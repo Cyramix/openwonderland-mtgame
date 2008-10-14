@@ -94,8 +94,8 @@ public class JMECollisionSystem extends CollisionSystem {
      * A pick routine, which will pick against every scene rendered
      */
     public void pickAll(Ray ray, PickResults result) {
-        synchronized (collisionComponents) {
-            synchronized (worldManager.getRenderManager().getCollisionLock()) {
+        synchronized (worldManager.getRenderManager().getCollisionLock()) {
+            synchronized (collisionComponents) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
                     JMECollisionComponent cc = (JMECollisionComponent) collisionComponents.get(i);
                     if (cc.isPickable()) {
