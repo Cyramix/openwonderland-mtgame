@@ -51,7 +51,7 @@ public class Entity {
     * The component map contains all features of the entity.  The map is 
     * indexed by a string.  The default strings are declared above.
     */
-   private HashMap componentMap = new HashMap();
+   private HashMap<Class, EntityComponent> componentMap = new HashMap();
 
    /**
     * The partition within the current space which this entity resides
@@ -107,6 +107,15 @@ public class Entity {
        return((EntityComponent)componentMap.get(key));
    }
    
+   /**
+    * Return all the components from this entity
+    * 
+    * @return
+    */
+   public Iterable<EntityComponent> getComponents() {
+       return componentMap.values();
+   }
+
    /**
     * Remove a component from the entity
     */
