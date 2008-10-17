@@ -463,7 +463,7 @@ public class ShaderTest implements RenderUpdater {
 
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
                 teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
+        e.addComponent(RotationProcessor.class, rp);
         wm.addEntity(e);
     }
     

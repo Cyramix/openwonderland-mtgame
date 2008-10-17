@@ -165,22 +165,6 @@ public class RenderManager {
         renderer.waitUntilReady();
         return (renderer.createJMECamera(width, height));   
     }
-
-    /**
-     * Add an entity to our processing list
-     */
-    void addEntity(Entity e) {
-        // Pass the entity onto the renderer
-        renderer.addEntity(e);
-    }
-
-    /**
-     * Add an entity to our processing list
-     */
-    void removeEntity(Entity e) {
-        // Pass the entity onto the renderer
-        renderer.removeEntity(e);
-    }
  
     /**
      * Change the ortho flag for this render component
