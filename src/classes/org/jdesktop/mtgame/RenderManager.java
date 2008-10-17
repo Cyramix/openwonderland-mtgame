@@ -126,13 +126,11 @@ public class RenderManager {
     public Canvas createCanvas(int width, int height) {
         Canvas canvas = null;
 
-        synchronized (renderer) {
-            if (!initialized) {
-                renderer.initialize();
-                initialized = true;
-            }
-            canvas = renderer.createCanvas(width, height);
+        if (!initialized) {
+            renderer.initialize();
+            initialized = true;
         }
+        canvas = renderer.createCanvas(width, height);
         return (canvas);
     }
 
@@ -183,7 +181,15 @@ public class RenderManager {
         // Pass the entity onto the renderer
         renderer.removeEntity(e);
     }
-
+ 
+    /**
+     * Change the ortho flag for this render component
+     */
+    void changeOrthoFlag(RenderComponent rc) {
+        // Pass the change onto the renderer
+        renderer.changeOrthoFlag(rc);
+    }
+    
     /**
      * Add a component to our processing list
      */
