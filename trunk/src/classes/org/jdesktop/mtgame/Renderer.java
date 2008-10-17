@@ -55,6 +55,9 @@ import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
 import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
 
+import java.util.Map;
+import java.util.Collection;
+
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
  * made from this thread
@@ -184,19 +187,15 @@ class Renderer extends Thread {
     private Object pickLock = new Object();
     
     /**
-     * The list of HUD elements
+     * The array list of orthographic projection render components waiting
+     * to have their status changed
      */
-    private HudComponent[] renderHuds = null;
+    private ArrayList orthos = new ArrayList();
     
     /**
-     * The array list of hud's
+     * A boolean indicating that the orthos list has changed
      */
-    private ArrayList huds = new ArrayList();
-    
-    /**
-     * A boolean indicating that the hud list has changed
-     */
-    private boolean hudsChanged = false;
+    private boolean orthosChanged = false;
     
     /**
      * The list of listeners waiting for notifications of scene changes
@@ -265,6 +264,7 @@ class Renderer extends Thread {
      */
     private GLCanvas currentCanvas = null;
     private Canvas currentAWTCanvas = null;
+    private GLContext glContext = null;
     
     /**
      * A boolean that indicates that the canvas is ready
@@ -275,7 +275,7 @@ class Renderer extends Thread {
      * This is true if we are using JOGL
      */
     private boolean useJOGL = true;
-            
+               
     /**
      * The constructor
      */
@@ -290,16 +290,18 @@ class Renderer extends Thread {
      * Get the renderer started.  This is called from the render manager to get
      * the thread started.
      */
-    synchronized void initialize() {
-        this.start();
-        try {
-            wait();
-        } catch (InterruptedException e) {
-            System.out.println(e);
+    void initialize() {
+        synchronized (this) {
+            this.start();
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
         }
     } 
 
-    synchronized Canvas createCanvas(int width, int height) {
+    Canvas createCanvas(int width, int height) {
         // Create the canvas and it's notification object
         JMECanvas canvas = displaySystem.createCanvas(width, height, "AWT", null);
         if (useJOGL) {
@@ -313,53 +315,75 @@ class Renderer extends Thread {
         return ((Canvas)canvas);
     }
     
-    synchronized void setCurrentCanvas(Canvas canvas) {
+    void setCurrentCanvas(Canvas canvas) {
         currentAWTCanvas = canvas;
         if (useJOGL) {
             currentCanvas = (GLCanvas) canvas;
+            glContext = currentCanvas.getContext();
         }
     }
     
     /**
      * This is internal initialization done once.
      */
-    synchronized void initRenderer() {
-        //Create the base jME objects
-        try {
-            if (!useJOGL) {
-                displaySystem = DisplaySystem.getDisplaySystem(LWJGLSystemProvider.LWJGL_SYSTEM_IDENTIFIER);
-                //displaySystem = DisplaySystem.getDisplaySystem("LWJGL");
-                displaySystem.registerCanvasConstructor("AWT", LWJGLAWTCanvasConstructor.class);
-            } else {
-                displaySystem = DisplaySystem.getDisplaySystem("JOGL");
-                Threading.disableSingleThreading();
-                displaySystem.registerCanvasConstructor("AWT", JOGLAWTCanvasConstructor.class);
-            }
+    void initRenderer() {
+        synchronized (this) {
+            //Create the base jME objects
+            try {
+                if (!useJOGL) {
+                    displaySystem = DisplaySystem.getDisplaySystem(LWJGLSystemProvider.LWJGL_SYSTEM_IDENTIFIER);
+                    //displaySystem = DisplaySystem.getDisplaySystem("LWJGL");
+                    displaySystem.registerCanvasConstructor("AWT", LWJGLAWTCanvasConstructor.class);
+                } else {
+                    displaySystem = DisplaySystem.getDisplaySystem("JOGL");
+                    Threading.disableSingleThreading();
+                    displaySystem.registerCanvasConstructor("AWT", JOGLAWTCanvasConstructor.class);
+                }
             //lwjglDisplay = (LWJGLDisplaySystem) displaySystem;
             //joglDisplay = (JOGLDisplaySystem) displaySystem;
-        } catch (JmeException e) {
-            System.out.println(e);
-        }
+            } catch (JmeException e) {
+                System.out.println(e);
+            }
 
-        // Let the caller know to proceed
-        notify();
+            /*
+            Map stackMap = Thread.getAllStackTraces();
+            System.out.println(stackMap);
+            Collection col = stackMap.values();
+            Object[] stacks = (Object[])col.toArray();
+            
+            for (int j=0; j<stacks.length; j++) {
+                StackTraceElement[] st = (StackTraceElement[]) stacks[j];
+                System.out.println("\n======================================\n");
+                for (int k=0; k<st.length; k++) {
+                    System.out.println(st[k]);
+                }
+            }
+             */
+            // Let the caller know to proceed
+            notify();
+        }
+        
         
         // Now wait for a canvas...
-        try {
-            wait();
-        } catch (InterruptedException e) {
-            System.out.println(e);
+        synchronized (this) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
+
+            // We should be set to go now...
+            jmeRenderer = displaySystem.getRenderer();
+            //System.out.println("jmeRenderer: " + jmeRenderer);
+            canvasReady = true;
         }
-        
-        // We should be set to go now...
-        jmeRenderer = displaySystem.getRenderer();
-        //System.out.println("jmeRenderer: " + jmeRenderer);
-        canvasReady = true;
     }
     
-    synchronized void canvasIsReady() {
+    void canvasIsReady() {
         // Just notify the renderer
-        notify();
+        synchronized (this) {
+            notify();
+        }
     }
     
     void waitUntilReady() {
@@ -394,13 +418,22 @@ class Renderer extends Thread {
         long frameStartTime = -1;
         long renderTime = -1;
         long totalTime = -1;
-        long threadStartTime = System.nanoTime();
-        GLContext glContext = null;
-        
-        initRenderer();
+                       
+        initRenderer();        
         while (!done) {
             // Snapshot the current time
             frameStartTime = System.nanoTime();
+            
+            if (useJOGL) {
+                try {
+                    glContext.makeCurrent();
+                } catch (javax.media.opengl.GLException e) {
+                    System.out.println(e);
+                }
+            } else {
+                //((LWJGLDisplaySystem)displaySystem).setCurrentCanvas((JMECanvas) currentCanvas);
+                ((LWJGLDisplaySystem) displaySystem).switchContext(currentCanvas);
+            }
             
             /**
              * Grab any new entities
@@ -408,26 +441,15 @@ class Renderer extends Thread {
             synchronized (pickLock) {
                 checkForEntityChanges();
             }
-
-            if (renderScenes.size() > 0 || renderCameras.size() > 0) {
-                if (useJOGL) {
-                    glContext = currentCanvas.getContext();
-                    try {
-                        glContext.makeCurrent();
-                    } catch (javax.media.opengl.GLException e) {
-                        System.out.println(e);
-                    }
-                } else {
-                //((LWJGLDisplaySystem)displaySystem).setCurrentCanvas((JMECanvas) currentCanvas);
-                    ((LWJGLDisplaySystem)displaySystem).switchContext(currentCanvas);   
-                }
+      
+            if (renderScenes.size() > 0 || renderCameras.size() > 0) { 
 
                 /* 
                  * This block of code handles calling entity processes which are
                  * locked to the renderer - like the current camera.
                  */
                 runProcessorsTriggered();
-                
+  
                 /**
                  * This allows anyone that needs to do some updating in the render
                  * thread be called
@@ -450,7 +472,7 @@ class Renderer extends Thread {
                 jmeRenderer.clearQueue();
                 jmeRenderer.getQueue().setTwoPassTransparency(true);
                 jmeRenderer.clearBuffers();
-                                   
+                 
                 // Render the skybox
                 if (currentSkybox != null) {
                     jmeRenderer.draw(currentSkybox);
@@ -473,8 +495,10 @@ class Renderer extends Thread {
  
                 // This actually does the rendering
                 jmeRenderer.renderQueue();
-               
+  
                 currentCanvas.swapBuffers();
+                
+
             }
             
             /*
@@ -491,15 +515,16 @@ class Renderer extends Thread {
                 processCommitList(processTime);
                 if (processTime < 0) {
                     //System.out.println("NEED TO ADAPT TO NEGATIVE PROCESS TIME");
-                    }
+                }
             }
-
+            
+            // Release the AWT lock
+            glContext.release();
              
             // Let the processes know that we want to do a frame tick
             if (screenNumber == 0) {
                 renderManager.triggerNewFrame();
             }
-
             
             // Decide if we need to sleep
             totalTime = System.nanoTime() - frameStartTime;
@@ -539,6 +564,19 @@ class Renderer extends Thread {
         synchronized (renderUpdateList) {
             renderUpdateList.add(ru);
             renderUpdateArgs.add(obj);
+        }
+    }
+     
+    /**
+     * Change the ortho flag for this render component
+     */
+    void changeOrthoFlag(RenderComponent rc) {
+        synchronized (entityLock) {
+            synchronized (orthos) {
+                orthos.add(rc);
+                orthosChanged = true;
+                entityChanged = true;
+            }
         }
     }
     
@@ -646,42 +684,44 @@ class Renderer extends Thread {
     /**
      * Process as many committers as we can, given the amount of process time
      */
-    synchronized void processCommitList(long processTime) {
+    void processCommitList(long processTime) {
         long currentTime = System.nanoTime();
         long elapsedTime = 0;
         long nextCurrentTime = 0;
         ProcessorComponent pc = null;
         
-        if (commitList == null) {
-            //System.out.println("Renderer: No Commits");
-            return;
-        }
-        
-        // Note: We won't stop in the middle of a chain
-        // TODO: Work on partial commits
-        while (/*elapsedTime < processTime &&*/ currentCommit != commitList.length) {
-            pc = commitList[currentCommit++];
-            pc.commit(pc.getCurrentTriggerCollection());
-            pc.clearTriggerCollection();
-            
-            // Process the chain
-            pc = pc.getNextInChain();
-            while (pc != null) {
+        synchronized (this) {
+            if (commitList == null) {
+                //System.out.println("Renderer: No Commits");
+                return;
+            }
+
+            // Note: We won't stop in the middle of a chain
+            // TODO: Work on partial commits
+            while (/*elapsedTime < processTime &&*/currentCommit != commitList.length) {
+                pc = commitList[currentCommit++];
                 pc.commit(pc.getCurrentTriggerCollection());
                 pc.clearTriggerCollection();
+
+                // Process the chain
                 pc = pc.getNextInChain();
+                while (pc != null) {
+                    pc.commit(pc.getCurrentTriggerCollection());
+                    pc.clearTriggerCollection();
+                    pc = pc.getNextInChain();
+                }
+
+                nextCurrentTime = System.nanoTime();
+                elapsedTime += (nextCurrentTime - currentTime);
+                currentTime = nextCurrentTime;
             }
-   
-            nextCurrentTime = System.nanoTime();
-            elapsedTime += (nextCurrentTime - currentTime);
-            currentTime = nextCurrentTime;
-        }
-        
-        // If we are done, notify the process controller
-        if (currentCommit == commitList.length) {
-            currentCommit = 0;
-            commitList = null;
-            notify();
+
+            // If we are done, notify the process controller
+            if (currentCommit == commitList.length) {
+                currentCommit = 0;
+                commitList = null;
+                notify();
+            }
         }
     }
     
@@ -689,14 +729,15 @@ class Renderer extends Thread {
      * Run the processes component commit list
      * For now, we'll just run them on screen 0
      */
-    synchronized void runCommitList(ProcessorComponent[] runList) {
-        commitList = runList;
-        try {
-            wait();
-        } catch (InterruptedException e) {
-            System.out.println(e);
-        }
-        
+    void runCommitList(ProcessorComponent[] runList) {
+        synchronized (this) {
+            commitList = runList;
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
+        }     
     }
         
     /**
@@ -785,10 +826,6 @@ class Renderer extends Thread {
                     scenesChanged = true;
                     entityChanged = true;
                 }
-            } else if ((ec = e.getComponent(HudComponent.class)) != null) {
-                huds.add(ec);
-                hudsChanged = true;
-                entityChanged = true;
             }
         }
     }
@@ -837,10 +874,6 @@ class Renderer extends Thread {
                     scenesChanged = true;
                     entityChanged = true;
                 }
-            } else if ((ec = e.getComponent(HudComponent.class)) != null) {
-                huds.remove(ec);
-                hudsChanged = true;
-                entityChanged = true;
             }
         }
     }
@@ -891,10 +924,6 @@ class Renderer extends Thread {
                     scenesChanged = true;
                     entityChanged = true;
                 }
-            } else if (c instanceof HudComponent) {
-                huds.add(c);
-                hudsChanged = true;
-                entityChanged = true;
             }
         }
     }
@@ -945,10 +974,6 @@ class Renderer extends Thread {
                     scenesChanged = true;
                     entityChanged = true;
                 }
-            } else if (c instanceof HudComponent) {
-                huds.remove(c);
-                hudsChanged = true;
-                entityChanged = true;
             }
         }
     }
@@ -1055,9 +1080,9 @@ class Renderer extends Thread {
                     processPassesChanged();
                     passesChanged = false;
                 }
-                if (hudsChanged) {
-                    processHudsChanged();
-                    hudsChanged = false;
+                if (orthosChanged) {
+                    processOrthosChanged();
+                    orthosChanged = false;
                 }
                 entityChanged = false;
             }
@@ -1251,10 +1276,17 @@ class Renderer extends Thread {
     }
 
     /**
-     * Check for hud changes
+     * Check for ortho changes
      */
-    void processHudsChanged() {
-        
+    void processOrthosChanged() {
+        synchronized (orthos) {
+            for (int i=0; i<orthos.size(); i++) {
+                RenderComponent rc = (RenderComponent) orthos.get(i);
+                processSceneGraph(rc);
+                addToUpdateList(rc.getSceneRoot());
+            }
+            orthos.clear();
+        }
     }
     
     class MyImplementor extends SimpleCanvasImpl {
@@ -1298,20 +1330,20 @@ class Renderer extends Thread {
     void processSceneGraph(RenderComponent sc) {
         Node sg = sc.getSceneRoot();
         
-        traverseGraph(sg);
+        traverseGraph(sg, sc.getOrtho());
     }
     
     /**
      * Examine this node and travese it's children
      */
-    void traverseGraph(Spatial sg) {
+    void traverseGraph(Spatial sg, boolean ortho) {
    
-        examineSpatial(sg);
+        examineSpatial(sg, ortho);
         if (sg instanceof Node) {
             Node node = (Node)sg;
             for (int i=0; i<node.getQuantity(); i++) {
                 Spatial child = node.getChild(i);
-                traverseGraph(child);
+                traverseGraph(child, ortho);
             }
         }
     }
@@ -1319,17 +1351,18 @@ class Renderer extends Thread {
     /**
      * Examine the given node
      */
-    void examineSpatial(Spatial s) {
-        checkForTransparency(s);
+    void examineSpatial(Spatial s, boolean ortho) {
+        setRenderQueue(s, ortho);
     }
     
     /**
      * This mehod checks for transpaency attributes
      */
-    void checkForTransparency(Spatial s) {
+    void setRenderQueue(Spatial s, boolean ortho) {
         BlendState blendState = (BlendState) s.getRenderState(RenderState.RS_BLEND);
-        
-        if (s.getRenderQueueMode() != com.jme.renderer.Renderer.QUEUE_SKIP) {
+        if (ortho) {
+            s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_ORTHO);
+        } else {
             if (blendState != null) {
                 if (blendState.isBlendEnabled()) {
                     s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_TRANSPARENT);

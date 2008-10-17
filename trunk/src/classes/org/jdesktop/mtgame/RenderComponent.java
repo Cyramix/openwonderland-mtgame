@@ -49,6 +49,12 @@ public class RenderComponent extends EntityComponent {
     * A sometimes non-null place for this RenderComponent to attach to.
     */
    private Node attachPoint = null;
+   
+   /**
+    * A flag to indicate whether or not this render component should
+    * use an orthographic projection
+    */
+   private boolean ortho = false;
 
    /**
     * The default constructor
@@ -111,4 +117,24 @@ public class RenderComponent extends EntityComponent {
        return(attachPoint);
    }
    
+   /**
+    * Set the othographic projection flag
+    */
+   public void setOrtho(boolean flag) {
+       Entity e = getEntity();
+
+       if (ortho != flag) {
+           ortho = flag;
+           if (e != null) {
+               e.getWorldManager().getRenderManager().changeOrthoFlag(this);
+           }
+       }
+   }
+   
+   /**
+    * Get the value of the orthographic projection flag
+    */
+   public boolean getOrtho() {
+       return (ortho);
+   }
 }

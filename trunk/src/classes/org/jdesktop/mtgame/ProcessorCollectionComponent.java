@@ -74,4 +74,31 @@ public class ProcessorCollectionComponent extends EntityComponent {
         procs = (ProcessorComponent[]) processors.toArray(procs);
         return(procs);
     }
+    
+    /**
+     * Remove a processor from the collection
+     */
+    public void removeProcessor(ProcessorComponent pc) {
+        Entity e = getEntity();
+        if (e != null) {
+            WorldManager wm = e.getWorldManager();
+            if (wm != null) {
+                wm.getProcessorManager().removeComponent(pc);
+            }
+        }
+        processors.remove(pc);
+    }
+    
+    /**
+     * Remove all processors from this collection
+     */
+    public void removeAllProcessors() {
+        int len = processors.size();
+        
+        for (int i=0; i<len; i++) {
+            // This relies on the fast that removeProcessor shrinks
+            // the processor array list
+            removeProcessor((ProcessorComponent)processors.get(0));
+        }
+    }
 }
