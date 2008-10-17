@@ -35,6 +35,8 @@ import com.jme.renderer.pass.Pass;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+
 
 /**
  * This is the class which manages everything in the system.
@@ -143,20 +145,13 @@ public class WorldManager {
      * This adds an already created entity to the system
      */
     public void addEntity(Entity e) {
+        EntityComponent c = null;
         e.setWorldManager(this);
-        if (e.getComponent(RenderComponent.class) != null ||
-            e.getComponent(CollisionComponent.class) != null ||
-            e.getComponent(JMECollisionComponent.class) != null ||
-            e.getComponent(JBulletCollisionComponent.class) != null ||
-            e.getComponent(SkyboxComponent.class) != null ||
-            e.getComponent(PassComponent.class) != null ||
-            e.getComponent(CameraComponent.class) != null) {
-            renderManager.addEntity(e);
-        }
-
-        if (e.getComponent(ProcessorComponent.class) != null ||
-            e.getComponent(ProcessorCollectionComponent.class) != null) {
-            processorManager.addEntity(e);
+        
+        Iterator comps = e.getComponents().iterator(); 
+        while (comps.hasNext()) {
+            c = (EntityComponent) comps.next();
+            addComponent(c);
         }
         entities.add(e);
         
@@ -170,19 +165,12 @@ public class WorldManager {
      * This adds an already created entity to the system
      */
     public void removeEntity(Entity e) {
-        if (e.getComponent(RenderComponent.class) != null ||
-            e.getComponent(CollisionComponent.class) != null ||
-            e.getComponent(JMECollisionComponent.class) != null ||
-            e.getComponent(JBulletCollisionComponent.class) != null ||
-            e.getComponent(SkyboxComponent.class) != null ||
-            e.getComponent(PassComponent.class) != null ||
-            e.getComponent(CameraComponent.class) != null) {
-            renderManager.removeEntity(e);
-        }
-
-        if (e.getComponent(ProcessorComponent.class) != null ||
-            e.getComponent(ProcessorCollectionComponent.class) != null) {
-            processorManager.removeEntity(e);
+        EntityComponent c = null;
+        
+        Iterator comps = e.getComponents().iterator();
+        while (comps.hasNext()) {
+            c = (EntityComponent) comps.next();
+            removeComponent(c);
         }
 
         // remove the sub-entities
@@ -213,20 +201,20 @@ public class WorldManager {
      * already being processed
      */
     void addComponent(EntityComponent c) {
-        if (c instanceof RenderComponent ||
-            c instanceof CollisionComponent ||
-            c instanceof JMECollisionComponent ||
-            c instanceof JBulletCollisionComponent ||
-            c instanceof SkyboxComponent ||
-            c instanceof PassComponent ||
-            c instanceof CameraComponent) {
+        if (RenderComponent.class.isInstance(c) ||
+            CollisionComponent.class.isInstance(c) ||
+            JMECollisionComponent.class.isInstance(c) ||
+            JBulletCollisionComponent.class.isInstance(c) ||
+            SkyboxComponent.class.isInstance(c) ||
+            PassComponent.class.isInstance(c) ||
+            CameraComponent.class.isInstance(c)) {
             renderManager.addComponent(c);
         }
 
-        if (c instanceof ProcessorComponent ||
-            c instanceof ProcessorCollectionComponent) {
+        if (ProcessorComponent.class.isInstance(c) ||
+            ProcessorCollectionComponent.class.isInstance(c)) {
             processorManager.addComponent(c);
-        }   
+        }  
     }
     
     /**
@@ -234,20 +222,20 @@ public class WorldManager {
      * already being processed
      */
     void removeComponent(EntityComponent c) {
-        if (c instanceof RenderComponent || 
-            c instanceof CollisionComponent ||
-            c instanceof JMECollisionComponent ||
-            c instanceof JBulletCollisionComponent ||
-            c instanceof SkyboxComponent ||
-            c instanceof PassComponent ||
-            c instanceof CameraComponent) {
+        if (RenderComponent.class.isInstance(c) ||
+            CollisionComponent.class.isInstance(c) ||
+            JMECollisionComponent.class.isInstance(c) ||
+            JBulletCollisionComponent.class.isInstance(c) ||
+            SkyboxComponent.class.isInstance(c) ||
+            PassComponent.class.isInstance(c) ||
+            CameraComponent.class.isInstance(c)) {
             renderManager.removeComponent(c);
         }
 
-        if (c instanceof ProcessorComponent ||
-            c instanceof ProcessorCollectionComponent) {
+        if (ProcessorComponent.class.isInstance(c) ||
+            ProcessorCollectionComponent.class.isInstance(c)) {
             processorManager.removeComponent(c);
-        }   
+        }    
     }
     
     /**
