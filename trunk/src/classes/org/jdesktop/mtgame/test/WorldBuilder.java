@@ -45,6 +45,7 @@ import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
+import com.jme.light.LightNode;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
@@ -135,6 +136,7 @@ public class WorldBuilder {
      * A list of the models we are looking at
      */
     private ArrayList models = new ArrayList();
+    private LightNode lightNode = null;
     
     public WorldBuilder(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -142,13 +144,23 @@ public class WorldBuilder {
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
         
+        lightNode = new LightNode();
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setLocation(new Vector3f(100, 100, 100));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(0.0f, 0.0f, 50.0f);
+        wm.getRenderManager().addLight(lightNode);
+        
         createUI(wm);  
         createCameraEntity(wm);   
         createGrid(wm);
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-        
+         
         createRandomTeapots(wm);
        
     }
@@ -234,6 +246,7 @@ public class WorldBuilder {
         gridSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(gridSG);
+        rc.setLightingEnabled(false);
         grid.addComponent(RenderComponent.class, rc);
     }
     
@@ -248,6 +261,7 @@ public class WorldBuilder {
         axisSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(axisSG);
+        rc.setLightingEnabled(false);
         axis.addComponent(RenderComponent.class, rc);
     }
     
@@ -406,15 +420,6 @@ public class WorldBuilder {
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
-            PointLight light = new PointLight();
-            light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-            light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-            light.setLocation(new Vector3f(100, 100, 100));
-            light.setEnabled(true);
-            LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-            lightState.setEnabled(true);
-            lightState.attach(light);
         
             MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
             matState.setDiffuse(color);
@@ -433,7 +438,6 @@ public class WorldBuilder {
             
             node.setRenderState(matState);
             node.setRenderState(buf);
-            node.setRenderState(lightState);
             node.setLocalTranslation(0.0f, 0.0f, 0.0f);
             teapot.setModelBound(bbox);
             addModel(node);
@@ -460,6 +464,7 @@ public class WorldBuilder {
                 node = new Node();
                 node.attachChild(box);
                 RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
+                sc.setLightingEnabled(false);
                 e.addComponent(RenderComponent.class, sc);
             }
 
@@ -574,7 +579,7 @@ public class WorldBuilder {
             RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
                 teapot, (float) (6.0f * Math.PI / 180.0f));
             e.addComponent(ProcessorComponent.class, rp);
-                        wm.addEntity(e);
+            wm.addEntity(e);
                         
         }
     }
@@ -595,15 +600,6 @@ public class WorldBuilder {
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-        LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled(true);
-        lightState.attach(light);
         
         if (transparent) {
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
@@ -626,7 +622,6 @@ public class WorldBuilder {
         
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(lightState);
         node.setLocalTranslation(x, y, z);
         node.setModelBound(bbox); 
         

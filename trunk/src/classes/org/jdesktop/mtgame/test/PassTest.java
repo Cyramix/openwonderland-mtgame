@@ -46,6 +46,7 @@ import com.jme.util.TextureManager;
 import com.jme.scene.CameraNode;
 import com.jme.renderer.Camera;
 import com.jme.scene.Skybox;
+import com.jme.light.LightNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.shape.Quad;
 import com.jme.scene.state.ZBufferState;
@@ -303,6 +304,7 @@ public class PassTest implements RenderUpdater {
         gridSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(gridSG);
+        rc.setLightingEnabled(false);
         grid.addComponent(RenderComponent.class, rc);
     }
     
@@ -317,6 +319,7 @@ public class PassTest implements RenderUpdater {
         axisSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(axisSG);
+        rc.setLightingEnabled(false);
         axis.addComponent(RenderComponent.class, rc);
     }
     
@@ -682,6 +685,15 @@ public class PassTest implements RenderUpdater {
         fogState.setDensityFunction(FogState.DensityFunction.Linear);
         fogState.setQuality(FogState.Quality.PerVertex);
         rootNode.setRenderState(fogState);
+        
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setEnabled(true);
+        LightNode ln = new LightNode();
+        ln.setLight(light);
+        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        wm.getRenderManager().addLight(ln);
     }
     
     private void createReflectionTerrain() {
@@ -1076,15 +1088,6 @@ public class PassTest implements RenderUpdater {
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-        LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled(true);
-        lightState.attach(light);
         
         if (transparent) {
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
@@ -1107,7 +1110,6 @@ public class PassTest implements RenderUpdater {
         
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(lightState);
         node.setLocalTranslation(x, y, z);
         node.setModelBound(bbox); 
         

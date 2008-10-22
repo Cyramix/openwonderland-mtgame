@@ -108,6 +108,13 @@ public class Entity {
    }
    
    /**
+    * Return whether or not an entity has a component
+    */
+   public boolean hasComponent(Class key) {
+       return(getComponent(key) != null);
+   }
+   
+   /**
     * Return all the components from this entity
     * 
     * @return

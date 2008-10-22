@@ -235,6 +235,7 @@ public class ShaderTest implements RenderUpdater {
         gridSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(gridSG);
+        rc.setLightingEnabled(false);
         grid.addComponent(RenderComponent.class, rc);
     }
     
@@ -249,6 +250,7 @@ public class ShaderTest implements RenderUpdater {
         axisSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(axisSG);
+        rc.setLightingEnabled(false);
         axis.addComponent(RenderComponent.class, rc);
     }
     

@@ -39,6 +39,8 @@ import com.jme.scene.Node;
 import com.jme.scene.Skybox;
 import com.jme.scene.CameraNode;
 import com.jme.scene.Spatial;
+import com.jme.light.LightNode;
+import com.jme.scene.state.LightState;
 import com.jme.system.*;
 import com.jme.renderer.*;
 import com.jme.renderer.pass.Pass;
@@ -155,7 +157,22 @@ class Renderer extends Thread {
      * A boolean indicating that the scene list has changed
      */
     private boolean scenesChanged = false;
+        
+    /**
+     * The array list of scene's
+     */
+    private ArrayList lights = new ArrayList();
+    
+    /**
+     * A boolean indicating that the scene list has changed
+     */
+    private boolean lightsChanged = false;
           
+    /**
+     * The global light state to be applied to all objects
+     */
+    private ArrayList globalLights = new ArrayList();
+    
     /**
      * The current list of renderable passes
      */
@@ -196,6 +213,17 @@ class Renderer extends Thread {
      * A boolean indicating that the orthos list has changed
      */
     private boolean orthosChanged = false;
+       
+    /**
+     * The array list of render components waiting
+     * to have their lighting changed
+     */
+    private ArrayList componentLighting = new ArrayList();
+    
+    /**
+     * A boolean indicating that some component lighting has changed
+     */
+    private boolean componentLightingChanged = false;
     
     /**
      * The list of listeners waiting for notifications of scene changes
@@ -579,6 +607,19 @@ class Renderer extends Thread {
             }
         }
     }
+           
+    /**
+     * Change the lighting info for this render component
+     */
+    void changeLighting(RenderComponent rc) {
+        synchronized (entityLock) {
+            synchronized (componentLighting) {
+                componentLighting.add(rc);
+                componentLightingChanged = true;
+                entityChanged = true;
+            }
+        }
+    }
     
     /**
      * Process anyone who wants to update in the render thread before rendering
@@ -604,7 +645,6 @@ class Renderer extends Thread {
             if (updateList.size() != 0) {
                 for (int i = 0; i < updateList.size(); i++) {
                     Spatial s = (Spatial) updateList.get(i);
-
                     s.updateGeometricState(referenceTime, true);
                     s.updateRenderState();
                 }
@@ -613,7 +653,7 @@ class Renderer extends Thread {
             }
         }
     }   
-    
+  
     /**
      * Process the scene updates
      */
@@ -781,103 +821,7 @@ class Renderer extends Thread {
             }
         }
     }
-    
-    void addEntity(Entity e) {
-        EntityComponent ec = null;
-
-        synchronized (entityLock) {
-            
-            // Lot's of things can have a camera
-            if ((ec = e.getComponent(CameraComponent.class)) != null) {
-                cameras.add(ec);
-                camerasChanged = true;
-                entityChanged = true;
-            }
-            
-            if ((ec = e.getComponent(CollisionComponent.class)) != null) {
-                synchronized (collisionComponents) {
-                    collisionComponents.add(ec);
-                }
-            }
-            
-            if ((ec = e.getComponent(SkyboxComponent.class)) != null) {
-                synchronized (skyboxes) {
-                    skyboxes.add(ec);
-                    skyboxChanged = true;
-                    entityChanged = true;
-                }
-            }
-                        
-            if ((ec = e.getComponent(PassComponent.class)) != null) {
-                synchronized (passes) {
-                    passes.add(ec);
-                    passesChanged = true;
-                    entityChanged = true;
-                }
-            }
-
-            // An entity is one of the following - for now.
-            if ((ec = e.getComponent(RenderComponent.class)) != null) {
-                processSceneGraph((RenderComponent)ec);
-                if (((RenderComponent)ec).getAttachPoint() != null) {
-                    processAttachPoint((RenderComponent)ec, true);
-                } else {
-                    scenes.add(ec);
-                    scenesChanged = true;
-                    entityChanged = true;
-                }
-            }
-        }
-    }
-    
-    void removeEntity(Entity e) {
-        EntityComponent ec = null;
-
-        synchronized (entityLock) {
-            
-            // Lot's of things can have a camera
-            if ((ec = e.getComponent(CameraComponent.class)) != null) {
-                cameras.remove(ec);
-                camerasChanged = true;
-                entityChanged = true;
-            }
-
-                        
-            if ((ec = e.getComponent(CollisionComponent.class)) != null) {
-                synchronized (collisionComponents) {
-                    collisionComponents.remove(ec);
-                }
-            }
-                        
-            if ((ec = e.getComponent(SkyboxComponent.class)) != null) {
-                synchronized (skyboxes) {
-                    skyboxes.remove(ec);
-                    skyboxChanged = true;
-                    entityChanged = true;
-                }
-            }
-                                   
-            if ((ec = e.getComponent(PassComponent.class)) != null) {
-                synchronized (passes) {
-                    passes.remove(ec);
-                    passesChanged = true;
-                    entityChanged = true;
-                }
-            }
-            
-            // An entity is one of the following - for now.
-            if ((ec = e.getComponent(RenderComponent.class)) != null) {
-                if (((RenderComponent) ec).getAttachPoint() != null) {
-                    processAttachPoint((RenderComponent) ec, false);
-                } else {
-                    scenes.remove(ec);
-                    scenesChanged = true;
-                    entityChanged = true;
-                }
-            }
-        }
-    }
-    
+     
     /**
      * Add a component to the list that we process
      * @param c
@@ -1050,6 +994,91 @@ class Renderer extends Thread {
             }
         }
     }
+                
+    /**
+     * Add a global light to the scene
+     */
+    public void addLight(LightNode light) {
+        synchronized (entityLock) {
+            synchronized (lights) {
+                lights.add(light);
+                lightsChanged = true;
+                entityChanged = true;
+            }
+        }
+    }
+    
+    /**
+     * Remove a global light from the scene
+     */
+    public void removeLight(LightNode light) {
+        synchronized (entityLock) {
+            synchronized (lights) {
+                lights.remove(light);
+                lightsChanged = true;
+                entityChanged = true;
+            }
+        }
+    }
+    
+    /**
+     * Return the number of global Lights
+     */
+    public int numLights() {
+        int num = 0;
+        synchronized (entityLock) {
+            synchronized (lights) {
+                num = lights.size();
+            }
+        }
+        return (num);
+    }
+    
+    /**
+     * Get a light at the index specified
+     */
+    public LightNode getLight(int i) {
+        LightNode light = null;
+        
+        synchronized (entityLock) {
+            synchronized (lights) {
+                light = (LightNode)lights.get(i);
+            }
+        }
+        return (light);
+    }
+    
+    /**
+     * Change the lights settings
+     */
+    private void processLightsChanged() {
+        // The list of lights have changed, reset the light list.
+        globalLights.clear();
+        for (int i=0; i<lights.size(); i++) {
+            globalLights.add(lights.get(i));
+        }
+        
+        // Now go through all the renderScenes and apply the light state
+        for (int i=0; i<renderScenes.size(); i++) {
+            RenderComponent scene = (RenderComponent) renderScenes.get(i);
+            scene.updateLightState(globalLights);
+            scene.getSceneRoot().updateRenderState();
+        }
+    }
+    
+    /**
+     * Check for component lighting changes
+     */
+    void processComponentLightingChanged() {
+        synchronized (componentLighting) {
+            for (int i=0; i<componentLighting.size(); i++) {
+                RenderComponent rc = (RenderComponent) componentLighting.get(i);
+                rc.updateLightState(globalLights);
+                rc.getSceneRoot().updateRenderState();
+            }
+            componentLighting.clear();
+        }
+    }
     
     /**
      * Get the jme renderer
@@ -1083,6 +1112,14 @@ class Renderer extends Thread {
                 if (orthosChanged) {
                     processOrthosChanged();
                     orthosChanged = false;
+                }
+                if (componentLightingChanged) {
+                    processComponentLightingChanged();
+                    componentLightingChanged = false;
+                }
+                if (lightsChanged) {
+                    processLightsChanged();
+                    lightsChanged = false;
                 }
                 entityChanged = false;
             }
@@ -1175,6 +1212,7 @@ class Renderer extends Thread {
         for (int i=0; i<scenes.size(); i++) {
             scene = (RenderComponent) scenes.get(i);
             if (!renderScenes.contains(scene)) {
+                scene.updateLightState(globalLights);
                 renderScenes.add(scene);
                 addToUpdateList(scene.getSceneRoot());
             }
