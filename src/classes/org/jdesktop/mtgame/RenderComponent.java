@@ -32,6 +32,10 @@
 package org.jdesktop.mtgame;
 
 import com.jme.scene.Node;
+import com.jme.scene.state.LightState;
+import com.jme.scene.state.RenderState;
+import com.jme.light.LightNode;
+import java.util.ArrayList;
 
 /**
 * This is an entity component that implements the visual representation of 
@@ -55,6 +59,23 @@ public class RenderComponent extends EntityComponent {
     * use an orthographic projection
     */
    private boolean ortho = false;
+   
+   /**
+    * This flag controls whether or not lighting is applied to 
+    * this RenderComponent
+    */
+   private boolean lightingEnabled = true;
+   
+   /**
+    * The lights that only apply to this RenderCompoenent
+    */
+   private ArrayList lights = new ArrayList();
+   
+   /**
+    * The LightState that is used to apply lighting to just this
+    * RenderComponent.
+    */
+   private LightState lightState = null;
 
    /**
     * The default constructor
@@ -137,4 +158,106 @@ public class RenderComponent extends EntityComponent {
    public boolean getOrtho() {
        return (ortho);
    }
+   
+   /**
+    * Set the lighting enable flag
+    */
+   public void setLightingEnabled(boolean flag) {
+       Entity e = getEntity();
+       
+       if (lightingEnabled != flag) {
+           lightingEnabled = flag;
+           if (e != null) {
+               e.getWorldManager().getRenderManager().changeLighting(this);
+           }
+       }
+   }
+   
+   /**
+    * Get the lighting enabled flag
+    */
+   public boolean getLightingEnabled() {
+       return (lightingEnabled);
+   }
+   
+    /**
+     * Add a global light to the scene
+     */
+    public void addLight(LightNode light) {
+        Entity e = getEntity();
+
+        synchronized (lights) {
+            lights.add(light);
+            if (e != null) {
+                e.getWorldManager().getRenderManager().changeLighting(this);
+            }
+        }
+    }
+
+    /**
+     * Remove a global light from the scene
+     */
+    public void removeLight(LightNode light) {
+        Entity e = getEntity();
+
+        synchronized (lights) {
+            lights.remove(light);
+            if (e != null) {
+                e.getWorldManager().getRenderManager().changeLighting(this);
+            }
+        }
+    }
+    
+    /**
+     * Create a LightState with the current set of lights
+     */
+    void updateLightState(ArrayList globalLights) {    
+        Entity e = getEntity();
+        
+        lightState = (LightState) e.getWorldManager().
+                getRenderManager().createRendererState(RenderState.RS_LIGHT);
+        for (int i = 0; i < globalLights.size(); i++) {
+            LightNode ln = (LightNode) globalLights.get(i);
+            e.getWorldManager().addToUpdateList(ln);
+            lightState.attach(ln.getLight());
+        }
+        
+        for (int i = 0; i < lights.size(); i++) {
+            LightNode ln = (LightNode) lights.get(i);
+            e.getWorldManager().addToUpdateList(ln);
+            lightState.attach(ln.getLight());
+        }
+        lightState.setEnabled(lightingEnabled);
+        sceneRoot.setRenderState(lightState);
+    }
+    
+    /**
+     * Get the LightState for this RenderComponent
+     */
+    LightState getLightState() {
+        return (lightState);
+    }
+
+    /**
+     * Return the number of global Lights
+     */
+    public int numLights() {
+        int num = 0;
+        synchronized (lights) {
+            num = lights.size();
+        }
+        return (num);
+    }
+
+    /**
+     * Get a light at the index specified
+     */
+    public LightNode getLight(int i) {
+        LightNode light = null;
+
+        synchronized (lights) {
+            light = (LightNode) lights.get(i);
+        }
+        return (light);
+    }
 }

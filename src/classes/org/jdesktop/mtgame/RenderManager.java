@@ -36,6 +36,7 @@ import java.awt.Canvas;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.Spatial;
 import com.jme.scene.Node;
+import com.jme.light.LightNode;
 import com.jme.scene.CameraNode;
 import com.jme.renderer.Camera;
 import com.jme.scene.Skybox;
@@ -157,7 +158,35 @@ public class RenderManager {
         renderer.waitUntilReady();
         return (renderer.createRendererState(type));
     }
-           
+         
+    /**
+     * Add a global light to the scene
+     */
+    public void addLight(LightNode light) {
+        renderer.addLight(light);
+    }
+    
+    /**
+     * Remove a global light from the scene
+     */
+    public void removeLight(LightNode light) {
+        renderer.removeLight(light);
+    }
+    
+    /**
+     * Return the number of global Lights
+     */
+    public int numLights() {
+        return (renderer.numLights());
+    }
+    
+    /**
+     * Get a light at the index specified
+     */
+    public LightNode getLight(int i) {
+        return (renderer.getLight(i));
+    }
+    
     /**
      * Create the jmeCamera
      */
@@ -172,6 +201,14 @@ public class RenderManager {
     void changeOrthoFlag(RenderComponent rc) {
         // Pass the change onto the renderer
         renderer.changeOrthoFlag(rc);
+    }
+        
+    /**
+     * Change the lighting information for this render component
+     */
+    void changeLighting(RenderComponent rc) {
+        // Pass the change onto the renderer
+        renderer.changeLighting(rc);
     }
     
     /**

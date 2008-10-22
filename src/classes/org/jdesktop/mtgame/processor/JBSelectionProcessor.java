@@ -195,6 +195,7 @@ public class JBSelectionProcessor extends AWTEventProcessorComponent {
         
         Entity entity = new Entity("Selection Line");
         RenderComponent rc = wm.getRenderManager().createRenderComponent(lineSG);
+        rc.setLightingEnabled(false);
         entity.addComponent(RenderComponent.class, rc);
         
         //wm.addEntity(entity);
@@ -292,6 +293,7 @@ public class JBSelectionProcessor extends AWTEventProcessorComponent {
             node = new Node();
             node.attachChild(box);
             RenderComponent rc = worldManager.getRenderManager().createRenderComponent(node);
+            rc.setLightingEnabled(false);
             e.addComponent(RenderComponent.class, rc);
         }
         

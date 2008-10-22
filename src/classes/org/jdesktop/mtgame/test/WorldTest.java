@@ -39,6 +39,7 @@ import com.jme.scene.CameraNode;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
+import com.jme.light.LightNode;
 import com.jme.scene.state.LightState;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.RenderState;
@@ -92,10 +93,23 @@ public class WorldTest {
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
         
         createUI(wm);  
+        createGlobalLight(wm);
         createTestSpaces(wm);
         createTestEntities(wm);
         createCameraEntity(wm);        
     }
+                  
+    private void createGlobalLight(WorldManager wm) {
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setEnabled(true);
+        LightNode ln = new LightNode();
+        ln.setLight(light);
+        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        wm.getRenderManager().addLight(ln); 
+    }
+    
     
     private void createCameraEntity(WorldManager wm) {
         Node cameraSG = createCameraGraph(wm);
@@ -123,34 +137,25 @@ public class WorldTest {
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-        LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled(true);
-        lightState.attach(light);
-
         // The center teapot
         color.r = 0.0f; color.g = 0.0f; color.b = 1.0f; color.a = 1.0f;
-        createTeapotEntity("Center ", 0.0f, 0.0f, 0.0f, buf, lightState, color, wm);
+        createTeapotEntity("Center ", 0.0f, 0.0f, 0.0f, buf, color, wm);
 
         color.r = 0.0f; color.g = 1.0f; color.b = 0.0f; color.a = 1.0f;
-        createTeapotEntity("North ", 0.0f, 0.0f, 100.0f, buf, lightState, color, wm);
+        createTeapotEntity("North ", 0.0f, 0.0f, 100.0f, buf, color, wm);
         
         color.r = 1.0f; color.g = 0.0f; color.b = 0.0f; color.a = 1.0f;
-        createTeapotEntity("South ", 0.0f, 0.0f, -100.0f, buf, lightState, color, wm);
+        createTeapotEntity("South ", 0.0f, 0.0f, -100.0f, buf, color, wm);
         
         color.r = 1.0f; color.g = 1.0f; color.b = 0.0f; color.a = 1.0f;
-        createTeapotEntity("East ", 100.0f, 0.0f, 0.0f, buf, lightState, color, wm);
+        createTeapotEntity("East ", 100.0f, 0.0f, 0.0f, buf, color, wm);
         
         color.r = 0.0f; color.g = 1.0f; color.b = 1.0f; color.a = 1.0f;
-        createTeapotEntity("West ", -100.0f, 0.0f, 0.0f, buf, lightState, color, wm);        
+        createTeapotEntity("West ", -100.0f, 0.0f, 0.0f, buf, color, wm);        
     }
     
     public void createTeapotEntity(String name, float xoff, float yoff, float zoff, 
-            ZBufferState buf, LightState ls, ColorRGBA color, WorldManager wm) {
+            ZBufferState buf, ColorRGBA color, WorldManager wm) {
         MaterialState matState = null;
         
         // The center teapot
@@ -163,7 +168,6 @@ public class WorldTest {
         matState.setDiffuse(color);
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(ls);
         node.setLocalTranslation(xoff, yoff, zoff);
 
         Entity te = new Entity(name + "Teapot");
@@ -185,41 +189,29 @@ public class WorldTest {
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-
-        /** Attach the light to a lightState and the lightState to rootNode. */
-        LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled(true);
-        lightState.setTwoSidedLighting(true);
-        lightState.attach(light);
-
         // First create the geometry
         center.x = 0.0f; center.y = 25.0f; center.z = 0.0f;
         color.r = 0.0f; color.g = 0.0f; color.b = 1.0f; color.a = 1.0f;
-        createSpace("Center ", center, buf, lightState, color, wm);
+        createSpace("Center ", center, buf, color, wm);
         
         center.x = 0.0f; center.y = 25.0f; center.z = 98.0f;
         color.r = 0.0f; color.g = 1.0f; color.b = 0.0f; color.a = 1.0f;
-        createSpace("North ", center, buf, lightState, color, wm);
+        createSpace("North ", center, buf, color, wm);
 
         center.x = 0.0f; center.y = 25.0f; center.z = -98.0f;
         color.r = 1.0f; color.g = 0.0f; color.b = 0.0f; color.a = 1.0f;
-        createSpace("South ", center, buf, lightState, color, wm);
+        createSpace("South ", center, buf, color, wm);
 
         center.x = 98.0f; center.y = 25.0f; center.z = 0.0f;
         color.r = 1.0f; color.g = 1.0f; color.b = 0.0f; color.a = 1.0f;
-        createSpace("East ", center, buf, lightState, color, wm);
+        createSpace("East ", center, buf, color, wm);
 
         center.x = -98.0f; center.y = 25.0f; center.z = 0.0f;
         color.r = 0.0f; color.g = 1.0f; color.b = 1.0f; color.a = 1.0f;
-        createSpace("West ", center, buf, lightState, color, wm);
+        createSpace("West ", center, buf, color, wm);
     }
     
-    public void createSpace(String name, Vector3f center, ZBufferState buf, LightState ls,
+    public void createSpace(String name, Vector3f center, ZBufferState buf,
             ColorRGBA color, WorldManager wm) {
         MaterialState matState = null;
 
@@ -243,7 +235,6 @@ public class WorldTest {
         BoundingBox bbox = new BoundingBox(center, 50.0f, 50.0f, 50.0f);
         node.setModelBound(bbox);
         node.setRenderState(buf);
-        node.setRenderState(ls);
         matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
         matState.setDiffuse(color);
         node.setRenderState(matState);

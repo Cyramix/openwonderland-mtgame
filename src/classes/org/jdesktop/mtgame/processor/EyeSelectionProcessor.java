@@ -151,6 +151,7 @@ public class EyeSelectionProcessor extends AWTEventProcessorComponent {
             node = new Node();
             node.attachChild(box);
             RenderComponent rc = worldManager.getRenderManager().createRenderComponent(node);
+            rc.setLightingEnabled(false);
             e.addComponent(RenderComponent.class, rc);
         }
         

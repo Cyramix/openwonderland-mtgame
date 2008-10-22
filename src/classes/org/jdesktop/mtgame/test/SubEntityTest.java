@@ -43,6 +43,7 @@ import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
+import com.jme.light.LightNode;
 import com.jme.scene.state.LightState;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
@@ -147,9 +148,20 @@ public class SubEntityTest {
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-        
+        createGlobalLight();
         createEntities(wm);
        
+    }
+                 
+    private void createGlobalLight() {
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setEnabled(true);
+        LightNode ln = new LightNode();
+        ln.setLight(light);
+        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        wm.getRenderManager().addLight(ln); 
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -232,6 +244,7 @@ public class SubEntityTest {
         gridSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(gridSG);
+        rc.setLightingEnabled(false);
         grid.addComponent(RenderComponent.class, rc);
     }
     
@@ -246,6 +259,7 @@ public class SubEntityTest {
         axisSG.setRenderState(buf);
         
         RenderComponent rc = wm.getRenderManager().createRenderComponent(axisSG);
+        rc.setLightingEnabled(false);
         axis.addComponent(RenderComponent.class, rc);
     }
     
@@ -405,15 +419,6 @@ public class SubEntityTest {
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-            PointLight light = new PointLight();
-            light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-            light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-            light.setLocation(new Vector3f(100, 100, 100));
-            light.setEnabled(true);
-            LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-            lightState.setEnabled(true);
-            lightState.attach(light);
-        
             MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
             matState.setDiffuse(color);
             
@@ -431,7 +436,6 @@ public class SubEntityTest {
             
             node.setRenderState(matState);
             node.setRenderState(buf);
-            node.setRenderState(lightState);
             node.setLocalTranslation(0.0f, 0.0f, 0.0f);
             teapot.setModelBound(bbox);
             addModel(node);
@@ -551,15 +555,6 @@ public class SubEntityTest {
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-        LightState lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled(true);
-        lightState.attach(light);
-        
         if (transparent) {
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
             as.setEnabled(true);
@@ -581,7 +576,6 @@ public class SubEntityTest {
         
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(lightState);
         node.setLocalTranslation(x, y, z);
         node.setModelBound(bbox); 
         

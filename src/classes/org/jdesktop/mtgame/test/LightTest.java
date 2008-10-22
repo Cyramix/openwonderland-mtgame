@@ -31,9 +31,7 @@
 
 package org.jdesktop.mtgame.test;
 
-import org.jdesktop.mtgame.processor.RotationProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
-import org.jdesktop.mtgame.processor.JBSelectionProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.CameraNode;
@@ -42,12 +40,12 @@ import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.light.LightNode;
-import com.jme.scene.state.LightState;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
+import com.jme.scene.shape.Sphere;
 import com.jme.scene.shape.Box;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
@@ -85,7 +83,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class JBulletTest {
+public class LightTest {
     /**
      * The WorldManager for this world
      */
@@ -133,12 +131,20 @@ public class JBulletTest {
      * A list of the models we are looking at
      */
     private ArrayList models = new ArrayList();
+    private LightNode globalLight1 = null;
+    private LightNode globalLight2 = null;
+    private LightNode localLight1 = null;
+    private LightNode localLight2 = null;
+    private RenderComponent localLightRC = null;
+    private Node lls2 = null;
+    private Node gls2 = null;
     
-    public JBulletTest(String[] args) {
+    public LightTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
+
         
         createUI(wm);  
         createCameraEntity(wm);   
@@ -146,20 +152,100 @@ public class JBulletTest {
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-        createGlobalLight();
-        createRandomTeapots(wm);
+        createLights();
+        createTeapots();
        
     }
-          
-    private void createGlobalLight() {
+    
+    private void createLights() {    
+        MyLightProcessor lp = null;
+        Entity e = null;
+        Node lightSphere = null;
+        RenderComponent src = null;
+        ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
+  
+        globalLight1 = new LightNode();
         PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setDiffuse(new ColorRGBA(0.75f, 0.0f, 0.0f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
         light.setEnabled(true);
-        LightNode ln = new LightNode();
-        ln.setLight(light);
-        ln.setLocalTranslation(new Vector3f(100, 100, 100));
-        wm.getRenderManager().addLight(ln); 
+        globalLight1.setLight(light);
+        globalLight1.setLocalTranslation(0.0f, 0.0f, 50.0f);
+        lightSphere = createLightSphere(new ColorRGBA(0.75f, 0.0f, 0.0f, 1.0f),
+                new Vector3f(0.0f, 0.0f, 50.0f));
+        src = wm.getRenderManager().createRenderComponent(lightSphere);
+        src.setLightingEnabled(false);
+        lp = new MyLightProcessor(wm, globalLight1, lightSphere, (float) (1.0f * Math.PI / 180.0f),
+                0.0f, 0.0f, 50.0f);
+        e = new Entity("Light1");
+        e.addComponent(MyLightProcessor.class, lp);
+        e.addComponent(RenderComponent.class, src);
+        wm.addEntity(e);
+
+        globalLight2 = new LightNode();
+        light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.0f, 0.75f, 0.0f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setEnabled(true);
+        globalLight2.setLight(light);
+        globalLight2.setLocalTranslation(0.0f, 0.0f, -50.0f);
+        gls2 = createLightSphere(new ColorRGBA(0.0f, 0.75f, 0.0f, 1.0f),
+                new Vector3f(0.0f, 0.0f, -50.0f));
+        src = wm.getRenderManager().createRenderComponent(gls2);
+        src.setLightingEnabled(false);
+        lp = new MyLightProcessor(wm, globalLight2, gls2, (float) (1.0f * Math.PI / 180.0f),
+                0.0f, 0.0f, -50.0f);
+        e = new Entity("Light1");
+        e.addComponent(MyLightProcessor.class, lp);
+        e.addComponent(RenderComponent.class, src);
+        wm.addEntity(e);
+
+        localLight1 = new LightNode();
+        light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.0f, 0.0f, 0.75f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setEnabled(true);
+        localLight1.setLight(light);
+        localLight1.setLocalTranslation(50.0f, 0.0f, 0.0f);
+        lightSphere = createLightSphere(new ColorRGBA(0.0f, 0.0f, 0.75f, 1.0f),
+                new Vector3f(50.0f, 0.0f, 0.0f));
+        src = wm.getRenderManager().createRenderComponent(lightSphere);
+        src.setLightingEnabled(false);
+        lp = new MyLightProcessor(wm, localLight1, lightSphere, (float) (1.0f * Math.PI / 180.0f),
+                50.0f, 0.0f, 0.0f);
+        e = new Entity("Light1");
+        e.addComponent(MyLightProcessor.class, lp);
+        e.addComponent(RenderComponent.class, src);
+        wm.addEntity(e);
+
+        localLight2 = new LightNode();
+        light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.0f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setEnabled(true);
+        localLight2.setLight(light);
+        localLight2.setLocalTranslation(-50.0f, 0.0f, 0.0f);
+        lls2 = createLightSphere(new ColorRGBA(0.75f, 0.75f, 0.0f, 1.0f),
+                new Vector3f(-50.0f, 0.0f, 0.0f));
+        src = wm.getRenderManager().createRenderComponent(lls2);
+        src.setLightingEnabled(false);
+        lp = new MyLightProcessor(wm, localLight2, lls2, (float) (1.0f * Math.PI / 180.0f),
+                -50.0f, 0.0f, 0.0f);
+        e = new Entity("Light1");
+        e.addComponent(MyLightProcessor.class, lp);
+        e.addComponent(RenderComponent.class, src);
+        wm.addEntity(e);
+        
+        wm.getRenderManager().addLight(globalLight1);
+        wm.getRenderManager().addLight(globalLight2);
+    }
+    
+    private Node createLightSphere(ColorRGBA color, Vector3f pos) {
+        Node node = new Node();
+        Sphere sphere = new Sphere("Light", 10, 10, 1.0f);
+        node.attachChild(sphere);
+        sphere.setSolidColor(color);
+        return (node);
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -174,17 +260,11 @@ public class JBulletTest {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
-        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
-        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);        
-        JBSelectionProcessor selector = new JBSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-        selector.setRunInRenderer(true);
-        
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -263,7 +343,7 @@ public class JBulletTest {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        JBulletTest worldBuilder = new JBulletTest(args);
+        LightTest worldBuilder = new LightTest(args);
         
     }
     
@@ -291,6 +371,45 @@ public class JBulletTest {
         frame.setVisible(true);
     }
     
+    class MyLightProcessor extends ProcessorComponent {
+        private WorldManager worldManager = null;
+        private float degrees = 0.0f;
+        private float increment = 0.0f;
+        private Quaternion quaternion = new Quaternion();
+        private Node target = null;
+        private Node target2 = null;
+        private Vector3f startPosition = new Vector3f();
+        private Vector3f currentPosition = new Vector3f();
+
+        public MyLightProcessor(WorldManager worldManager, Node target, Node target2,
+                float increment, float x, float y, float z) {
+            this.worldManager = worldManager;
+            this.target = target;
+            this.target2 = target2;
+            this.increment = increment;
+            startPosition.x = x; startPosition.y = y; startPosition.z = z; 
+            setArmingCondition(new NewFrameCondition(this));
+        }
+
+        public void initialize() {
+            //setArmingCondition(new NewFrameCondition(this));
+        }
+
+        public void compute(ProcessorArmingCollection collection) {
+            degrees += increment;
+            quaternion.fromAngles(0.0f, degrees, 0.0f);
+            quaternion.mult(startPosition, currentPosition);
+            System.out.println(this + " is " + currentPosition);
+        }
+
+        public void commit(ProcessorArmingCollection collection) {
+            target.setLocalTranslation(currentPosition);
+            worldManager.addToUpdateList(target);
+            target2.setLocalTranslation(currentPosition);
+            worldManager.addToUpdateList(target2);
+        }
+    }
+    
     class SwingFrame extends JFrame implements FrameRateListener, ActionListener {
 
         JPanel contentPane;
@@ -301,8 +420,8 @@ public class JBulletTest {
         Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Coords", true);
-        JToggleButton gridButton = new JToggleButton("Grid", true);
+        JToggleButton coordButton = new JToggleButton("Global Light", true);
+        JToggleButton gridButton = new JToggleButton("Local Light", true);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
@@ -414,7 +533,7 @@ public class JBulletTest {
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
+        
             MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
             matState.setDiffuse(color);
             
@@ -489,24 +608,24 @@ public class JBulletTest {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    wm.removeEntity(axis);
-                    System.out.println("Turning Coordinates Off");
+                    wm.getRenderManager().removeLight(globalLight2);
+                    System.out.println("Turning Global Light Off");
                 } else {
                     coordsOn = true;
-                    wm.addEntity(axis);
-                    System.out.println("Turning Coordinates On");
+                    wm.getRenderManager().addLight(globalLight2);
+                    System.out.println("Turning Global Light On");
                 }
             }
             
             if (e.getSource() == gridButton) {
                 if (gridOn) {
                     gridOn = false;
-                    wm.removeEntity(grid);
-                    System.out.println("Turning Grid Off");
+                    localLightRC.removeLight(localLight2);
+                    System.out.println("Turning Local Light Off");
                 } else {
                     gridOn = true;
-                    wm.addEntity(grid);
-                    System.out.println("Turning Grid On");
+                    localLightRC.addLight(localLight2);
+                    System.out.println("Turning Local Light On");
                 }
             }
             
@@ -543,7 +662,7 @@ public class JBulletTest {
     /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
-    private void createRandomTeapots(WorldManager wm) {
+    private void createTeapots() {
         float x = 0.0f;
         float y = 0.0f;
         float z = 0.0f;
@@ -551,30 +670,60 @@ public class JBulletTest {
         int numTeapots = 500;
         Random r = new Random();
         RenderComponent sc = null;
-        JBulletCollisionComponent cc = null;
+        JMECollisionComponent cc = null;
         Entity e = null;
-        JBulletCollisionSystem collisionSystem = (JBulletCollisionSystem) 
-                wm.getCollisionManager().loadCollisionSystem(JBulletCollisionSystem.class);   
+        Node teapot = null;
+        JMECollisionSystem collisionSystem = (JMECollisionSystem) 
+                wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*100.0f) - 50.0f;
-            y = (r.nextFloat()*100.0f) - 50.0f;
-            z = (r.nextFloat()*100.0f) - 50.0f;
-            transparent = r.nextBoolean();
-            Node teapot = createTeapotModel(x, y, z, transparent);
-            
-            e = new Entity("Teapot " + i);
-            sc = wm.getRenderManager().createRenderComponent(teapot);
-            cc = collisionSystem.createCollisionComponent(teapot);
-            e.addComponent(RenderComponent.class, sc);
-            e.addComponent(CollisionComponent.class, cc);
-            
-            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-            e.addComponent(ProcessorComponent.class, rp);
-            wm.addEntity(e);                        
-        }
+        teapot = createTeapotModel(x, y, z, transparent);
+        e = new Entity("Teapot 1");
+        localLightRC = wm.getRenderManager().createRenderComponent(teapot);
+        localLightRC.addLight(localLight1);
+        localLightRC.addLight(localLight2);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, localLightRC);
+        e.addComponent(CollisionComponent.class, cc);
+        wm.addEntity(e);
+
+        x = 25.0f; z = 25.0f;
+        teapot = createTeapotModel(x, y, z, transparent);
+        e = new Entity("Teapot 2");
+        sc = wm.getRenderManager().createRenderComponent(teapot);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
+        e.addComponent(CollisionComponent.class, cc);
+        wm.addEntity(e);
         
+        
+        x = 25.0f; z = -25.0f;
+        teapot = createTeapotModel(x, y, z, transparent);
+        e = new Entity("Teapot 3");
+        sc = wm.getRenderManager().createRenderComponent(teapot);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
+        e.addComponent(CollisionComponent.class, cc);
+        wm.addEntity(e);
+        
+        
+        x = -25.0f; z = -25.0f;
+        teapot = createTeapotModel(x, y, z, transparent);
+        e = new Entity("Teapot 4");
+        sc = wm.getRenderManager().createRenderComponent(teapot);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
+        e.addComponent(CollisionComponent.class, cc);
+        wm.addEntity(e);
+        
+        
+        x = -25.0f; z = 25.0f;
+        teapot = createTeapotModel(x, y, z, transparent);
+        e = new Entity("Teapot 5");
+        sc = wm.getRenderManager().createRenderComponent(teapot);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
+        e.addComponent(CollisionComponent.class, cc);
+        wm.addEntity(e);
     }
     
     private Node createTeapotModel(float x, float y, float z, boolean transparent) {
@@ -593,7 +742,7 @@ public class JBulletTest {
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
+        
         if (transparent) {
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
             as.setEnabled(true);
