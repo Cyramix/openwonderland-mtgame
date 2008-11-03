@@ -134,6 +134,9 @@ public class AttachPointTest implements RenderUpdater {
      */
     private ArrayList models = new ArrayList();
     
+    private Canvas canvas = null;
+    private RenderBuffer rb = null;
+    
     public AttachPointTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
@@ -166,16 +169,17 @@ public class AttachPointTest implements RenderUpdater {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
-        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);        
+        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
         SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         selector.setRunInRenderer(true);
         
@@ -295,7 +299,6 @@ public class AttachPointTest implements RenderUpdater {
         JPanel canvasPanel = new JPanel();
         JPanel optionsPanel = new JPanel();
         JPanel statusPanel = new JPanel();
-        Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
         
         JToggleButton coordButton = new JToggleButton("Coords", true);
@@ -341,8 +344,9 @@ public class AttachPointTest implements RenderUpdater {
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            canvas = wm.getRenderManager().createCanvas(width, height);
-            wm.getRenderManager().setCurrentCanvas(canvas);
+            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            wm.getRenderManager().addRenderBuffer(rb);
+            canvas = rb.getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
@@ -462,7 +466,7 @@ public class AttachPointTest implements RenderUpdater {
         greenRc = createTeapotEntity( 15.0f, 0.0f, -15.0f, new ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f), rc.getSceneRoot(), collisionSystem);
         Entity e = new Entity("INPUT");
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent listener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent listener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         KeyboardProcessor kp = new KeyboardProcessor(listener, rc.getSceneRoot(), greenRc);
         e.addComponent(ProcessorComponent.class, kp);
         wm.addEntity(e);
@@ -477,13 +481,13 @@ public class AttachPointTest implements RenderUpdater {
         Node teapot = createTeapotModel(x, y, z, color);
         e = new Entity("Teapot");
         sc = wm.getRenderManager().createRenderComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
         if (attachPoint != null) {
             sc.setAttachPoint(attachPoint);
         }
         cc = (JMECollisionComponent)cs.createCollisionComponent(teapot);
         e.addComponent(CollisionComponent.class, cc);
-        e.addComponent(RenderComponent.class, sc);
-
+        
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
                 teapot, (float) (6.0f * Math.PI / 180.0f));
         e.addComponent(ProcessorComponent.class, rp);
@@ -544,13 +548,15 @@ public class AttachPointTest implements RenderUpdater {
         public void initialize() {
             setArmingCondition(collection);
         }
-    
+        
+        public void compute(ProcessorArmingCollection collection) {
+        }
+        
         public void commit(ProcessorArmingCollection pc) {
             Object[] events = getEvents();
             for (int i = 0; i < events.length; i++) {
                 if (events[i] instanceof KeyEvent) {
                     KeyEvent ke = (KeyEvent) events[i];
-                    System.out.println(ke);
                     if (ke.getID() == KeyEvent.KEY_TYPED && ke.getKeyChar() == ' ') {
                         if (attached) {
                             rc.setAttachPoint(null);

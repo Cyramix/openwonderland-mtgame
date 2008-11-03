@@ -64,11 +64,6 @@ public class AWTEventProcessorComponent extends ProcessorComponent {
      * @param conditions
      */
     public void compute(ProcessorArmingCollection collection) {
-        Object[] events = eventListener.getEvents();
-        
-        if (events.length == 0) {
-            System.out.println("No Events!!!!!");
-        }
     }
     
     public void commit(ProcessorArmingCollection collection) {        

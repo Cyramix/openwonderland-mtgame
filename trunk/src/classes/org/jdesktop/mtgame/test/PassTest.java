@@ -187,6 +187,9 @@ public class PassTest implements RenderUpdater {
      * A list of the models we are looking at
      */
     private ArrayList models = new ArrayList();
+        
+    private Canvas canvas = null;
+    private RenderBuffer rb = null;
     
     public PassTest(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -230,12 +233,13 @@ public class PassTest implements RenderUpdater {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 10000.0f, true);
+        rb.setCameraComponent(cc);
         jmeCam = cc.getCamera();
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         
         PathCameraProcessor eventProcessor = new PathCameraProcessor(cameraListener, cameraNode, wm, 
@@ -829,7 +833,6 @@ public class PassTest implements RenderUpdater {
         JPanel canvasPanel = new JPanel();
         JPanel optionsPanel = new JPanel();
         JPanel statusPanel = new JPanel();
-        Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
         
         JToggleButton coordButton = new JToggleButton("Coords", true);
@@ -875,8 +878,9 @@ public class PassTest implements RenderUpdater {
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            canvas = wm.getRenderManager().createCanvas(width, height);
-            wm.getRenderManager().setCurrentCanvas(canvas);
+            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            wm.getRenderManager().addRenderBuffer(rb);
+            canvas = rb.getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);

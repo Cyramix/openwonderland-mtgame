@@ -108,7 +108,7 @@ public class RenderComponent extends EntityComponent {
        Entity e = getEntity();
        
        // Nothing to do if we don't have an entity
-       if (e != null) {
+       if (e != null && e.getWorldManager() != null) {
            // First, see if we need to detach from our current location
            if (attachPoint != null) {
                // Detach and put the highest parent on the update list

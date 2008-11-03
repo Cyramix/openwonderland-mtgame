@@ -32,6 +32,7 @@
 package org.jdesktop.mtgame;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.jme.scene.Node;
 import com.jme.scene.Geometry;
@@ -57,6 +58,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * The list of collision components to be used for collision queries
      */
     private ArrayList collisionComponents = new ArrayList();
+    private HashMap spatialMap = new HashMap();
     
     /**
      * Cached camera information
@@ -76,6 +78,7 @@ public class JMECollisionSystem extends CollisionSystem {
     public void addCollisionComponent(CollisionComponent cc) {
         synchronized (collisionComponents) {
             collisionComponents.add(cc);
+            spatialMap.put(cc.getNode(), cc);
         }
     }
         
@@ -86,6 +89,7 @@ public class JMECollisionSystem extends CollisionSystem {
     public void removeCollisionComponent(JMECollisionComponent cc) {
         synchronized (collisionComponents) {
             collisionComponents.remove(cc);
+            spatialMap.remove(cc.getNode());
         }
     }
     
@@ -198,30 +202,21 @@ public class JMECollisionSystem extends CollisionSystem {
      * Find the entity which contains this geometry
      */
     private JMEPickDetails getPickDetails(Geometry g, PickInfo pickInfo, PickData pickData) {
-        CollisionComponent cc = null;
+        JMECollisionComponent cc = null;
         Entity entity = null;
         JMEPickDetails pickDetails = null;
         
         // First, find the topmost parent
         Node parent = g.getParent();
         Node node = parent;
-        while (parent != null) {
+        cc = (JMECollisionComponent) spatialMap.get(node);
+        while (cc == null && parent != null) {
             node = parent;
             parent = parent.getParent();
+            cc = (JMECollisionComponent) spatialMap.get(node);
         }
+        entity = cc.getEntity();        
         
-        // Now look for node through our collision components
-        // We should probably turn this into a hastable
-        synchronized (collisionComponents) {
-            for (int i=0; i<collisionComponents.size(); i++) {
-                cc = (CollisionComponent)collisionComponents.get(i);
-                if (cc.getNode() == node) {
-                    // This is the one we want
-                    entity = cc.getEntity();
-                    break;
-                }
-            } 
-        }
         pickDetails = new JMEPickDetails(this, entity, cc, pickInfo, 
                 pickData, pickData.getDistance());
         return (pickDetails);
