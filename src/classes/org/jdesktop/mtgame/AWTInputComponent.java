@@ -32,6 +32,7 @@
 package org.jdesktop.mtgame;
 
 import java.awt.AWTEvent;
+import java.awt.Canvas;
 import java.awt.event.AWTEventListener;
 import java.util.ArrayList;
 
@@ -53,8 +54,14 @@ public class AWTInputComponent extends InputComponent implements AWTEventListene
      */
     private int eventMask = 0;
     
-    AWTInputComponent(int mask) {
+    /**
+     * The Canvas that generates the events
+     */
+    private Canvas canvas = null;
+    
+    AWTInputComponent(Canvas c, int mask) {
         eventMask = mask;
+        canvas = c;
     }
     
     /**
@@ -62,6 +69,13 @@ public class AWTInputComponent extends InputComponent implements AWTEventListene
      */
     int getEventMask() {
         return (eventMask);
+    }
+    
+    /**
+     * Get the event mask
+     */
+    Canvas getCanvas() {
+        return (canvas);
     }
     
     /**

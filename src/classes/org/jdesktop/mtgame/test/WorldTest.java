@@ -85,6 +85,9 @@ public class WorldTest {
     private int width = 800;
     private int height = 600;
     private float aspect = 800.0f/600.0f;
+        
+    private Canvas canvas = null;
+    private RenderBuffer rb = null;
     
     public WorldTest(String[] args) {
         WorldManager wm = new WorldManager("TestWorld");
@@ -118,11 +121,12 @@ public class WorldTest {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent eventListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent eventListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         camera.addComponent(ProcessorComponent.class, eventProcessor);   
@@ -313,7 +317,6 @@ public class WorldTest {
 
         JPanel contentPane;
         JPanel mainPanel = new JPanel();
-        Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
 
         // Construct the frame
@@ -333,10 +336,11 @@ public class WorldTest {
             setTitle("DUCK!");
 
             // make the canvas:
-            canvas = wm.getRenderManager().createCanvas(width, height);
+            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            wm.getRenderManager().addRenderBuffer(rb);
+            canvas = rb.getCanvas();
             canvas.setVisible(true);
             wm.getRenderManager().setFrameRateListener(this, 100);
-            wm.getRenderManager().setCurrentCanvas(canvas);
 
             contentPane.add(mainPanel, BorderLayout.NORTH);
             mainPanel.add(fpsLabel,

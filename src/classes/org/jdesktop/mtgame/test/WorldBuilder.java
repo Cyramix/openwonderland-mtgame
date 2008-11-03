@@ -137,6 +137,9 @@ public class WorldBuilder {
      */
     private ArrayList models = new ArrayList();
     private LightNode lightNode = null;
+        
+    private Canvas canvas = null;
+    private RenderBuffer rb = null;
     
     public WorldBuilder(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -162,7 +165,7 @@ public class WorldBuilder {
         wm.addEntity(axis);
          
         createRandomTeapots(wm);
-       
+        
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -172,16 +175,17 @@ public class WorldBuilder {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
-        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);        
+        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
         MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
@@ -304,7 +308,6 @@ public class WorldBuilder {
         JPanel canvasPanel = new JPanel();
         JPanel optionsPanel = new JPanel();
         JPanel statusPanel = new JPanel();
-        Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
         
         JToggleButton coordButton = new JToggleButton("Coords", true);
@@ -344,17 +347,43 @@ public class WorldBuilder {
             
             // Create Menu
             JMenu createMenu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot");
+            createTeapotItem = new JMenuItem("Teapot1");
             createTeapotItem.addActionListener(this);
             createMenu.add(createTeapotItem);
             menuBar.add(createMenu);
+            
+            JMenu test1Menu = new JMenu("Test1");
+            createTeapotItem = new JMenuItem("Teapot2");
+            createTeapotItem.addActionListener(this);
+            test1Menu.add(createTeapotItem);
+            menuBar.add(test1Menu);
+            
+            JMenu test2Menu = new JMenu("Create");
+            createTeapotItem = new JMenuItem("Teapot3");
+            createTeapotItem.addActionListener(this);
+            test2Menu.add(createTeapotItem);
+            menuBar.add(test2Menu);
+            
+            JMenu test3Menu = new JMenu("Create");
+            createTeapotItem = new JMenuItem("Teapot4");
+            createTeapotItem.addActionListener(this);
+            test3Menu.add(createTeapotItem);
+            createTeapotItem = new JMenuItem("Teapot5");
+            createTeapotItem.addActionListener(this);
+            test3Menu.add(createTeapotItem);
+            createTeapotItem = new JMenuItem("Teapot6");
+            createTeapotItem.addActionListener(this);
+            test3Menu.add(createTeapotItem);
+            menuBar.add(test3Menu);
+            
             
             menuPanel.add(menuBar);
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            canvas = wm.getRenderManager().createCanvas(width, height);
-            wm.getRenderManager().setCurrentCanvas(canvas);
+            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            wm.getRenderManager().addRenderBuffer(rb);
+            canvas = rb.getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
@@ -576,9 +605,11 @@ public class WorldBuilder {
             e.addComponent(CollisionComponent.class, cc);
 
             
+            ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
             RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-            e.addComponent(ProcessorComponent.class, rp);
+                teapot, (float) (6.0f * Math.PI / 180.0f));       
+            pcc.addProcessor(rp);
+            e.addComponent(ProcessorCollectionComponent.class, pcc);
             wm.addEntity(e);
                         
         }
@@ -627,6 +658,4 @@ public class WorldBuilder {
         
         return (node);
     }
-
-
 }

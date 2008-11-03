@@ -83,7 +83,7 @@ class ProcessorManager extends Thread {
      * Two lists to keep track of post event processing
      */
     private ArrayList postEventArmed = new ArrayList();
-    private ArrayList eventsInterested = new ArrayList();
+    private ArrayList postEventListeners = new ArrayList();
     
     /**
      * The current list of triggered processors
@@ -345,12 +345,23 @@ class ProcessorManager extends Thread {
      * Arm a post event condition
      */
     void armPostEvent(PostEventCondition condition) {
+        boolean pendingTrigger = false;
         ProcessorComponent pc = condition.getProcessorComponent();
       
         synchronized (postEventArmed) {
             if (!postEventArmed.contains(pc)) {
+                if (condition.eventsPending()) {
+                    pendingTrigger = true;
+                }
                 postEventArmed.add(pc);
             }
+            if (!postEventListeners.contains(condition)) {
+                postEventListeners.add(condition);
+            }
+        }
+        if (pendingTrigger) {
+            //System.out.println("PENDING POST EVENT");
+            triggerPostEvent();
         }
     }
     
@@ -494,9 +505,24 @@ class ProcessorManager extends Thread {
     }
 
     /**
+     * Distribute a post event
+     */
+    void distributePostEvent(long event) {
+        synchronized (postEventArmed) {
+            // Pass out the event
+            for (int i=0; i<postEventListeners.size(); i++) {
+                PostEventCondition cond = (PostEventCondition) postEventListeners.get(i);
+                if (cond.triggers(event)) {
+                    cond.addTriggerEvent(event);
+                }
+            }
+        }
+    }
+    
+    /**
      * Trigger a post event
      */
-    synchronized void triggerPostEvent(long event) {
+    synchronized void triggerPostEvent() {
         int index = 0;
         PostEventCondition condition = null;
         ProcessorComponent pc = null;
@@ -508,8 +534,7 @@ class ProcessorManager extends Thread {
                 pc = (ProcessorComponent) postEventArmed.get(index);               
                 condition = (PostEventCondition)findCondition(PostEventCondition.class, pc.getArmingCondition());
                 
-                if (pc.isEnabled() && condition.triggers(event)) {
-                    condition.addTriggerEvent(event);
+                if (pc.isEnabled() && condition.eventsPending()) {
                     pc.addTriggerCondition(condition);
 
                     if (addToTriggered(pc) && !anyTriggered) {

@@ -36,6 +36,7 @@ import com.jme.renderer.pass.Pass;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.awt.Canvas;
 
 
 /**
@@ -242,7 +243,8 @@ public class WorldManager {
      * Post an event to the system
      */
     public void postEvent(long event) {
-        processorManager.triggerPostEvent(event);
+        processorManager.distributePostEvent(event);
+        processorManager.triggerPostEvent();
     }
     
     /**
@@ -353,29 +355,29 @@ public class WorldManager {
     /**
      * Start tracking key input.
      */
-    void trackKeyInput(Object listener) {
-        renderManager.trackKeyInput(listener);
+    void trackKeyInput(Canvas c, Object listener) {
+        renderManager.trackKeyInput(c, listener);
     }
 
     /**
      * Stop tracking key input
      */
-    void untrackKeyInput(Object listener) {
-        renderManager.untrackKeyInput(listener);
+    void untrackKeyInput(Canvas c, Object listener) {
+        renderManager.untrackKeyInput(c, listener);
     }
 
     /**
      * Set the MouseInput to track.  Null means stop tracking
      */
-    void trackMouseInput(Object listener) {
-        renderManager.trackMouseInput(listener);
+    void trackMouseInput(Canvas c, Object listener) {
+        renderManager.trackMouseInput(c, listener);
     }
 
     /**
      * Stop tracking key input
      */
-    void untrackMouseInput(Object listener) {
-        renderManager.untrackMouseInput(listener);
+    void untrackMouseInput(Canvas c, Object listener) {
+        renderManager.untrackMouseInput(c, listener);
     }
     
 }

@@ -32,6 +32,7 @@
 package org.jdesktop.mtgame;
 
 import java.awt.event.AWTEventListener;
+import java.awt.Canvas;
 
 /**
  * This class handles input management for the system.  A custom input manager
@@ -57,7 +58,7 @@ public abstract class InputManager {
     /**
      * Create an InputComponent 
      */
-    public abstract InputComponent createInputComponent(int events);
+    public abstract InputComponent createInputComponent(Canvas c, int events);
             
     /**
      * Create an InputComponent 

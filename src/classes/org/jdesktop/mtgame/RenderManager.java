@@ -61,11 +61,6 @@ public class RenderManager {
      * The entity process controller - used for new frame triggers
      */
     private WorldManager worldManager = null;
-    
-    /**
-     * A flag indicating that the renderer has been initialized
-     */
-    private boolean initialized = false;
 
     /**
      * The default constructor
@@ -122,26 +117,10 @@ public class RenderManager {
     }  
     
     /**
-     * Create a window
+     * Create a render buffer with the characteristics given.
      */
-    public Canvas createCanvas(int width, int height) {
-        Canvas canvas = null;
-
-        if (!initialized) {
-            renderer.initialize();
-            initialized = true;
-        }
-        canvas = renderer.createCanvas(width, height);
-        return (canvas);
-    }
-
-    /**
-     * Set the current rendering canvas to be the one given.
-     * 
-     * @param canvas
-     */
-    public void setCurrentCanvas(Canvas canvas) {
-        renderer.setCurrentCanvas(canvas);
+    public void addRenderBuffer(RenderBuffer rb) {
+        renderer.addRenderBuffer(rb);
     }
     
     /**
@@ -299,29 +278,29 @@ public class RenderManager {
     /**
      * Start tracking key input.
      */
-    void trackKeyInput(Object listener) {
-        renderer.trackKeyInput(listener);
+    void trackKeyInput(Canvas c, Object listener) {
+        renderer.trackKeyInput(c, listener);
     }
 
     /**
      * Stop tracking key input
      */
-    void untrackKeyInput(Object listener) {
-        renderer.untrackKeyInput(listener);
+    void untrackKeyInput(Canvas c, Object listener) {
+        renderer.untrackKeyInput(c, listener);
     }
 
     /**
      * Set the MouseInput to track.  Null means stop tracking
      */
-    void trackMouseInput(Object listener) {
-        renderer.trackMouseInput(listener);
+    void trackMouseInput(Canvas c, Object listener) {
+        renderer.trackMouseInput(c, listener);
     }
 
     /**
      * Stop tracking key input
      */
-    void untrackMouseInput(Object listener) {
-        renderer.untrackMouseInput(listener);
+    void untrackMouseInput(Canvas c, Object listener) {
+        renderer.untrackMouseInput(c, listener);
     }
 
     /**

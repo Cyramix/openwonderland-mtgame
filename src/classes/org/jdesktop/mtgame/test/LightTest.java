@@ -138,6 +138,9 @@ public class LightTest {
     private RenderComponent localLightRC = null;
     private Node lls2 = null;
     private Node gls2 = null;
+        
+    private Canvas canvas = null;
+    private RenderBuffer rb = null;
     
     public LightTest(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -255,11 +258,12 @@ public class LightTest {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
-        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(eventMask);
+        AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
@@ -399,7 +403,7 @@ public class LightTest {
             degrees += increment;
             quaternion.fromAngles(0.0f, degrees, 0.0f);
             quaternion.mult(startPosition, currentPosition);
-            System.out.println(this + " is " + currentPosition);
+            //System.out.println(this + " is " + currentPosition);
         }
 
         public void commit(ProcessorArmingCollection collection) {
@@ -417,7 +421,6 @@ public class LightTest {
         JPanel canvasPanel = new JPanel();
         JPanel optionsPanel = new JPanel();
         JPanel statusPanel = new JPanel();
-        Canvas canvas = null;
         JLabel fpsLabel = new JLabel("FPS: ");
         
         JToggleButton coordButton = new JToggleButton("Global Light", true);
@@ -466,8 +469,9 @@ public class LightTest {
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            canvas = wm.getRenderManager().createCanvas(width, height);
-            wm.getRenderManager().setCurrentCanvas(canvas);
+            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            wm.getRenderManager().addRenderBuffer(rb);
+            canvas = rb.getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);

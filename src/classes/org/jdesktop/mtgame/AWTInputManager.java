@@ -34,6 +34,7 @@ package org.jdesktop.mtgame;
 import java.util.ArrayList;
 import java.awt.event.*;
 import java.awt.AWTEvent;
+import java.awt.Canvas;
 
 /**
  * This is the default input manager.  It listens to mouse and 
@@ -90,13 +91,13 @@ class AWTInputManager extends InputManager implements KeyListener,
     /**
      * Create an AWTInputComponent.
      */
-    public InputComponent createInputComponent(int events) {
-        AWTInputComponent ic = new AWTInputComponent(events);
+    public InputComponent createInputComponent(Canvas c, int events) {
+        AWTInputComponent ic = new AWTInputComponent(c, events);
         if ((events & KEY_EVENTS) != 0) {
-            addAWTKeyListener(ic);
+            addAWTKeyListener(c, ic);
         }
         if ((events & MOUSE_EVENTS) != 0) {
-            addAWTMouseListener(ic);
+            addAWTMouseListener(c, ic);
         }
         return (ic);
     }
@@ -109,10 +110,10 @@ class AWTInputManager extends InputManager implements KeyListener,
         AWTInputComponent aic = (AWTInputComponent)ic;
         int events = aic.getEventMask();
         if ((events & KEY_EVENTS) != 0) {
-            removeAWTKeyListener(aic);
+            removeAWTKeyListener(aic.getCanvas(), aic);
         }
         if ((events & MOUSE_EVENTS) != 0) {
-            removeAWTMouseListener(aic);
+            removeAWTMouseListener(aic.getCanvas(), aic);
         }
     }
     
@@ -120,11 +121,11 @@ class AWTInputManager extends InputManager implements KeyListener,
      * This method adds an entity to the list of those tracking key events
      * @param e The interested entity
      */
-    void addAWTKeyListener(AWTEventListener listener) {
+    void addAWTKeyListener(Canvas c, AWTEventListener listener) {
         synchronized (keyListeners) {
             keyListeners.add(listener);
             if (!keyListening) {
-                worldManager.trackKeyInput(this);
+                worldManager.trackKeyInput(c, this);
                 keyListening = true;
             }
         }
@@ -134,11 +135,11 @@ class AWTInputManager extends InputManager implements KeyListener,
      * This method removes an entity from the list of those tracking key events
      * @param e The uinterested entity
      */    
-    void removeAWTKeyListener(AWTEventListener listener) {
+    void removeAWTKeyListener(Canvas c, AWTEventListener listener) {
         synchronized (keyListeners) {
             keyListeners.remove(listener);
             if (keyListeners.size() == 0) {
-                worldManager.untrackKeyInput(this);
+                worldManager.untrackKeyInput(c, this);
                 keyListening = false;
             }
         }
@@ -148,11 +149,11 @@ class AWTInputManager extends InputManager implements KeyListener,
      * This method adds an entity to the list of those tracking mouse events
      * @param e The interested entity
      */    
-    void addAWTMouseListener(AWTEventListener listener) {
+    void addAWTMouseListener(Canvas c, AWTEventListener listener) {
         synchronized (mouseListeners) {
             mouseListeners.add(listener);
             if (!mouseListening) {
-                worldManager.trackMouseInput(this);
+                worldManager.trackMouseInput(c, this);
                 mouseListening = true;
             }
         }
@@ -162,11 +163,11 @@ class AWTInputManager extends InputManager implements KeyListener,
      * This method removes an entity from the list of those tracking mouse events
      * @param e The uinterested entity
      */        
-    void removeAWTMouseListener(AWTEventListener listener) {
+    void removeAWTMouseListener(Canvas c, AWTEventListener listener) {
         synchronized (mouseListeners) {
             mouseListeners.remove(listener);
             if (mouseListeners.size() == 0) {
-                worldManager.untrackMouseInput(this);
+                worldManager.untrackMouseInput(c, this);
                 mouseListening = false;
             }
         }

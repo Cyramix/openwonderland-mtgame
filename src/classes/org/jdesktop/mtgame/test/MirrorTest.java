@@ -31,26 +31,32 @@
 
 package org.jdesktop.mtgame.test;
 
+import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
+import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
+import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
-import com.jme.scene.Spatial;
-import com.jme.image.Texture;
-import com.jme.scene.Spatial.TextureCombineMode;
-import com.jme.scene.state.TextureState;
-import com.jme.util.TextureManager;
 import com.jme.scene.CameraNode;
-import com.jme.scene.Skybox;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
-import com.jme.scene.state.CullState;
-import com.jme.scene.state.FogState;
-import com.jme.scene.state.GLSLShaderObjectsState;
+import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
+import com.jme.light.LightNode;
+import com.jme.scene.state.TextureState;
+import com.jme.image.Texture2D;
+import com.jme.scene.state.MaterialState;
+import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
+import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
+import com.jme.scene.shape.Box;
+import com.jme.scene.shape.Quad;
+import com.jme.scene.Geometry;
+import com.jme.bounding.BoundingBox;
+import com.jme.bounding.BoundingVolume;
 import com.jme.scene.Line;
 import com.jme.math.*;
 
@@ -70,20 +76,21 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import javax.swing.JLabel;
 import javax.swing.JFileChooser;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
 
+import java.util.Random;
+
+
 /**
  * A World test application
  * 
  * @author Doug Twilleager
  */
-public class SkyboxTest implements RenderUpdater {
+public class MirrorTest {
     /**
      * The WorldManager for this world
      */
@@ -127,11 +134,8 @@ public class SkyboxTest implements RenderUpdater {
      */
     private Entity axis = new Entity("Axis");
     
-    /**
-     * URL's for the shaders
-     */
-    private URL vert = null;
-    private URL frag = null;
+    private RenderComponent orthoRC = null;
+    private Quad quadGeo = null;
     
     /**
      * A list of the models we are looking at
@@ -141,17 +145,8 @@ public class SkyboxTest implements RenderUpdater {
     private Canvas canvas = null;
     private RenderBuffer rb = null;
     
-    public SkyboxTest(String[] args) {
+    public MirrorTest(String[] args) {
         wm = new WorldManager("TestWorld");
-        
-        try {
-            vert = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleVertShader");
-            frag = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleFragShader");
-            //vert = new URL("file:/Documents and Settings/runner/Desktop/Work/mtgame/src/org/jdesktop/mtgame/SampleVertShader");
-            //frag = new URL("file:/Documents and Settings/runner/Desktop/Work/mtgame/src/org/jdesktop/mtgame/SampleFragShader");
-        } catch (MalformedURLException e) {
-            System.out.println(e);
-        }
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
@@ -162,12 +157,21 @@ public class SkyboxTest implements RenderUpdater {
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-        
-        createSkybox(wm);
-        
-        //createRoom();
-        createTeapots();
+        createGlobalLight();
+        createRandomTeapots(wm);
+        createOrthoObjects();
        
+    }
+              
+    private void createGlobalLight() {
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setEnabled(true);
+        LightNode ln = new LightNode();
+        ln.setLight(light);
+        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        wm.getRenderManager().addLight(ln); 
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -188,12 +192,15 @@ public class SkyboxTest implements RenderUpdater {
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
-        SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-        selector.setRunInRenderer(true);
+        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+
+        //selector.setRunInRenderer(true);
         
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        pcc.addProcessor(selector);
+        //pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -268,74 +275,11 @@ public class SkyboxTest implements RenderUpdater {
         axis.addComponent(RenderComponent.class, rc);
     }
     
-    private void createSkybox(WorldManager wm) {
-        Skybox skybox = new Skybox("skybox", 500, 500, 500);
-
-        String dir = "jmetest/data/skybox1/";
-        Texture north = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "1.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-        Texture south = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "3.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-        Texture east = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "2.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-        Texture west = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "4.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-        Texture up = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "6.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-        Texture down = TextureManager.loadTexture(Texture.class
-                .getClassLoader().getResource(dir + "5.jpg"),
-                Texture.MinificationFilter.BilinearNearestMipMap,
-                Texture.MagnificationFilter.Bilinear);
-
-        skybox.setTexture(Skybox.Face.North, north);
-        skybox.setTexture(Skybox.Face.West, west);
-        skybox.setTexture(Skybox.Face.South, south);
-        skybox.setTexture(Skybox.Face.East, east);
-        skybox.setTexture(Skybox.Face.Up, up);
-        skybox.setTexture(Skybox.Face.Down, down);
-        //skybox.preloadTextures();
-
-        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-        cullState.setEnabled(true);
-        skybox.setRenderState(cullState);
-
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        //zState.setEnabled(false);
-        skybox.setRenderState(zState);
-
-        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
-        fs.setEnabled(false);
-        skybox.setRenderState(fs);
-
-        skybox.setLightCombineMode(Spatial.LightCombineMode.Off);
-        skybox.setCullHint(Spatial.CullHint.Never);
-        skybox.setTextureCombineMode(TextureCombineMode.Replace);
-        skybox.updateRenderState();
-
-        skybox.lockBounds();
-        //skybox.lockMeshes();
-        
-        Entity e = new Entity("Skybox");
-        SkyboxComponent sbc = wm.getRenderManager().createSkyboxComponent(skybox, true);
-        e.addComponent(SkyboxComponent.class, sbc);
-        wm.addEntity(e);
-    }
-    
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        SkyboxTest st = new SkyboxTest(args);
+        MirrorTest worldBuilder = new MirrorTest(args);
         
     }
     
@@ -372,7 +316,7 @@ public class SkyboxTest implements RenderUpdater {
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Coords", true);
+        JToggleButton coordButton = new JToggleButton("Ortho", true);
         JToggleButton gridButton = new JToggleButton("Grid", true);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
@@ -409,6 +353,9 @@ public class SkyboxTest implements RenderUpdater {
             
             // Create Menu
             JMenu createMenu = new JMenu("Create");
+            createTeapotItem = new JMenuItem("Teapot");
+            createTeapotItem.addActionListener(this);
+            createMenu.add(createTeapotItem);
             menuBar.add(createMenu);
             
             menuPanel.add(menuBar);
@@ -461,9 +408,94 @@ public class SkyboxTest implements RenderUpdater {
             models.add(modelRoot);
             
             Entity e = new Entity("Model");
-            RenderComponent rc = wm.getRenderManager().createRenderComponent(modelRoot);
-            e.addComponent(RenderComponent.class, rc);
+            RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
+            e.addComponent(RenderComponent.class, sc);
             wm.addEntity(e);              
+        }
+        
+        private void createTeapot() {
+            Node node = new Node();
+            Teapot teapot = new Teapot();
+            teapot.resetData();
+            node.attachChild(teapot);
+            
+            Triangle[] tris = new Triangle[teapot.getTriangleCount()];
+            
+            BoundingBox bbox = new BoundingBox();
+            bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
+            System.out.println(bbox);
+        
+            ColorRGBA color = new ColorRGBA();
+
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            buf.setEnabled(true);
+            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+
+            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+            matState.setDiffuse(color);
+            
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setBlendEnabled(true);
+            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+            node.setRenderState(as);
+
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            cs.setEnabled(true);
+            cs.setCullFace(CullState.Face.Back);
+            node.setRenderState(cs);
+            
+            node.setRenderState(matState);
+            node.setRenderState(buf);
+            node.setLocalTranslation(0.0f, 0.0f, 0.0f);
+            teapot.setModelBound(bbox);
+            addModel(node);
+            addToVisibleBounds(teapot);
+        }
+            
+        private void addToVisibleBounds(Geometry g) {
+            BoundingVolume bv = g.getModelBound();
+            Entity e = null;
+            Node node = null;
+            ColorRGBA color = new ColorRGBA(1.0f, 0.0f, 0.0f, 0.4f);
+            Box box = null;
+
+            System.out.println("BOUNDS: " + bv);
+            if (bv instanceof BoundingBox) {
+                BoundingBox bbox = (BoundingBox) bv;
+                Vector3f center = bbox.getCenter();
+
+                Vector3f extent = bbox.getExtent(null);
+                box = new Box("Bounds", center, extent.x, extent.y, extent.z);
+                box.setDefaultColor(color);
+
+                e = new Entity("Bounds");
+                node = new Node();
+                node.attachChild(box);
+                RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
+                sc.setLightingEnabled(false);
+                e.addComponent(RenderComponent.class, sc);
+            }
+
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            buf.setEnabled(true);
+            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+            node.setRenderState(buf);
+
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setBlendEnabled(true);
+            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+            node.setRenderState(as);
+
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            cs.setEnabled(true);
+            cs.setCullFace(CullState.Face.Back);
+            node.setRenderState(cs);
+
+            wm.addEntity(e);
         }
     
         /**
@@ -473,13 +505,18 @@ public class SkyboxTest implements RenderUpdater {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    wm.removeEntity(axis);
+                    orthoRC.getSceneRoot().setLocalTranslation(0.0f, 0.0f, 0.0f);
+                    quadGeo.resize(50, 50);
+                    wm.removeEntity(axis);        
                     System.out.println("Turning Coordinates Off");
                 } else {
                     coordsOn = true;
+                    orthoRC.getSceneRoot().setLocalTranslation(width/2, height/2, 0.0f);
+                    quadGeo.resize(width/2, height/2);
                     wm.addEntity(axis);
                     System.out.println("Turning Coordinates On");
                 }
+                orthoRC.setOrtho(coordsOn);
             }
             
             if (e.getSource() == gridButton) {
@@ -517,61 +554,141 @@ public class SkyboxTest implements RenderUpdater {
             if (e.getSource() == exitItem) {
                 System.exit(1);
             }
+            
+            if (e.getSource() == createTeapotItem) {
+                createTeapot();
+            }
         }
     }
     
     /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
-    private void createTeapots() {
-        createTeapotEntity(  0.0f, 0.0f,   0.0f, new ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
-        createTeapotEntity(-15.0f, 0.0f, -15.0f, new ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f));
-        createTeapotEntity(-15.0f, 0.0f,  15.0f, new ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f));
-        createTeapotEntity( 15.0f, 0.0f,  15.0f, new ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f));
-        createTeapotEntity( 15.0f, 0.0f, -15.0f, new ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f));
+    private void createRandomTeapots(WorldManager wm) {
+        float x = 0.0f;
+        float y = 0.0f;
+        float z = 0.0f;
+        boolean transparent = false;
+        int numTeapots = 5;
+        Random r = new Random();
+        RenderComponent sc = null;
+        JMECollisionComponent cc = null;
+        Entity e = null;
+        JMECollisionSystem collisionSystem = (JMECollisionSystem) 
+                wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
+        
+        for (int i=0; i<numTeapots; i++) {
+            x = (r.nextFloat()*50.0f) - 25.0f;
+            y = (r.nextFloat()*50.0f) - 25.0f;
+            z = (r.nextFloat()*50.0f) - 25.0f;
+            transparent = r.nextBoolean();
+            Node teapot = createTeapotModel(x, y, z, transparent);
+            
+            e = new Entity("Teapot " + i);
+            sc = wm.getRenderManager().createRenderComponent(teapot);
+            cc = collisionSystem.createCollisionComponent(teapot);
+            e.addComponent(RenderComponent.class, sc);
+            e.addComponent(CollisionComponent.class, cc);
+
+            
+            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
+                teapot, (float) (6.0f * Math.PI / 180.0f));
+            e.addComponent(ProcessorComponent.class, rp);
+                        wm.addEntity(e);
+                        
+        }
     }
     
-    private void createTeapotEntity(float x, float y, float z, ColorRGBA color) {
-        RenderComponent sc = null;
-        Entity e = null;
+    private void createOrthoObjects() {
+        Node orthoQuad = new Node();
+        quadGeo = new Quad("Ortho", 150, 150);
+        Entity e = new Entity("Ortho ");
+        
+        orthoQuad.attachChild(quadGeo);
+        orthoQuad.setLocalTranslation(0.0f, 75.0f, -100.0f);
+        
+        RenderBuffer rb = new RenderBuffer(RenderBuffer.Target.TEXTURE_2D, width, height);
+        CameraNode cn = new CameraNode("MyCamera", null);
+        Node cameraSG = new Node();
+        cameraSG.attachChild(cn);
+        cameraSG.setLocalTranslation(0.0f, 5.0f, -100.0f);
 
-        Node teapot = createTeapotModel(x, y, z, color);
-        e = new Entity("Teapot");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
+        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cn, 
+                width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
+        wm.getRenderManager().addRenderBuffer(rb);
+        e.addComponent(CameraComponent.class, cc); 
+
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        orthoQuad.setRenderState(buf);
+                
+        Texture2D texture = new Texture2D();
+        rb.setTexture(texture);
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        ts.setEnabled(true);
+        ts.setTexture(rb.getTexture(), 0);
+        quadGeo.setRenderState(ts);
+        
+        orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
+        orthoRC.setOrtho(false);
+        orthoRC.setLightingEnabled(false);
+        e.addComponent(RenderComponent.class, orthoRC);
 
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
+                orthoQuad, (float) (6.0f * Math.PI / 180.0f));
+        //e.addComponent(ProcessorComponent.class, rp);
         wm.addEntity(e);
     }
     
-    private Node createTeapotModel(float x, float y, float z, ColorRGBA color) {
+    private Node createTeapotModel(float x, float y, float z, boolean transparent) {
         Node node = new Node();
         Teapot teapot = new Teapot();
         teapot.resetData();
         node.attachChild(teapot);
 
+        Triangle[] tris = new Triangle[teapot.getTriangleCount()];
+
+        BoundingBox bbox = new BoundingBox();
+        bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
+
+        ColorRGBA color = new ColorRGBA();
+
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
-        shader.setUniform("color", color);
-        // shader.load(vert, frag);
-        // Defer loading until we are in the renderer - this is actually a jme bug we are working around.
-        wm.addRenderUpdater(this, shader);
+        if (transparent) {
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setBlendEnabled(true);
+            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+            node.setRenderState(as);
+            
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            cs.setEnabled(true);
+            cs.setCullFace(CullState.Face.Back);
+            node.setRenderState(cs);
+            
+            color.set(0.0f, 1.0f, 1.0f, 0.75f);
+        }
+
+        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        matState.setDiffuse(color);
         
+        node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(shader);
         node.setLocalTranslation(x, y, z);
+        node.setModelBound(bbox); 
         
         return (node);
     }
 
-    public void update(Object obj) {
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState)obj;
-        shader.load(vert, frag); 
+    public void update(Object object) {
+        RenderBuffer rb = (RenderBuffer) object;
+
     }
 
 }

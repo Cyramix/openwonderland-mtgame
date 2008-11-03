@@ -31,6 +31,8 @@
 
 package org.jdesktop.mtgame;
 
+import java.util.ArrayList;
+
 /**
  * This condition listens for posting of user events
  * 
@@ -45,12 +47,7 @@ public class PostEventCondition extends ProcessorArmingCondition {
     /**
      * The list of triggering events.
      */
-    private long[] triggerEvents = null;
-    
-    /**
-     * The number of trigger events
-     */
-    private int numTriggerEvents = 0;
+    private ArrayList triggerEvents = new ArrayList();
             
     /**
      * The default constructor
@@ -58,7 +55,6 @@ public class PostEventCondition extends ProcessorArmingCondition {
     public PostEventCondition(ProcessorComponent pc, long[] events) {
         super(pc);
         armEvents = events;
-        triggerEvents = new long[events.length];
     }
     
     /**
@@ -75,19 +71,24 @@ public class PostEventCondition extends ProcessorArmingCondition {
     }
     
     /**
+     * Returns whether or not there are any post events pending
+     */
+    boolean eventsPending() {
+        boolean pending = false;
+        synchronized (triggerEvents) {
+            if (triggerEvents.size() > 0) {
+                pending = true;
+            }
+        }
+        return (pending);
+    }
+    
+    /**
      * Add the event to the trigger event
      */
     void addTriggerEvent(long event) {
         synchronized (triggerEvents) {
-            for (int i = 0; i < numTriggerEvents; i++) {
-                if (triggerEvents[i] == event) {
-                    // The event is already on the list
-                    return;
-                }
-            }
-
-            // Add the event to the list
-            triggerEvents[numTriggerEvents++] = event;
+            triggerEvents.add(new Long(event));
         }
     }
     
@@ -98,22 +99,16 @@ public class PostEventCondition extends ProcessorArmingCondition {
         long ret[] = null;
         
         synchronized (triggerEvents) {
-            ret = new long[numTriggerEvents];
+            int length = triggerEvents.size();
+            ret = new long[length];
 
-            for (int i = 0; i < numTriggerEvents; i++) {
-                ret[i] = triggerEvents[i];
+            for (int i = 0; i < length; i++) {
+                Long l = (Long)triggerEvents.get(i);
+                ret[i] = l.longValue();
             }
+            triggerEvents.clear();
         }
         
         return (ret);
-    }
-    
-    /**
-     * Clear the trigger events
-     */
-    void clearTriggerEvents() {
-        synchronized (triggerEvents) {
-            numTriggerEvents = 0;
-        }
     }
 }
