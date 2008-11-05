@@ -587,14 +587,14 @@ class Renderer extends Thread {
         
         for (int i = 0; i < offscreenRenderList.length; i++) {
             rb = (RenderBuffer) offscreenRenderList[i];
-            rb.render();
+            rb.render(this);
         }        
     }
     
     /**
      * This renders the scene to the current canvas
      */
-    void renderScene() {
+    void renderScene(ArrayList excludeList) {
         // First, clear the buffers
         //jmeRenderer.setBackgroundColor(new ColorRGBA(1.0f, 0.0f, 0.0f, 0.0f));
         jmeRenderer.clearQueue();
@@ -612,8 +612,9 @@ class Renderer extends Thread {
         for (int i = 0; i < renderScenes.size(); i++) {
             RenderComponent scene = (RenderComponent) renderScenes.get(i);
             Node sceneRoot = scene.getSceneRoot();
-
-            jmeRenderer.draw(sceneRoot);
+            if (excludeList == null || !excludeList.contains(sceneRoot)) {
+                jmeRenderer.draw(sceneRoot);
+            }
         }
 
         for (int i = 0; i < renderPasses.size(); i++) {
@@ -622,9 +623,7 @@ class Renderer extends Thread {
         }
 
         // This actually does the rendering
-        jmeRenderer.renderQueue();
-
-        currentCanvas.swapBuffers();      
+        jmeRenderer.renderQueue();     
     }
     
     /**
@@ -670,7 +669,8 @@ class Renderer extends Thread {
                 if (setCurrentCanvas(canvas)) {
                     processJMEUpdates(totalTime / 1000000000.0f);
                     renderBuffers();
-                    renderScene();
+                    renderScene(null);
+                    currentCanvas.swapBuffers();
                 }
                 releaseCurrentCanvas();
             }

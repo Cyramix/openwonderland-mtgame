@@ -83,7 +83,7 @@ public class PostEventProcessor extends ProcessorComponent {
         long[] e = pec.getTriggerEvents();
         
         for (int i=0; i<e.length; i++) {
-            //System.out.println("ProcessPostEvent: " + e[i]);
+            System.out.println("ProcessPostEvent: " + name + " " + e[i]);
         }
     }
 

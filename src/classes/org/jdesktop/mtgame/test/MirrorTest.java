@@ -624,8 +624,6 @@ public class MirrorTest {
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         orthoQuad.setRenderState(buf);
                 
-        Texture2D texture = new Texture2D();
-        rb.setTexture(texture);
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
         ts.setEnabled(true);
         ts.setTexture(rb.getTexture(), 0);
