@@ -9,6 +9,8 @@ import java.awt.Canvas;
 import java.util.ArrayList;
 
 import com.jme.image.Texture;
+import com.jme.image.Texture2D;
+import com.jme.image.TextureCubeMap;
 import com.jme.renderer.TextureRenderer;
 
 import java.nio.IntBuffer;
@@ -18,10 +20,12 @@ import com.jme.scene.state.jogl.JOGLTextureState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.Spatial;
 import com.jme.renderer.RenderContext;
+import com.jme.renderer.Camera;
 import com.jme.scene.state.jogl.records.TextureRecord;
 import com.jme.scene.state.jogl.records.TextureStateRecord;
 import com.jme.system.DisplaySystem;
 import com.jme.renderer.ColorRGBA;
+import com.jme.math.Vector3f;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
@@ -73,6 +77,22 @@ public class RenderBuffer {
     private TextureRenderer renderer = null;
     
     /**
+     * The cube map texture
+     */
+    private TextureCubeMap cubeMap = null;
+    
+    /**
+     * A camera for the cubemap render
+     */
+    private Camera cubeMapCamera = null;
+    private Vector3f negativeX = new Vector3f(-1.0f, 0.0f, 0.0f);
+    private Vector3f positiveX = new Vector3f(1.0f, 0.0f, 0.0f);
+    private Vector3f negativeY = new Vector3f(0.0f, -1.0f, 0.0f);
+    private Vector3f positiveY = new Vector3f(0.0f, 1.0f, 0.0f);
+    private Vector3f negativeZ = new Vector3f(0.0f, 0.0f, -1.0f);
+    private Vector3f positiveZ = new Vector3f(0.0f, 0.0f, 1.0f);
+    
+    /**
      * A boolean indicating that this RenderBuffer has been initialized
      */
     private boolean initialized = false;
@@ -111,6 +131,10 @@ public class RenderBuffer {
         this.target = target;
         this.height = height;
         this.width = width;
+        setTexture(new Texture2D());
+        if (target == Target.TEXTURE_CUBEMAP) {
+            cubeMap = new TextureCubeMap();
+        }
     }
     
     /**
@@ -263,7 +287,7 @@ public class RenderBuffer {
     /**
      * Set the target texture
      */
-    public void setTexture(Texture t) {
+    void setTexture(Texture t) {
         texture = t;
         if (textureList.size() == 0) {
             textureList.add(t);
@@ -276,7 +300,14 @@ public class RenderBuffer {
      * Get the texture used for offscreen rendering
      */
     public Texture getTexture() {
-        return (texture);
+        Texture t = null;
+        
+        if (target == Target.TEXTURE_2D) {
+            t = texture;
+        } else if (target == Target.TEXTURE_CUBEMAP) {
+            t = cubeMap;
+        }
+        return (t);
     }
     
     /**
@@ -294,12 +325,26 @@ public class RenderBuffer {
         synchronized (spatialList) {
             if (!initialized) {
                 createTextureRenderer(display);
-                assignTextureId(gl);
-                allocateTextureData(gl);
-                setupState(display);
+                createTextureObjects(gl, display);
                 updateRenderList(skybox, renderComponents);
                 initialized = true;
             }
+        }
+    }
+    
+    /**
+     * Create the jME texture objects, and prep them for rendering
+     */
+    private void createTextureObjects(GL gl, DisplaySystem display) {
+        // First do the common render target
+        if (target == Target.TEXTURE_2D) {
+            assignTextureId(gl, texture, Texture.Type.TwoDimensional);
+            allocateTextureData(gl, texture, Texture.Type.TwoDimensional);
+            setupState(display, texture);
+        } else if (target == Target.TEXTURE_CUBEMAP) {
+            assignTextureId(gl, cubeMap, Texture.Type.CubeMap);
+            allocateTextureData(gl, cubeMap, Texture.Type.CubeMap);
+            setupState(display, cubeMap);
         }
     }
         
@@ -312,10 +357,8 @@ public class RenderBuffer {
                 break;
             case TEXTURE_2D:
             case SHADOWMAP:
-                tRtarget = TextureRenderer.Target.Texture2D;
-                break;
             case TEXTURE_CUBEMAP:
-                tRtarget = TextureRenderer.Target.TextureCubeMap;
+                tRtarget = TextureRenderer.Target.Texture2D;
                 break;
         }
         renderer = display.createTextureRenderer(getWidth(), getHeight(), tRtarget);
@@ -325,34 +368,32 @@ public class RenderBuffer {
     /**
      * Manage the texture id.
      */
-    void assignTextureId(GL gl) {
+    void assignTextureId(GL gl, Texture t, Texture.Type type) {
         IntBuffer ibuf = BufferUtils.createIntBuffer(1);
 
-        if (texture.getTextureId() != 0) {
-            ibuf.put(texture.getTextureId());
+        if (t.getTextureId() != 0) {
+            ibuf.put(t.getTextureId());
             gl.glDeleteTextures(ibuf.limit(), ibuf); // TODO Check <size>
             ibuf.clear();
         }
 
         // Create the texture
         gl.glGenTextures(ibuf.limit(), ibuf); // TODO Check <size>
-        texture.setTextureId(ibuf.get(0));
-        TextureManager.registerForCleanup(texture.getTextureKey(), texture.getTextureId());
+        t.setTextureId(ibuf.get(0));
+        TextureManager.registerForCleanup(t.getTextureKey(), t.getTextureId());
 
-        JOGLTextureState.doTextureBind(texture.getTextureId(), 0,
-                Texture.Type.TwoDimensional);
+        JOGLTextureState.doTextureBind(t.getTextureId(), 0, type);
     }
     
         
     /**
      * Allocate the texture data, based upon what we are doing.
      */
-    void allocateTextureData(GL gl) {
+    void allocateTextureData(GL gl, Texture t, Texture.Type type) {
         int components = GL.GL_RGBA8;
 	int format = GL.GL_RGBA;
 	int dataType = GL.GL_UNSIGNED_BYTE;
         Texture.RenderToTextureType rttType = Texture.RenderToTextureType.RGBA;
-        int glTarget = GL.GL_TEXTURE_2D;
         
         switch (target) {
             case TEXTURE_1D:
@@ -365,29 +406,50 @@ public class RenderBuffer {
             case TEXTURE_CUBEMAP:
                 break;
         }
-        texture.setRenderToTextureType(rttType);
-        gl.glTexImage2D(glTarget, 0, components, width, height, 0,
-		    format, dataType, null);
+        t.setRenderToTextureType(rttType);
         
-        // Initialize mipmapping for this texture, if requested
-        if (texture.getMinificationFilter().usesMipMapLevels()) {
-            gl.glGenerateMipmapEXT(glTarget);
+        if (type == Texture.Type.TwoDimensional) {
+            gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, components, width, height, 0,
+                	    format, dataType, null);
+            if (t.getMinificationFilter().usesMipMapLevels()) {
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
+            }
+        } else if (type == Texture.Type.CubeMap) {
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, components, width, height, 0,
+                    format, dataType, null);
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, components, width, height, 0,
+                    format, dataType, null);
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, components, width, height, 0,
+                    format, dataType, null);
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, components, width, height, 0,
+                    format, dataType, null);
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, components, width, height, 0,
+                    format, dataType, null);
+            gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, components, width, height, 0,
+                    format, dataType, null);
+            if (t.getMinificationFilter().usesMipMapLevels()) {
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+                gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+            }
         }
-
     }
     
     /**
      * Setup some state on the texture
      */
-    void setupState(DisplaySystem display) {   
+    void setupState(DisplaySystem display, Texture t) {   
         // Setup filtering and wrap
         RenderContext<?> context = display.getCurrentContext();
         TextureStateRecord record = (TextureStateRecord) context
                 .getStateRecord(RenderState.RS_TEXTURE);
-        TextureRecord texRecord = record.getTextureRecord(texture.getTextureId(), texture.getType());
+        TextureRecord texRecord = record.getTextureRecord(t.getTextureId(), t.getType());
 
-        JOGLTextureState.applyFilter(texture, texRecord, 0, record);
-        JOGLTextureState.applyWrap(texture, texRecord, 0, record);
+        JOGLTextureState.applyFilter(t, texRecord, 0, record);
+        JOGLTextureState.applyWrap(t, texRecord, 0, record);
     }
     
     /**
@@ -413,9 +475,65 @@ public class RenderBuffer {
     /**
      * Render the current RenderList into this buffer
      */
-    void render() {
-        renderer.setCamera(cameraComponent.getCamera());
-        cameraComponent.getCamera().update();
-        renderer.render(renderList, textureList, true);
+    void render(Renderer r) {
+        GL gl = GLU.getCurrentGL();
+        com.jme.renderer.Renderer jmeRenderer = r.getJMERenderer();
+        
+        if (target == Target.TEXTURE_2D) {
+            renderer.setCamera(cameraComponent.getCamera());
+            cameraComponent.getCamera().update();
+            renderer.render(renderList, textureList, true);
+        } else if (target == Target.TEXTURE_CUBEMAP) {
+            Camera ccCamera = cameraComponent.getCamera();
+            ccCamera.update();
+               
+            if (cubeMapCamera == null) {
+                cubeMapCamera = r.createJMECamera(width, height);
+                cubeMapCamera.setFrustumPerspective(cameraComponent.getFieldOfView(), cameraComponent.getAspectRatio(),
+                                                    cameraComponent.getNearClipDistance(), cameraComponent.getFarClipDistance());
+            }       
+            Camera saveCamera = jmeRenderer.getCamera();
+            jmeRenderer.setCamera(cubeMapCamera);
+            cubeMapCamera.setLocation(ccCamera.getLocation());
+            JOGLTextureState.doTextureBind(cubeMap.getTextureId(), 0, Texture.Type.CubeMap);
+            
+            // Render Negative X
+            cubeMapCamera.setDirection(negativeX);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+
+            // Render Positive X
+            cubeMapCamera.setDirection(positiveX);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+
+            // Render Negative Y
+            cubeMapCamera.setDirection(negativeY);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+
+            // Render Positive Y
+            cubeMapCamera.setDirection(positiveY);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+
+            // Render Negative Z
+            cubeMapCamera.setDirection(negativeZ);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+
+            // Render Positive Z
+            cubeMapCamera.setDirection(positiveZ);
+            cubeMapCamera.update();
+            r.renderScene(spatialList);
+            gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+            
+            jmeRenderer.setCamera(saveCamera);
+        }
     }
 }

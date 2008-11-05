@@ -44,14 +44,17 @@ import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
-import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
+import com.jme.scene.state.TextureState;
+import com.jme.image.Texture.EnvironmentalMapMode;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
 import com.jme.scene.shape.Box;
+import com.jme.scene.shape.Sphere;
+import com.jme.scene.shape.Quad;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
@@ -88,7 +91,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class WorldBuilder {
+public class CubeMapTest {
     /**
      * The WorldManager for this world
      */
@@ -107,9 +110,9 @@ public class WorldBuilder {
     /**
      * The width and height of our 3D window
      */
-    private int width = 800;
-    private int height = 600;
-    private float aspect = 800.0f/600.0f;
+    private int width = 512;
+    private int height = 512;
+    private float aspect = 1.0f; //800.0f/600.0f;
     
     /**
      * Some options state variables
@@ -132,30 +135,22 @@ public class WorldBuilder {
      */
     private Entity axis = new Entity("Axis");
     
+    private RenderComponent orthoRC = null;
+    private Box box = null;
+    
     /**
      * A list of the models we are looking at
      */
     private ArrayList models = new ArrayList();
-    private LightNode lightNode = null;
         
     private Canvas canvas = null;
     private RenderBuffer rb = null;
     
-    public WorldBuilder(String[] args) {
+    public CubeMapTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
-        
-        lightNode = new LightNode();
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
-        light.setEnabled(true);
-        lightNode.setLight(light);
-        lightNode.setLocalTranslation(0.0f, 0.0f, 50.0f);
-        wm.getRenderManager().addLight(lightNode);
         
         createUI(wm);  
         createCameraEntity(wm);   
@@ -163,9 +158,21 @@ public class WorldBuilder {
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-         
+        createGlobalLight();
         createRandomTeapots(wm);
-        
+        createOrthoObjects();
+       
+    }
+              
+    private void createGlobalLight() {
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setEnabled(true);
+        LightNode ln = new LightNode();
+        ln.setLight(light);
+        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        wm.getRenderManager().addLight(ln); 
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -186,15 +193,15 @@ public class WorldBuilder {
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
-        MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
 
-        selector.setRunInRenderer(true);
+        //selector.setRunInRenderer(true);
         
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        pcc.addProcessor(selector);
+        //pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -273,7 +280,7 @@ public class WorldBuilder {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        WorldBuilder worldBuilder = new WorldBuilder(args);
+        CubeMapTest worldBuilder = new CubeMapTest(args);
         
     }
     
@@ -310,7 +317,7 @@ public class WorldBuilder {
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Coords", true);
+        JToggleButton coordButton = new JToggleButton("Ortho", true);
         JToggleButton gridButton = new JToggleButton("Grid", true);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
@@ -347,36 +354,10 @@ public class WorldBuilder {
             
             // Create Menu
             JMenu createMenu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot1");
+            createTeapotItem = new JMenuItem("Teapot");
             createTeapotItem.addActionListener(this);
             createMenu.add(createTeapotItem);
             menuBar.add(createMenu);
-            
-            JMenu test1Menu = new JMenu("Test1");
-            createTeapotItem = new JMenuItem("Teapot2");
-            createTeapotItem.addActionListener(this);
-            test1Menu.add(createTeapotItem);
-            menuBar.add(test1Menu);
-            
-            JMenu test2Menu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot3");
-            createTeapotItem.addActionListener(this);
-            test2Menu.add(createTeapotItem);
-            menuBar.add(test2Menu);
-            
-            JMenu test3Menu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot4");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            createTeapotItem = new JMenuItem("Teapot5");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            createTeapotItem = new JMenuItem("Teapot6");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            test3Menu.getPopupMenu().setLightWeightPopupEnabled(false);
-            menuBar.add(test3Menu);
-            
             
             menuPanel.add(menuBar);
             contentPane.add(menuPanel, BorderLayout.NORTH);
@@ -450,7 +431,7 @@ public class WorldBuilder {
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
+
             MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
             matState.setDiffuse(color);
             
@@ -525,13 +506,14 @@ public class WorldBuilder {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    wm.removeEntity(axis);
+                    wm.removeEntity(axis);        
                     System.out.println("Turning Coordinates Off");
                 } else {
                     coordsOn = true;
                     wm.addEntity(axis);
                     System.out.println("Turning Coordinates On");
                 }
+                orthoRC.setOrtho(coordsOn);
             }
             
             if (e.getSource() == gridButton) {
@@ -584,7 +566,7 @@ public class WorldBuilder {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 500;
+        int numTeapots = 5;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
@@ -593,9 +575,9 @@ public class WorldBuilder {
                 wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
         for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*100.0f) - 50.0f;
-            y = (r.nextFloat()*100.0f) - 50.0f;
-            z = (r.nextFloat()*100.0f) - 50.0f;
+            x = (r.nextFloat()*50.0f) - 25.0f;
+            y = (r.nextFloat()*50.0f) - 25.0f;
+            z = (r.nextFloat()*50.0f) - 25.0f;
             transparent = r.nextBoolean();
             Node teapot = createTeapotModel(x, y, z, transparent);
             
@@ -606,14 +588,53 @@ public class WorldBuilder {
             e.addComponent(CollisionComponent.class, cc);
 
             
-            ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
             RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));       
-            pcc.addProcessor(rp);
-            e.addComponent(ProcessorCollectionComponent.class, pcc);
-            wm.addEntity(e);
+                teapot, (float) (6.0f * Math.PI / 180.0f));
+            e.addComponent(ProcessorComponent.class, rp);
+                        wm.addEntity(e);
                         
         }
+    }
+    
+    private void createOrthoObjects() {
+        Node orthoQuad = new Node();
+        box = new Box("Ortho", new Vector3f(), 10, 10, 10);
+        Entity e = new Entity("Ortho ");
+        
+        orthoQuad.attachChild(box);        
+        RenderBuffer rb = new RenderBuffer(RenderBuffer.Target.TEXTURE_CUBEMAP, width, height);
+        CameraNode cn = new CameraNode("MyCamera", null);
+        Node cameraSG = new Node();
+        cameraSG.attachChild(cn);
+        cameraSG.setLocalTranslation(0.0f, 0.0f, 0.0f);
+
+        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cn, 
+                width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        rb.setCameraComponent(cc);
+        wm.getRenderManager().addRenderBuffer(rb);
+        e.addComponent(CameraComponent.class, cc); 
+
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        orthoQuad.setRenderState(buf);
+                
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        ts.setEnabled(true);
+        rb.getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
+        ts.setTexture(rb.getTexture(), 0);
+        box.setRenderState(ts);
+        
+        orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
+        orthoRC.setOrtho(false);
+        orthoRC.setLightingEnabled(false);
+        e.addComponent(RenderComponent.class, orthoRC);
+        rb.addRenderScene(orthoQuad);
+
+        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
+                orthoQuad, (float) (6.0f * Math.PI / 180.0f));
+        //e.addComponent(ProcessorComponent.class, rp);
+        wm.addEntity(e);
     }
     
     private Node createTeapotModel(float x, float y, float z, boolean transparent) {
@@ -632,7 +653,7 @@ public class WorldBuilder {
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
+
         if (transparent) {
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
             as.setEnabled(true);
@@ -659,4 +680,10 @@ public class WorldBuilder {
         
         return (node);
     }
+
+    public void update(Object object) {
+        RenderBuffer rb = (RenderBuffer) object;
+
+    }
+
 }
