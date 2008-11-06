@@ -640,6 +640,18 @@ class Renderer extends Thread {
         return (jmeRenderer.createCamera(width, height));   
     }
     
+    void swapAndWait(long time) {
+        currentCanvas.swapBuffers();
+
+        if (time != 0) {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
+        }
+    }
+    
     /**
      * The render loop
      */
@@ -670,7 +682,7 @@ class Renderer extends Thread {
                     processJMEUpdates(totalTime / 1000000000.0f);
                     renderBuffers();
                     renderScene(null);
-                    currentCanvas.swapBuffers();
+                    swapAndWait(0);
                 }
                 releaseCurrentCanvas();
             }
