@@ -354,7 +354,7 @@ public class SubEntityTest {
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
             canvas = rb.getCanvas();
             canvas.setVisible(true);

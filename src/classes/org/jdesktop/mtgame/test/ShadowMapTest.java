@@ -39,7 +39,6 @@ import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
-import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
@@ -47,15 +46,14 @@ import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.light.LightNode;
 import com.jme.scene.state.TextureState;
-import com.jme.image.Texture.EnvironmentalMapMode;
+import com.jme.scene.Spatial.CullHint;
+import com.jme.image.Texture2D;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
 import com.jme.scene.shape.Box;
-import com.jme.scene.shape.Torus;
-import com.jme.scene.shape.Sphere;
 import com.jme.scene.shape.Quad;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
@@ -93,7 +91,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class CubeMapTest {
+public class ShadowMapTest {
     /**
      * The WorldManager for this world
      */
@@ -112,9 +110,9 @@ public class CubeMapTest {
     /**
      * The width and height of our 3D window
      */
-    private int width = 512;
-    private int height = 512;
-    private float aspect = 1.0f; //800.0f/600.0f;
+    private int width = 800;
+    private int height = 600;
+    private float aspect = 800.0f/600.0f;
     
     /**
      * Some options state variables
@@ -138,7 +136,7 @@ public class CubeMapTest {
     private Entity axis = new Entity("Axis");
     
     private RenderComponent orthoRC = null;
-    private Box box = null;
+    private Quad quadGeo = null;
     
     /**
      * A list of the models we are looking at
@@ -146,9 +144,10 @@ public class CubeMapTest {
     private ArrayList models = new ArrayList();
         
     private Canvas canvas = null;
+    private ShadowMapRenderBuffer shadowMapBuffer = null;
     private RenderBuffer rb = null;
     
-    public CubeMapTest(String[] args) {
+    public ShadowMapTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
@@ -157,24 +156,64 @@ public class CubeMapTest {
         createUI(wm);  
         createCameraEntity(wm);   
         createGrid(wm);
-        wm.addEntity(grid);
+        //wm.addEntity(grid);
         createAxis();
-        //wm.addEntity(axis);
+        wm.addEntity(axis);
         createGlobalLight();
-        createRandomTeapots(wm);
-        createOrthoObjects();
+        //createRandomTeapots(wm);
+        createTeapot();
+        createFloor();
        
     }
               
     private void createGlobalLight() {
+        Vector3f direction = new Vector3f(-1.0f, -1.0f, -1.0f);
+        Vector3f position = new Vector3f(50.0f, 50.0f, 50.0f);
+        
         PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setDiffuse(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+        //light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
         light.setEnabled(true);
         LightNode ln = new LightNode();
         ln.setLight(light);
-        ln.setLocalTranslation(new Vector3f(100, 100, 100));
+        ln.setLocalTranslation(position);
         wm.getRenderManager().addLight(ln); 
+        
+        createShadowBuffer(direction, position);
+    }
+    
+    private void createShadowBuffer(Vector3f dir, Vector3f pos) {
+        int shadowWidth = 512;
+        int shadowHeight = 512;
+        Node shadowDebug = new Node("Shadow Debug");
+        Quad shadowImage = new Quad("Shadow Quad", shadowWidth, shadowHeight);
+        Entity e = new Entity("Shadow Debug ");
+        
+        shadowDebug.attachChild(shadowImage);
+        shadowDebug.setLocalTranslation(new Vector3f(0.0f, 0.0f, -350.0f));
+        
+        shadowMapBuffer = (ShadowMapRenderBuffer) wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.SHADOWMAP, shadowWidth, shadowHeight);
+        shadowMapBuffer.setCameraLookAt(new Vector3f());
+        shadowMapBuffer.setCameraUp(new Vector3f(-1.0f, 1.0f, -1.0f));
+        shadowMapBuffer.setCameraPosition(pos);
+        shadowMapBuffer.setManageRenderScenes(true);
+
+        wm.getRenderManager().addRenderBuffer(shadowMapBuffer);
+
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        shadowDebug.setRenderState(buf);
+                
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        ts.setEnabled(true);
+        ts.setTexture(shadowMapBuffer.getTexture(), 0);
+        shadowDebug.setRenderState(ts);
+        
+        RenderComponent shadowDebugRC = wm.getRenderManager().createRenderComponent(shadowDebug);
+        shadowDebugRC.setLightingEnabled(false);
+        e.addComponent(RenderComponent.class, shadowDebugRC);
+        //wm.addEntity(e);      
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -282,7 +321,7 @@ public class CubeMapTest {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CubeMapTest worldBuilder = new CubeMapTest(args);
+        ShadowMapTest worldBuilder = new ShadowMapTest(args);
         
     }
     
@@ -415,45 +454,7 @@ public class CubeMapTest {
             e.addComponent(RenderComponent.class, sc);
             wm.addEntity(e);              
         }
-        
-        private void createTeapot() {
-            Node node = new Node();
-            Teapot teapot = new Teapot();
-            teapot.resetData();
-            node.attachChild(teapot);
-            
-            Triangle[] tris = new Triangle[teapot.getTriangleCount()];
-            
-            BoundingBox bbox = new BoundingBox();
-            bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
-        
-            ColorRGBA color = new ColorRGBA();
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-            buf.setEnabled(true);
-            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-
-            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-            matState.setDiffuse(color);
-            
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
-            as.setEnabled(true);
-            as.setBlendEnabled(true);
-            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-            node.setRenderState(as);
-
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-            
-            node.setRenderState(matState);
-            node.setRenderState(buf);
-            node.setLocalTranslation(0.0f, 0.0f, 0.0f);
-            teapot.setModelBound(bbox);
-            addModel(node);
-        }
             
         private void addToVisibleBounds(Geometry g) {
             BoundingVolume bv = g.getModelBound();
@@ -556,7 +557,50 @@ public class CubeMapTest {
             }
         }
     }
-    
+
+    private void createTeapot() {
+        Node node = new Node();
+        Teapot teapot = new Teapot();
+        teapot.resetData();
+        node.attachChild(teapot);
+        node.setLocalScale(3.0f);
+
+        Triangle[] tris = new Triangle[teapot.getTriangleCount()];
+
+        BoundingBox bbox = new BoundingBox();
+        bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
+
+        ColorRGBA color = new ColorRGBA();
+
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+
+        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        matState.setDiffuse(color);
+
+        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        cs.setEnabled(true);
+        cs.setCullFace(CullState.Face.Back);
+        node.setRenderState(cs);
+
+        node.setRenderState(matState);
+        node.setRenderState(buf);
+        node.setLocalTranslation(0.0f, 0.0f, 0.0f);
+        teapot.setModelBound(bbox);
+        teapot.setCullHint(CullHint.Never);
+        shadowMapBuffer.addRenderScene(teapot);
+        
+        Entity e = new Entity("Teapot");
+        RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
+        e.addComponent(RenderComponent.class, sc);
+
+        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
+                node, (float) (6.0f * Math.PI / 180.0f));
+        e.addComponent(ProcessorComponent.class, rp);
+        wm.addEntity(e);
+    }
+        
     /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
@@ -565,7 +609,7 @@ public class CubeMapTest {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 5;
+        int numTeapots = 500;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
@@ -573,88 +617,16 @@ public class CubeMapTest {
         JMECollisionSystem collisionSystem = (JMECollisionSystem) 
                 wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        x = 25.0f; y = 0.0f; z = 0.0f;
-        Node teapot = createTeapotModel(x, y, z, false, new ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));        
-        e = new Entity("Teapot 1");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        
-        x = -25.0f; y = 0.0f; z = 0.0f;
-        teapot = createTeapotModel(x, y, z, false, new ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f));        
-        e = new Entity("Teapot 2");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        
-        
-        x = .0f; y = 0.0f; z = 25.0f;
-        teapot = createTeapotModel(x, y, z, false, new ColorRGBA(0.0f, 0.0f, 1.0f, 1.0f));        
-        e = new Entity("Teapot 3");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        
-        
-        x = 0.0f; y = 0.0f; z = -25.0f;
-        teapot = createTeapotModel(x, y, z, false, new ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f));        
-        e = new Entity("Teapot 4");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        
-                
-        x = 0.0f; y = 25.0f; z = 0.0f;
-        teapot = createTeapotModel(x, y, z, false, new ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f));        
-        e = new Entity("Teapot 4");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        
-                
-        x = 0.0f; y = -25.0f; z = 0.0f;
-        teapot = createTeapotModel(x, y, z, false, new ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f));        
-        e = new Entity("Teapot 4");
-        sc = wm.getRenderManager().createRenderComponent(teapot);
-        cc = collisionSystem.createCollisionComponent(teapot);
-        e.addComponent(RenderComponent.class, sc);
-        e.addComponent(CollisionComponent.class, cc);
-        rp = new RotationProcessor("Teapot Rotator", wm,
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
-        /*
         for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*50.0f) - 25.0f;
-            y = (r.nextFloat()*50.0f) - 25.0f;
-            z = (r.nextFloat()*50.0f) - 25.0f;
+            x = (r.nextFloat()*100.0f) - 50.0f;
+            y = (r.nextFloat()*100.0f);
+            z = (r.nextFloat()*100.0f) - 50.0f;
             transparent = r.nextBoolean();
             Node teapot = createTeapotModel(x, y, z, transparent);
+            
+            // TODO: Shouldn't have to do this....
+            teapot.setCullHint(CullHint.Never);
+            shadowMapBuffer.addRenderScene(teapot);
             
             e = new Entity("Teapot " + i);
             sc = wm.getRenderManager().createRenderComponent(teapot);
@@ -669,33 +641,17 @@ public class CubeMapTest {
                         wm.addEntity(e);
                         
         }
-         * */
     }
     
-    private void createOrthoObjects() {
-        Node orthoQuad = new Node("Box");
-        box = new Box("Ortho", new Vector3f(), 10, 10, 10);
-        Torus torus = new Torus("Torus", 50, 50, 5, 10);
-        Sphere sphere = new Sphere("Sphere", 100, 100, 20);
-        
-        Node teapot = createTeapotModel(0.0f, 0.0f, 0.0f, false, new ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f));
+    private void createFloor() {
+        Node orthoQuad = new Node();
+        quadGeo = new Quad("Ortho", 100, 100);
         Entity e = new Entity("Ortho ");
         
-        Spatial shape = torus;
-        
-        orthoQuad.attachChild(shape); 
-        //orthoQuad.setLocalScale(2.0f);
-        RenderBuffer rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.TEXTURE_CUBEMAP, width, height);
-        CameraNode cn = new CameraNode("MyCamera", null);
-        Node cameraSG = new Node();
-        cameraSG.attachChild(cn);
-        cameraSG.setLocalTranslation(0.0f, 0.0f, 0.0f);
-
-        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cn, 
-                width, height, 90.0f, aspect, 1.0f, 1000.0f, true);
-        rb.setCameraComponent(cc);
-        wm.getRenderManager().addRenderBuffer(rb);
-        e.addComponent(CameraComponent.class, cc); 
+        orthoQuad.attachChild(quadGeo);
+        Quaternion q = new Quaternion();
+        q.fromAngleAxis((float)(Math.PI/2.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        orthoQuad.setLocalRotation(q);
 
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
         buf.setEnabled(true);
@@ -704,24 +660,34 @@ public class CubeMapTest {
                 
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
         ts.setEnabled(true);
-        //rb.getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
-        rb.getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
-        ts.setTexture(rb.getTexture(), 0);
-        shape.setRenderState(ts);
+        ts.setTexture(shadowMapBuffer.getTexture(), 0);
+        quadGeo.setRenderState(ts);
+    
+        BlendState discardShadowFragments = (BlendState)wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+        discardShadowFragments.setEnabled(true);
+        discardShadowFragments.setBlendEnabled(true);
+        discardShadowFragments
+                .setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+        discardShadowFragments
+                .setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+        quadGeo.setRenderState(discardShadowFragments);
+        
+        MaterialState darkMaterial = (MaterialState)wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        darkMaterial.setEnabled(true);
+        darkMaterial.setDiffuse(new ColorRGBA(0, 0, 0, 0.3f));
+        darkMaterial.setAmbient(new ColorRGBA(0, 0, 0, 0f));
+        darkMaterial.setShininess(0);
+        darkMaterial.setSpecular(new ColorRGBA(0, 0, 0, 0));
+        darkMaterial.setEmissive(new ColorRGBA(0, 0, 0, 0));
+        darkMaterial.setMaterialFace(MaterialState.MaterialFace.Front);
+        quadGeo.setRenderState(darkMaterial);
         
         orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
-        orthoRC.setOrtho(false);
-        orthoRC.setLightingEnabled(false);
         e.addComponent(RenderComponent.class, orthoRC);
-        rb.addRenderScene(orthoQuad);
-
-        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                orthoQuad, (float) (6.0f * Math.PI / 180.0f));
-        //e.addComponent(ProcessorComponent.class, rp);
         wm.addEntity(e);
     }
     
-    private Node createTeapotModel(float x, float y, float z, boolean transparent, ColorRGBA c) {
+    private Node createTeapotModel(float x, float y, float z, boolean transparent) {
         Node node = new Node();
         Teapot teapot = new Teapot();
         teapot.resetData();
@@ -755,7 +721,7 @@ public class CubeMapTest {
         }
 
         MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-        matState.setDiffuse(c);
+        matState.setDiffuse(color);
         
         node.setRenderState(matState);
         node.setRenderState(buf);

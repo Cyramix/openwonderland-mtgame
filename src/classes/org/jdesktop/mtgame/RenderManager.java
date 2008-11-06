@@ -117,6 +117,23 @@ public class RenderManager {
     }  
     
     /**
+     * Create a RenderBuffer of the given type, width, and height
+     */
+    public RenderBuffer createRenderBuffer(RenderBuffer.Target target, int width, int height) {
+        RenderBuffer rb = null;
+        if (target == RenderBuffer.Target.ONSCREEN) {
+            rb = new OnscreenRenderBuffer(target, width, height);
+        } else if (target == RenderBuffer.Target.TEXTURE_2D) {
+            rb = new TextureRenderBuffer(target, width, height);
+        } else if (target == RenderBuffer.Target.TEXTURE_CUBEMAP) {
+            rb = new CubeMapRenderBuffer(target, width, height);
+        } else if (target == RenderBuffer.Target.SHADOWMAP) {
+            rb = new ShadowMapRenderBuffer(target, width, height);
+        }
+        return (rb);
+    }
+    
+    /**
      * Create a render buffer with the characteristics given.
      */
     public void addRenderBuffer(RenderBuffer rb) {

@@ -362,7 +362,7 @@ public class MirrorTest {
             contentPane.add(menuPanel, BorderLayout.NORTH);
             
             // The Rendering Canvas
-            rb = new RenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
+            rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
             canvas = rb.getCanvas();
             canvas.setVisible(true);
@@ -607,7 +607,7 @@ public class MirrorTest {
         orthoQuad.attachChild(quadGeo);
         orthoQuad.setLocalTranslation(0.0f, 75.0f, -100.0f);
         
-        RenderBuffer rb = new RenderBuffer(RenderBuffer.Target.TEXTURE_2D, width, height);
+        RenderBuffer rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.TEXTURE_2D, width, height);
         CameraNode cn = new CameraNode("MyCamera", null);
         Node cameraSG = new Node();
         cameraSG.attachChild(cn);
