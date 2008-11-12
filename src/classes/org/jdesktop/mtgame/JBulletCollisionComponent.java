@@ -40,10 +40,12 @@ import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
 import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
+import com.bulletphysics.collision.shapes.SphereShape;
 import com.jmex.terrain.TerrainPage;
 
 import com.jme.scene.Node;
 import com.jme.bounding.BoundingBox;
+import com.jme.bounding.BoundingSphere;
 import com.jme.bounding.BoundingVolume;
 import com.jme.scene.TriMesh;
 
@@ -165,6 +167,15 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
                 //System.out.println("Center: " + center);
                 //System.out.println("Extent: " + bbox.xExtent + ", " +
                 //        bbox.yExtent + ", " + bbox.zExtent);
+            } else if (bv instanceof BoundingSphere) {
+                BoundingSphere bsphere = (BoundingSphere)bv;
+                SphereShape bs = new SphereShape(bsphere.getRadius());
+                com.jme.math.Vector3f center = bsphere.getCenter();
+                transform.origin.x = center.x;
+                transform.origin.y = center.y;
+                transform.origin.z = center.z;
+                collisionShape = bs;
+                worldTransform.set(transform);
             } else {
                 System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv);
             }
@@ -211,6 +222,12 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             transform.origin.y = center.y;
             transform.origin.z = center.z;
             //collisionShape = bs;
+        } else if (bv instanceof BoundingSphere) {
+            BoundingSphere bsphere = (BoundingSphere)bv;
+            com.jme.math.Vector3f center = bsphere.getCenter();
+            transform.origin.x = center.x;
+            transform.origin.y = center.y;
+            transform.origin.z = center.z;
         } else {
             System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv);
         }
