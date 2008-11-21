@@ -37,7 +37,6 @@ import java.awt.event.*;
 
 import com.jme.scene.Node;
 import com.jme.scene.Skybox;
-import com.jme.scene.CameraNode;
 import com.jme.scene.Spatial;
 import com.jme.light.LightNode;
 import com.jme.system.*;
@@ -48,19 +47,12 @@ import com.jme.system.canvas.JMECanvas;
 import com.jme.system.canvas.SimpleCanvasImpl;
 import javax.media.opengl.GLCanvas;
 import javax.media.opengl.GLContext;
+import javax.media.opengl.GL;
 import javax.media.opengl.Threading;
 import com.jmex.awt.jogl.JOGLAWTCanvasConstructor;
 import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
 import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
-
-import com.jme.image.Texture;
-import com.jme.image.Texture1D;
-import com.jme.image.Texture2D;
-import com.jme.image.TextureCubeMap;
-
-import java.util.Map;
-import java.util.Collection;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -274,6 +266,11 @@ class Renderer extends Thread {
     private int frameRateListenerFrequency = 0;
     
     /**
+     * The samples to use for multisampling
+     */
+    private int minSamples = 0;
+    
+    /**
      * A countdown variable for the listener
      */
     private int listenerCountdown = 0;
@@ -319,6 +316,8 @@ class Renderer extends Thread {
      * A flag indicating that the renderer has been initialized
      */
     private boolean initialized = false;
+    
+    ColorRGBA bgColor = new ColorRGBA();
                
     /**
      * The constructor
@@ -404,6 +403,7 @@ class Renderer extends Thread {
     
     boolean setCurrentCanvas(Canvas canvas) {
         boolean doRender = true;
+        GL gl = null;
         
         currentAWTCanvas = canvas;
         if (useJOGL) {
@@ -414,7 +414,12 @@ class Renderer extends Thread {
             } catch (javax.media.opengl.GLException e) {
                 System.out.println(e);
             }
-
+            gl = glContext.getGL();
+            if (displaySystem.getMinSamples() == 0) {
+                gl.glDisable(GL.GL_MULTISAMPLE);
+            } else {
+                gl.glEnable(GL.GL_MULTISAMPLE);
+            }
         } else {
             //((LWJGLDisplaySystem)displaySystem).setCurrentCanvas((JMECanvas) currentCanvas);
             ((LWJGLDisplaySystem) displaySystem).switchContext(currentCanvas);
@@ -426,6 +431,8 @@ class Renderer extends Thread {
             Camera camera = cc.getCamera();
             camera.update();
             jmeRenderer.setCamera(camera);
+            rb.getBackgroundColor(bgColor);
+            jmeRenderer.setBackgroundColor(bgColor);
         } else {
             doRender = false;
         }
@@ -452,6 +459,7 @@ class Renderer extends Thread {
                 Threading.disableSingleThreading();
                 displaySystem.registerCanvasConstructor("AWT", JOGLAWTCanvasConstructor.class);
             }
+            displaySystem.setMinSamples(minSamples);
         //lwjglDisplay = (LWJGLDisplaySystem) displaySystem;
         //joglDisplay = (JOGLDisplaySystem) displaySystem;
         } catch (JmeException e) {
@@ -582,13 +590,22 @@ class Renderer extends Thread {
     /**
      * Render to all the offscreen buffers
      */
-    void renderBuffers() {
+    boolean renderBuffers() {
         RenderBuffer rb = null;
+        
+        if (offscreenRenderList.length == 0) {
+            return (false);
+        }
         
         for (int i = 0; i < offscreenRenderList.length; i++) {
             rb = (RenderBuffer) offscreenRenderList[i];
             rb.render(this);
-        }        
+            if (rb.getRenderUpdater() != null) {
+                rb.getRenderUpdater().update(rb);
+            }
+        }    
+        
+        return (true);
     }
     
     /**
@@ -661,9 +678,7 @@ class Renderer extends Thread {
         long renderTime = -1;
         long totalTime = -1;
                     
-        System.out.println("Before Init");
         initRenderer();   
-        System.out.println("After Init");
         while (!done) {
             // Snapshot the current time
             frameStartTime = System.nanoTime();
@@ -680,7 +695,10 @@ class Renderer extends Thread {
                 Canvas canvas = renderCanvases[i];
                 if (setCurrentCanvas(canvas)) {
                     processJMEUpdates(totalTime / 1000000000.0f);
-                    renderBuffers();
+                    if (renderBuffers()) {
+                        // If we rendered a buffer, need to reset the camera
+                        setCurrentCanvas(canvas);
+                    }
                     renderScene(null);
                     swapAndWait(0);
                 }
@@ -1418,7 +1436,17 @@ class Renderer extends Thread {
         desiredFrameRate = fps;
         desiredFrameTime = 1000000000/desiredFrameRate;
     }
-              
+         
+    /**
+     * Set the desired frame rate
+     */
+    public void setMinSamples(int samples) {
+        minSamples = samples;
+        if (displaySystem != null) {
+            displaySystem.setMinSamples(samples);
+        }
+    }
+    
     /**
      * Set a listener for frame rate updates
      */

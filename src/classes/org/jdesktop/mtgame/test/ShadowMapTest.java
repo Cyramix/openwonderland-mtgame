@@ -43,6 +43,7 @@ import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
+import com.jme.light.DirectionalLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.light.LightNode;
 import com.jme.scene.state.TextureState;
@@ -91,7 +92,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class ShadowMapTest {
+public class ShadowMapTest implements RenderUpdater {
     /**
      * The WorldManager for this world
      */
@@ -170,7 +171,8 @@ public class ShadowMapTest {
         Vector3f direction = new Vector3f(-1.0f, -1.0f, -1.0f);
         Vector3f position = new Vector3f(50.0f, 50.0f, 50.0f);
         
-        PointLight light = new PointLight();
+        //PointLight light = new PointLight();
+        DirectionalLight light = new DirectionalLight();
         light.setDiffuse(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
         //light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
         light.setEnabled(true);
@@ -180,11 +182,53 @@ public class ShadowMapTest {
         wm.getRenderManager().addLight(ln); 
         
         createShadowBuffer(direction, position);
+        LightProcessor lp = new LightProcessor(wm, ln, shadowMapBuffer, (float)(1.0f * Math.PI / 180.0f));
+        Entity e = new Entity("Light Rotator");
+        e.addComponent(ProcessorComponent.class, lp);
+        wm.addEntity(e);
+    }
+    
+    class LightProcessor extends ProcessorComponent {     
+    private WorldManager worldManager = null;
+        private float degrees = 0.0f;
+        private float increment = 0.0f;
+        private Quaternion quaternion = new Quaternion();
+        private LightNode target = null;
+        private ShadowMapRenderBuffer smb = null;
+        Vector3f position = new Vector3f(50.0f, 50.0f, 50.0f);
+        Vector3f positionOut = new Vector3f(50.0f, 50.0f, 50.0f);
+        Vector3f up = new Vector3f(-1.0f, 1.0f, -1.0f);
+        Vector3f upOut = new Vector3f(-1.0f, 1.0f, -1.0f);
+
+        public LightProcessor(WorldManager worldManager, LightNode ln, ShadowMapRenderBuffer sb, float increment) {
+            this.worldManager = worldManager;
+            this.target = ln;
+            this.increment = increment;
+            this.smb = sb;
+            setArmingCondition(new NewFrameCondition(this));
+        }
+
+        public void initialize() {
+        }
+
+        public void compute(ProcessorArmingCollection collection) {
+            degrees += increment;
+            quaternion.fromAngles(0.0f, degrees, 0.0f);
+            quaternion.mult(up, upOut);
+            quaternion.mult(position, positionOut);
+        }
+
+        public void commit(ProcessorArmingCollection collection) {
+            target.setLocalTranslation(positionOut);
+            worldManager.addToUpdateList(target);
+            smb.setCameraPosition(positionOut);
+            smb.setCameraUp(upOut);
+        }
     }
     
     private void createShadowBuffer(Vector3f dir, Vector3f pos) {
-        int shadowWidth = 512;
-        int shadowHeight = 512;
+        int shadowWidth = 2048;
+        int shadowHeight = 2048;
         Node shadowDebug = new Node("Shadow Debug");
         Quad shadowImage = new Quad("Shadow Quad", shadowWidth, shadowHeight);
         Entity e = new Entity("Shadow Debug ");
@@ -582,7 +626,7 @@ public class ShadowMapTest {
         CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
         cs.setEnabled(true);
         cs.setCullFace(CullState.Face.Back);
-        node.setRenderState(cs);
+        //node.setRenderState(cs);
 
         node.setRenderState(matState);
         node.setRenderState(buf);
@@ -590,6 +634,7 @@ public class ShadowMapTest {
         teapot.setModelBound(bbox);
         teapot.setCullHint(CullHint.Never);
         shadowMapBuffer.addRenderScene(teapot);
+        shadowMapBuffer.setRenderUpdater(this);
         
         Entity e = new Entity("Teapot");
         RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
@@ -597,7 +642,7 @@ public class ShadowMapTest {
 
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
                 node, (float) (6.0f * Math.PI / 180.0f));
-        e.addComponent(ProcessorComponent.class, rp);
+        //e.addComponent(ProcessorComponent.class, rp);
         wm.addEntity(e);
     }
         
@@ -609,7 +654,7 @@ public class ShadowMapTest {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 500;
+        int numTeapots = 250;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
@@ -617,12 +662,18 @@ public class ShadowMapTest {
         JMECollisionSystem collisionSystem = (JMECollisionSystem) 
                 wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        ts.setEnabled(true);
+        ts.setTexture(shadowMapBuffer.getTexture(), 0);
+        
+        
         for (int i=0; i<numTeapots; i++) {
             x = (r.nextFloat()*100.0f) - 50.0f;
             y = (r.nextFloat()*100.0f);
             z = (r.nextFloat()*100.0f) - 50.0f;
             transparent = r.nextBoolean();
             Node teapot = createTeapotModel(x, y, z, transparent);
+            //teapot.setRenderState(ts);
             
             // TODO: Shouldn't have to do this....
             teapot.setCullHint(CullHint.Never);
@@ -715,7 +766,7 @@ public class ShadowMapTest {
             CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
+            //node.setRenderState(cs);
             
             color.set(0.0f, 1.0f, 1.0f, 0.75f);
         }
@@ -732,8 +783,8 @@ public class ShadowMapTest {
     }
 
     public void update(Object object) {
-        RenderBuffer rb = (RenderBuffer) object;
-
+        ShadowMapRenderBuffer sb = (ShadowMapRenderBuffer) object;
+        //System.out.println(sb.getTexture().getImage());
     }
 
 }

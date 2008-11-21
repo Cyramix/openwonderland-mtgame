@@ -164,7 +164,7 @@ public class WorldBuilder {
         createAxis();
         wm.addEntity(axis);
          
-        createRandomTeapots(wm);
+        //createRandomTeapots(wm);
         
     }
     
@@ -175,6 +175,8 @@ public class WorldBuilder {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        //CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
+        //        width, height, 1.0f, 1000.0f, -100, 100, 100, -100, true);
         rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
@@ -423,6 +425,13 @@ public class WorldBuilder {
          */
         private void addModel(Node model) {
             Node modelRoot = new Node("Model");
+            
+            
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            buf.setEnabled(true);
+            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+            modelRoot.setRenderState(buf);
+            
             System.out.println("Adding: " + model);
             modelRoot.attachChild(model);
             models.add(modelRoot);

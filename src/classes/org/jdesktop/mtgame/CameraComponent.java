@@ -69,6 +69,14 @@ public class CameraComponent extends EntityComponent {
     private float farClip = 1000.0f;
     
     /**
+     * Parallel projection data
+     */
+    private float left = 0.0f;
+    private float right = 0.0f;
+    private float bottom = 0.0f;
+    private float top = 0.0f;
+    
+    /**
      * The jME Camera object
      * Note: This is created by the renderer
      */
@@ -85,6 +93,11 @@ public class CameraComponent extends EntityComponent {
     private CameraNode cameraNode = null;
     
     /**
+     * A boolen indicating whether or not we are using parallel projection
+     */
+    private boolean isParallel = false;
+    
+    /**
      * The constructor
      */
     CameraComponent(Node cSG, CameraNode cNode, int viewportWidth, 
@@ -99,6 +112,27 @@ public class CameraComponent extends EntityComponent {
         nearClip = near;
         farClip = far;
         this.primary = primary;
+        this.isParallel = false;
+    }
+         
+    /**
+     * The constructor
+     */
+    CameraComponent(Node cSG, CameraNode cNode, int viewportWidth, 
+                    int viewportHeight, float near, float far, float left, 
+                    float right, float bottom, float top, boolean primary) {
+        cameraSceneGraph = cSG;
+        cameraNode = cNode;
+        width = viewportWidth;
+        height = viewportHeight;
+        this.left = left;
+        this.right = right;
+        this.bottom = bottom;
+        this.top = top;
+        nearClip = near;
+        farClip = far;
+        this.primary = primary;
+        this.isParallel = true;
     }
     
     /**
@@ -106,9 +140,15 @@ public class CameraComponent extends EntityComponent {
      */
     void createJMECamera(RenderManager rm) {                      
         camera = rm.createJMECamera(width, height);
-        camera.setFrustumPerspective(fieldOfView, aspectRatio, nearClip, farClip);
+        if (!isParallel) {
+            camera.setFrustumPerspective(fieldOfView, aspectRatio, nearClip, farClip);
+        } else {
+            camera.setFrustum(nearClip, farClip, left, right, top, bottom);       
+        }
+        camera.setParallelProjection(isParallel);
         cameraNode.setCamera(camera);    
     }
+    
     
     /**
      * Set the viewport width and height

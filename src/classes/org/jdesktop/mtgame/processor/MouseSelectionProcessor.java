@@ -132,10 +132,19 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                     Vector2f sc = new Vector2f(x, (halfHeight*2) - y);
                     jmeCamera.getWorldCoordinates(sc, 0.0f, thru);
                     
-                    eyeRay.direction.x = thru.x - eyeRay.origin.x;
-                    eyeRay.direction.y = thru.y - eyeRay.origin.y;
-                    eyeRay.direction.z = thru.z - eyeRay.origin.z;
-                    eyeRay.direction.normalize();
+                    if (jmeCamera.isParallelProjection()) {
+                        eyeRay.direction.x = 0.0f;
+                        eyeRay.direction.y = 0.0f;
+                        eyeRay.direction.z = thru.z - eyeRay.origin.z;
+                        eyeRay.origin.x = thru.x;
+                        eyeRay.origin.y = thru.y;
+                        eyeRay.origin.z = thru.z;
+                    } else {
+                        eyeRay.direction.x = thru.x - eyeRay.origin.x;
+                        eyeRay.direction.y = thru.y - eyeRay.origin.y;
+                        eyeRay.direction.z = thru.z - eyeRay.origin.z;  
+                    }
+                    eyeRay.direction.normalizeLocal();
                     
                     //System.out.println("Thru at: " + thru.x + ", " + thru.y + ", " + thru.z);
                     //System.out.println("Ray starts at: " + eyeRay.origin.x + ", " + eyeRay.origin.y + ", " + eyeRay.origin.z);

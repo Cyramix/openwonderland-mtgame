@@ -21,6 +21,7 @@ import com.jme.renderer.RenderContext;
 import com.jme.scene.state.jogl.records.TextureRecord;
 import com.jme.scene.state.jogl.records.TextureStateRecord;
 import com.jme.system.DisplaySystem;
+import com.jme.renderer.ColorRGBA;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
@@ -32,7 +33,9 @@ import javax.media.opengl.glu.GLU;
  * 
  * @author Doug Twilleager
  */
-public class TextureRenderBuffer extends RenderBuffer {    
+public class TextureRenderBuffer extends RenderBuffer { 
+    ColorRGBA bgColor = new ColorRGBA();
+        
     /**
      * The constructor
      */
@@ -72,7 +75,6 @@ public class TextureRenderBuffer extends RenderBuffer {
         TextureRenderer.Target tRtarget = TextureRenderer.Target.Texture2D;
 
         setTextureRenderer(display.createTextureRenderer(getWidth(), getHeight(), tRtarget));
-        getTextureRenderer().setBackgroundColor(getBackgroundColor());
     }
     
     /**
@@ -137,6 +139,8 @@ public class TextureRenderBuffer extends RenderBuffer {
         
         getTextureRenderer().setCamera(getCameraComponent().getCamera());
         getCameraComponent().getCamera().update();
+        getBackgroundColor(bgColor);
+        getTextureRenderer().setBackgroundColor(bgColor);
         getTextureRenderer().render(getRenderList(), getTextureList(), true);
     }
 }
