@@ -48,6 +48,7 @@ public class CubeMapRenderBuffer extends RenderBuffer {
     private Vector3f positiveY = new Vector3f(0.0f, 1.0f, 0.0f);
     private Vector3f negativeZ = new Vector3f(0.0f, 0.0f, -1.0f);
     private Vector3f positiveZ = new Vector3f(0.0f, 0.0f, 1.0f);
+    ColorRGBA bgColor = new ColorRGBA();
 
     /**
      * The constructor
@@ -171,6 +172,8 @@ public class CubeMapRenderBuffer extends RenderBuffer {
         }
         Camera saveCamera = jmeRenderer.getCamera();
         jmeRenderer.setCamera(cubeMapCamera);
+        getBackgroundColor(bgColor);
+        jmeRenderer.setBackgroundColor(bgColor);
         cubeMapCamera.setLocation(ccCamera.getLocation());
         JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.CubeMap);
 

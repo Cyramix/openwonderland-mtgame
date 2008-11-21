@@ -70,6 +70,12 @@ public abstract class RenderBuffer {
      * managing manually.
      */
     private boolean manageRenderScenes = false;
+    
+    /**
+     * A callback for applications that want to be notified after a
+     * render.
+     */
+    private RenderUpdater renderUpdater = null;
      
     /**
      * The list of Spatials to render into this buffer
@@ -120,6 +126,20 @@ public abstract class RenderBuffer {
      */
     void setInitialized(boolean flag) {
         initialized = flag;
+    }
+        
+    /**
+     * Set the Render Updater
+     */
+    public void setRenderUpdater(RenderUpdater updater) {
+        renderUpdater = updater;
+    }
+    
+    /**
+     * Set the Render Updater
+     */
+    public RenderUpdater getRenderUpdater() {
+        return (renderUpdater);
     }
     
     /**
@@ -248,8 +268,20 @@ public abstract class RenderBuffer {
     /**
      * Get the background color
      */
-    public ColorRGBA getBackgroundColor() {
-        return (backgroundColor);
+    public ColorRGBA getBackgroundColor(ColorRGBA color) {
+        synchronized (backgroundColor) {
+            color.set(backgroundColor);
+        }
+        return (color);
+    }
+         
+    /**
+     * Get the background color
+     */
+    public void setBackgroundColor(ColorRGBA color) {
+        synchronized (backgroundColor) {
+            backgroundColor.set(color);
+        }
     }
     
     /**

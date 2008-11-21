@@ -29,6 +29,7 @@ import com.jme.image.Texture.DepthTextureCompareMode;
 import com.jme.image.Texture.DepthTextureMode;
 import com.jme.renderer.Camera;
 import com.jme.renderer.AbstractCamera;
+import com.jme.renderer.ColorRGBA;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
@@ -79,6 +80,8 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
     private static Matrix4f biasMatrix = new Matrix4f(0.5f, 0.0f, 0.0f, 0.0f,
             0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f,
             1.0f);
+    
+    ColorRGBA bgColor = new ColorRGBA();
 
     /**
      * The constructor
@@ -223,7 +226,6 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
     private void createTextureRenderer(DisplaySystem display) {
         TextureRenderer.Target tRtarget = TextureRenderer.Target.Texture2D;
         setTextureRenderer(display.createTextureRenderer(getWidth(), getHeight(), tRtarget));
-        getTextureRenderer().setBackgroundColor(getBackgroundColor());
     }
     
     /**
@@ -294,7 +296,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         //System.out.println("Up: " + cameraUp);
         if (cameraIsParallel) {
             camera.setParallelProjection(true);
-            camera.setFrustum(1.0f, 500.0f, -getWidth()/2, getWidth()/2, getHeight()/2, -getHeight()/2);
+            camera.setFrustum(1.0f, 3000.0f, -75, 75, -75, 75);
         } else {
             camera.setParallelProjection(false);
             camera.setFrustumPerspective(60.0f, getWidth()/getHeight(), 1.0f, 1000.0f);
@@ -317,6 +319,11 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Render the current RenderList into this buffer
      */
     void render(Renderer r) {
+        GL gl = GLU.getCurrentGL();
+        com.jme.renderer.Renderer jmeRenderer = r.getJMERenderer();
+        int width = getWidth();
+        int height = getHeight();
+        
         synchronized (getRBLock()) {
             if (cameraChanged) {
                 camera = getTextureRenderer().getCamera();
@@ -325,10 +332,24 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
             }
         }
         camera.update();
+        getBackgroundColor(bgColor);
+        getTextureRenderer().setBackgroundColor(bgColor);
         //System.out.println("Camera loc: " + camera.getLocation());
         //System.out.println("Camera dir: " + camera.getDirection()); 
         //System.out.println("RL: " + getRenderList().size());
         //System.out.println("TL: " + getTextureList().size());
         getTextureRenderer().render(getRenderList(), getTextureList(), true);
+        
+        /*
+        Camera saveCamera = jmeRenderer.getCamera();
+        jmeRenderer.setCamera(camera);
+        JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
+
+        //r.renderScene(getSpatialList());
+        r.renderScene(null);
+        r.swapAndWait(5000); 
+        //gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+        jmeRenderer.setCamera(saveCamera);
+        */
     }
 }

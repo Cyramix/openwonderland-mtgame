@@ -115,6 +115,20 @@ public class RenderManager {
         cc.createJMECamera(this);
         return (cc);
     }  
+          
+    /**
+     * Create a CameraComponent using the jME graph given and the camera parameters
+     */
+    public CameraComponent createCameraComponent(Node cameraSG, CameraNode cameraNode, 
+            int viewportWidth, int viewportHeight, float near, float far, 
+            float left, float right, float bottom, float top, boolean primary){
+        
+        CameraComponent cc = new CameraComponent(cameraSG, cameraNode, 
+                viewportWidth, viewportHeight, near, far, left, right, bottom, top,
+                primary);
+        cc.createJMECamera(this);
+        return (cc);
+    }  
     
     /**
      * Create a RenderBuffer of the given type, width, and height
@@ -237,7 +251,15 @@ public class RenderManager {
         // Pass the info onto the renderers
         renderer.setDesiredFrameRate(fps);
     }
-
+ 
+    /**
+     * Set the desired frame rate
+     */
+    public void setMinSamples(int samples) {
+        // Pass the info onto the renderers
+        renderer.setMinSamples(samples);
+    }
+    
     /**
      * Set a listener for frame rate updates
      */
