@@ -151,6 +151,9 @@ public abstract class ProcessorComponent extends EntityComponent {
     * Set the trigger conditions for this Process
     */
    public void setArmingCondition(ProcessorArmingCondition condition) {
+       if (armingCondition != null && entityProcessController != null) {
+           entityProcessController.disarmProcessorComponent(armingCondition);
+       }
        armingCondition = condition;
        if (entityProcessController != null) {
            entityProcessController.armProcessorComponent(armingCondition);
