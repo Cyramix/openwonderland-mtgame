@@ -364,6 +364,69 @@ class ProcessorManager extends Thread {
             triggerPostEvent();
         }
     }
+        
+    /**
+     * Disarm a new frame condition
+     */
+    void disarmNewFrame(NewFrameCondition condition) {
+        ProcessorComponent pc = condition.getProcessorComponent();
+        
+        synchronized (newFrameArmed) {
+            newFrameArmed.remove(pc);
+        }        
+    }
+    
+    /**
+     * Disarm a timer expired condition
+     */
+    void disarmTimerExpired(TimerExpiredCondition condition) {
+        ProcessorComponent pc = condition.getProcessorComponent();
+        
+        synchronized (timeElapseArmed) {
+            timeElapseArmed.remove(pc);
+        }      
+    }
+  
+     
+    /**
+     * Arm an awt event condition
+     */
+    void disarmAwtEvent(AwtEventCondition condition) {
+        ProcessorComponent pc = condition.getProcessorComponent();
+
+        synchronized (awtEventsArmed) {
+            if (awtEventsArmed.contains(pc)) {
+                if (pc instanceof AWTEventProcessorComponent) {
+                    AWTEventProcessorComponent apc = (AWTEventProcessorComponent) pc;
+                    if (apc.eventsPending()) {
+                        // This clears out the events
+                        apc.getEvents();
+                    }
+                }
+                awtEventsArmed.remove(pc);
+            }
+        }
+    }
+    
+        
+    /**
+     * Disarm a post event condition
+     */
+    void disarmPostEvent(PostEventCondition condition) {
+        ProcessorComponent pc = condition.getProcessorComponent();
+      
+        synchronized (postEventArmed) {
+            if (postEventArmed.contains(pc)) {
+                postEventArmed.remove(pc);
+            }
+            if (postEventListeners.contains(condition)) {
+                postEventListeners.remove(condition);
+            }
+            if (condition.eventsPending()) {
+                condition.getTriggerEvents();
+            }
+        }
+    }
     
     /**
      * Arm a condition
@@ -388,11 +451,31 @@ class ProcessorManager extends Thread {
     }
     
     /**
+     * Disarm a condition
+     */
+    void disarmCondition(ProcessorArmingCondition armingCondition) {
+
+        if (armingCondition instanceof NewFrameCondition) {
+            disarmNewFrame((NewFrameCondition)armingCondition);
+        }
+
+        if (armingCondition instanceof TimerExpiredCondition) {
+            disarmTimerExpired((TimerExpiredCondition) armingCondition);
+        }
+
+        if (armingCondition instanceof AwtEventCondition) {
+            disarmAwtEvent((AwtEventCondition) armingCondition);
+        }
+
+        if (armingCondition instanceof PostEventCondition) {
+            disarmPostEvent((PostEventCondition) armingCondition);
+        }        
+    }
+    
+    /**
      * Add a processor component to the appropriate lists of possible arms
      */
     void armProcessorComponent(ProcessorArmingCondition armingCondition) {
-        boolean pendingTrigger = false;
-        ProcessorArmingCondition condition = null;
         
         if (armingCondition instanceof ProcessorArmingCollection) {
             ProcessorArmingCollection pac = (ProcessorArmingCollection) armingCondition;
@@ -401,6 +484,21 @@ class ProcessorManager extends Thread {
             }
         } else {
             armCondition(armingCondition);
+        }
+    }
+          
+    /**
+     * Add a processor component to the appropriate lists of possible arms
+     */
+    void disarmProcessorComponent(ProcessorArmingCondition armingCondition) {
+        
+        if (armingCondition instanceof ProcessorArmingCollection) {
+            ProcessorArmingCollection pac = (ProcessorArmingCollection) armingCondition;
+            for (int i=0; i<pac.size(); i++) {
+                disarmProcessorComponent(pac.get(i));
+            }
+        } else {
+            disarmCondition(armingCondition);
         }
     }
     

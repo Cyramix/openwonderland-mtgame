@@ -140,6 +140,7 @@ public class PostEventTest {
         
     private Canvas canvas = null;
     private RenderBuffer rb = null;
+    MyPostProcessor postProcs[] = new MyPostProcessor[500];
     
     public PostEventTest(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -503,9 +504,17 @@ public class PostEventTest {
                 if (coordsOn) {
                     coordsOn = false;
                     wm.removeEntity(axis);
+                    for (int i=0; i<100; i++) {
+                        postProcs[i].setArmingCondition(null);
+                    }
                     System.out.println("Turning Coordinates Off");
                 } else {
                     coordsOn = true;
+                    for (int i = 0; i < 100; i++) {
+                        long[] events = new long[1];
+                        events[0] = (long) i;
+                        postProcs[i].setArmingCondition(new PostEventCondition(postProcs[i], events));
+                    }
                     wm.addEntity(axis);
                     System.out.println("Turning Coordinates On");
                 }
@@ -589,6 +598,7 @@ public class PostEventTest {
             long[] events = new long[1];
             events[0] = (long)i;
             MyPostProcessor mpp = new MyPostProcessor("PostProcessor" + i, events);
+            postProcs[i] = mpp;
             
             pcc.addProcessor(mpp);
             pcc.addProcessor(rp);
