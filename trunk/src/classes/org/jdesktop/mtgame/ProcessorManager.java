@@ -221,42 +221,6 @@ class ProcessorManager extends Thread {
     }
     
     /**
-     * Add an entity to be potentially processed
-     */
-    void addEntity(Entity e) {
-        ProcessorComponent pc = 
-                (ProcessorComponent) e.getComponent(ProcessorComponent.class);
-        ProcessorCollectionComponent pcc = 
-                (ProcessorCollectionComponent)e.getComponent(ProcessorCollectionComponent.class);
-
-        if (pc != null) {
-            pc.setEntityProcessController(this);
-            if (pc.getArmingCondition() != null) {
-                armProcessorComponent(pc.getArmingCondition());
-            }
-            pc.initialize();
-        }
-
-        if (pcc != null) {
-            ProcessorComponent[] procs = pcc.getProcessors();
-            for (int i = 0; i < procs.length; i++) {
-                procs[i].setEntityProcessController(this);
-                if (procs[i].getArmingCondition() != null) {
-                    armProcessorComponent(procs[i].getArmingCondition());
-                }
-                procs[i].initialize();
-            }
-        }
-    }
-    
-    /**
-     * Add an entity to be potentially processed
-     */
-    void removeEntity(Entity e) {
-        // TODO.......
-    }
-    
-    /**
      * Add a component to be potentially processed
      */
     void addComponent(EntityComponent c) {
@@ -287,7 +251,24 @@ class ProcessorManager extends Thread {
      * Add an entity to be potentially processed
      */
     void removeComponent(EntityComponent c) {
-        // TODO.......
+        if (c instanceof ProcessorComponent) {
+            ProcessorComponent pc = (ProcessorComponent) c;      
+            if (pc.getArmingCondition() != null) {
+                disarmProcessorComponent(pc.getArmingCondition());
+            }
+            pc.setEntityProcessController(null);
+        }
+
+        if (c instanceof ProcessorCollectionComponent) {
+            ProcessorCollectionComponent pcc = (ProcessorCollectionComponent) c;
+            ProcessorComponent[] procs = pcc.getProcessors();
+            for (int i = 0; i < procs.length; i++) {        
+                if (procs[i].getArmingCondition() != null) {
+                    disarmProcessorComponent(procs[i].getArmingCondition());
+                }
+                procs[i].setEntityProcessController(null);
+            }
+        }
     }
     
     /**
