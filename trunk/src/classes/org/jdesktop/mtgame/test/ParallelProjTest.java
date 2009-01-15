@@ -88,7 +88,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class WorldBuilder {
+public class ParallelProjTest {
     /**
      * The WorldManager for this world
      */
@@ -141,7 +141,7 @@ public class WorldBuilder {
     private Canvas canvas = null;
     private RenderBuffer rb = null;
     
-    public WorldBuilder(String[] args) {
+    public ParallelProjTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
@@ -173,10 +173,10 @@ public class WorldBuilder {
         
         // Add the camera
         Entity camera = new Entity("DefaultCamera");
-        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
-                width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
         //CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
-        //        width, height, 1.0f, 1000.0f, -100, 100, 100, -100, true);
+        //        width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
+        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
+                width, height, 1.0f, 1000.0f, -100, 100, 100, -100, true);
         rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
@@ -275,7 +275,7 @@ public class WorldBuilder {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        WorldBuilder worldBuilder = new WorldBuilder(args);
+        ParallelProjTest worldBuilder = new ParallelProjTest(args);
         
     }
     
@@ -593,7 +593,7 @@ public class WorldBuilder {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 200;
+        int numTeapots = 500;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;

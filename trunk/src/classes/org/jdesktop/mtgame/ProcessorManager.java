@@ -106,6 +106,11 @@ class ProcessorManager extends Thread {
     private boolean done = false;
     
     /**
+     * This flag tells the renderer whether or not to run
+     */
+    private boolean running = true;
+    
+    /**
      * A flag to say whether or not we are waiting for work
      */
     private boolean waiting = false;
@@ -155,6 +160,14 @@ class ProcessorManager extends Thread {
         // For now, just notify the manager that we are ready
         notify();
     }
+        
+    void setRunning(boolean flag) {
+        running = flag;
+    }
+    
+    boolean getRunning() {
+        return (running);
+    }
     
     /**
      * The main run loop
@@ -164,6 +177,16 @@ class ProcessorManager extends Thread {
         
         initController();
         while (!done) {
+            
+            // Pause running if flag is set
+            while (!running) {
+                try {
+                    Thread.sleep(333, 0);
+                } catch (InterruptedException e) {
+                    System.out.println(e);
+                }
+            }
+            
             // Gather the list of processor components to execute
             // This includes any chained processors
             runList = waitForProcessorsTriggered();

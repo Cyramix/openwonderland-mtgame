@@ -198,6 +198,40 @@ public class RenderManager {
     }
     
     /**
+     * Set the flag which tells the renderer to run or not
+     */
+    public void setRunning(boolean flag) {
+        renderer.setRunning(flag);
+    }
+    
+    /**
+     * Get whether or not the renderer is running
+     */
+    public boolean getRunning() {
+        return (renderer.getRunning());
+    }
+    
+    /**
+     * Acquire the Swing/AWT lock.  Most users do not need to acquire and release
+     * this lock.  It is only needed for ProcessorComponents that wish to mix Swing/AWT
+     * rendering with jME/JOGL rendering in their commit method.  The lock should 
+     * be released before Swing/AWT rendering and reaquired before jME/JOGL rendering.
+     */
+    public void acquireSwingLock() {
+        renderer.acquireSwingLock();
+    }
+    
+    /**
+     * Release the Swing/AWT lock.  Most users do not need to acquire and release
+     * this lock.  It is only needed for ProcessorComponents that wish to mix Swing/AWT
+     * rendering with jME/JOGL rendering in their commit method.  The lock should 
+     * be released before Swing/AWT rendering and reaquired before jME/JOGL rendering.
+     */
+    public void releaseSwingLock() {
+        renderer.releaseSwingLock();
+    }    
+    
+    /**
      * Create the jmeCamera
      */
     Camera createJMECamera(int width, int height) {  
