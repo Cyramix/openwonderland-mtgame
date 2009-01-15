@@ -35,11 +35,17 @@ import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
 import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
+import org.jdesktop.mtgame.processor.LightNodeRotator;
 import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
+import org.jdesktop.mtgame.processor.FPSCameraProcessor;
+import org.jdesktop.mtgame.shader.DiffuseNormalMap;
+import org.jdesktop.mtgame.shader.DiffuseMap;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
+import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
+import com.jme.scene.TriMesh;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
@@ -79,8 +85,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
+import com.jme.util.resource.ResourceLocatorTool;
+import com.jme.util.resource.ResourceLocator;
 
 import java.util.Random;
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.nio.FloatBuffer;
+import com.jme.scene.TexCoords;
+import com.jme.util.export.SavableString;
+import com.jme.util.geom.TangentBinormalGenerator;
 
 
 /**
@@ -88,7 +102,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class WorldBuilder {
+public class ColladaLoader {
     /**
      * The WorldManager for this world
      */
@@ -141,7 +155,11 @@ public class WorldBuilder {
     private Canvas canvas = null;
     private RenderBuffer rb = null;
     
-    public WorldBuilder(String[] args) {
+    private SwingFrame frame = null;
+    //private String loadfile = "/Users/runner/Desktop/CGFXTest.dae";
+    private String loadfile = "/Users/runner/Desktop/ObjKiosk2.dae";
+    
+    public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
@@ -151,11 +169,17 @@ public class WorldBuilder {
         PointLight light = new PointLight();
         light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
         light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setLocation(new Vector3f(100, 100, 100));
+        //light.setLocation(new Vector3f(10, 10, 10));
         light.setEnabled(true);
         lightNode.setLight(light);
-        lightNode.setLocalTranslation(0.0f, 0.0f, 50.0f);
+        lightNode.setLocalTranslation(100.0f, 100.0f, 100.0f);
         wm.getRenderManager().addLight(lightNode);
+        
+        LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
+                lightNode, new Vector3f(0, 0, 100), (float) (1.0f * Math.PI / 180.0f));
+        Entity e = new Entity("Light Rotator");
+        e.addComponent(RotationProcessor.class, rp);
+        //wm.addEntity(e);
         
         createUI(wm);  
         createCameraEntity(wm);   
@@ -163,8 +187,9 @@ public class WorldBuilder {
         wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-         
-        createRandomTeapots(wm);
+        frame.loadFile(loadfile, true);
+        frame.loadFile(loadfile, false);
+        //createRandomTeapots(wm);
         
     }
     
@@ -183,20 +208,20 @@ public class WorldBuilder {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
+        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera);
         OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
-        MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
 
-        selector.setRunInRenderer(true);
+        //selector.setRunInRenderer(true);
         
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        pcc.addProcessor(selector);
+        //pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -275,7 +300,7 @@ public class WorldBuilder {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        WorldBuilder worldBuilder = new WorldBuilder(args);
+        ColladaLoader worldBuilder = new ColladaLoader(args);
         
     }
     
@@ -296,14 +321,14 @@ public class WorldBuilder {
      * Create all of the Swing windows - and the 3D window
      */
     private void createUI(WorldManager wm) {             
-        SwingFrame frame = new SwingFrame(wm);
+        frame = new SwingFrame(wm);
         // center the frame
         frame.setLocationRelativeTo(null);
         // show frame
         frame.setVisible(true);
     }
     
-    class SwingFrame extends JFrame implements FrameRateListener, ActionListener {
+    class SwingFrame extends JFrame implements FrameRateListener, ActionListener, ResourceLocator {
 
         JPanel contentPane;
         JPanel menuPanel = new JPanel();
@@ -317,6 +342,10 @@ public class WorldBuilder {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
+        String textureSubdir = "file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/";
+        String textureSubdirName = "/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/";
+        //String textureSubdir = "file:/Users/runner/Desktop/";
+        //String textureSubdirName = "/Users/runner/Desktop/";
 
 
         // Construct the frame
@@ -346,39 +375,6 @@ public class WorldBuilder {
             fileMenu.add(loadItem);
             fileMenu.add(exitItem);
             menuBar.add(fileMenu);
-            
-            // Create Menu
-            JMenu createMenu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot1");
-            createTeapotItem.addActionListener(this);
-            createMenu.add(createTeapotItem);
-            menuBar.add(createMenu);
-            
-            JMenu test1Menu = new JMenu("Test1");
-            createTeapotItem = new JMenuItem("Teapot2");
-            createTeapotItem.addActionListener(this);
-            test1Menu.add(createTeapotItem);
-            menuBar.add(test1Menu);
-            
-            JMenu test2Menu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot3");
-            createTeapotItem.addActionListener(this);
-            test2Menu.add(createTeapotItem);
-            menuBar.add(test2Menu);
-            
-            JMenu test3Menu = new JMenu("Create");
-            createTeapotItem = new JMenuItem("Teapot4");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            createTeapotItem = new JMenuItem("Teapot5");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            createTeapotItem = new JMenuItem("Teapot6");
-            createTeapotItem.addActionListener(this);
-            test3Menu.add(createTeapotItem);
-            test3Menu.getPopupMenu().setLightWeightPopupEnabled(false);
-            menuBar.add(test3Menu);
-            
             
             menuPanel.add(menuBar);
             contentPane.add(menuPanel, BorderLayout.NORTH);
@@ -411,6 +407,8 @@ public class WorldBuilder {
             contentPane.add(statusPanel, BorderLayout.SOUTH);
 
             pack();
+            
+            ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
         }
         
         /**
@@ -420,19 +418,37 @@ public class WorldBuilder {
             fpsLabel.setText("FPS: " + framerate);
         }
         
+        public URL locateResource(String resourceName) {
+            URL url = null;
+
+            //System.out.println("Looking for: " + resourceName);
+            try {
+                if (resourceName.contains(textureSubdirName)) {
+                    // We already resolved this one.
+                    url = new URL("file:" + resourceName);
+                } else {
+                    url = new URL(textureSubdir + resourceName);
+                }
+                //System.out.println("TEXTURE: " + url);
+            } catch (MalformedURLException e) {
+                System.out.println(e);
+            }
+
+            return (url);
+        }
+        
         /**
          * Add a model to be visualized
          */
         private void addModel(Node model) {
             Node modelRoot = new Node("Model");
-            
-            
+                    
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);
             
-            System.out.println("Adding: " + model);
+            //System.out.println("Adding: " + model);
             modelRoot.attachChild(model);
             models.add(modelRoot);
             
@@ -440,91 +456,6 @@ public class WorldBuilder {
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
             e.addComponent(RenderComponent.class, sc);
             wm.addEntity(e);              
-        }
-        
-        private void createTeapot() {
-            Node node = new Node();
-            Teapot teapot = new Teapot();
-            teapot.resetData();
-            node.attachChild(teapot);
-            
-            Triangle[] tris = new Triangle[teapot.getTriangleCount()];
-            
-            BoundingBox bbox = new BoundingBox();
-            bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
-            System.out.println(bbox);
-        
-            ColorRGBA color = new ColorRGBA();
-
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-            buf.setEnabled(true);
-            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
-            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-            matState.setDiffuse(color);
-            
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
-            as.setEnabled(true);
-            as.setBlendEnabled(true);
-            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-            node.setRenderState(as);
-
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-            
-            node.setRenderState(matState);
-            node.setRenderState(buf);
-            node.setLocalTranslation(0.0f, 0.0f, 0.0f);
-            teapot.setModelBound(bbox);
-            addModel(node);
-            addToVisibleBounds(teapot);
-        }
-            
-        private void addToVisibleBounds(Geometry g) {
-            BoundingVolume bv = g.getModelBound();
-            Entity e = null;
-            Node node = null;
-            ColorRGBA color = new ColorRGBA(1.0f, 0.0f, 0.0f, 0.4f);
-            Box box = null;
-
-            System.out.println("BOUNDS: " + bv);
-            if (bv instanceof BoundingBox) {
-                BoundingBox bbox = (BoundingBox) bv;
-                Vector3f center = bbox.getCenter();
-
-                Vector3f extent = bbox.getExtent(null);
-                box = new Box("Bounds", center, extent.x, extent.y, extent.z);
-                box.setDefaultColor(color);
-
-                e = new Entity("Bounds");
-                node = new Node();
-                node.attachChild(box);
-                RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
-                sc.setLightingEnabled(false);
-                e.addComponent(RenderComponent.class, sc);
-            }
-
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-            buf.setEnabled(true);
-            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-            node.setRenderState(buf);
-
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
-            as.setEnabled(true);
-            as.setBlendEnabled(true);
-            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-            node.setRenderState(as);
-
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-
-            wm.addEntity(e);
         }
     
         /**
@@ -571,6 +502,7 @@ public class WorldBuilder {
                     // Now load the model
                     ColladaImporter.load(fileStream, "Model");
                     Node model = ColladaImporter.getModel();
+                    parseModel(0, model, false);
                     addModel(model);                 
                 }
             }
@@ -578,94 +510,67 @@ public class WorldBuilder {
             if (e.getSource() == exitItem) {
                 System.exit(1);
             }
+        }
+        
+        void loadFile(String filename, boolean normalMap) {       
+            FileInputStream fileStream = null;
             
-            if (e.getSource() == createTeapotItem) {
-                createTeapot();
+            System.out.println("You chose to open this file: " + filename);
+            try {
+                fileStream = new FileInputStream(filename);
+            } catch (FileNotFoundException ex) {
+                System.out.println(ex);
+            }
+
+            // Now load the model
+            ColladaImporter.load(fileStream, "Model");
+            Node model = ColladaImporter.getModel();
+            if (normalMap) {
+                model.setLocalTranslation(10.0f, 0.0f, 0.0f);
+            } else {
+                model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
+            }
+            model.setLocalScale(5.0f);
+            parseModel(0, model, normalMap);
+            addModel(model);
+        }
+        
+        void parseModel(int level, Spatial model, boolean normalMap) {
+            if (model instanceof Node) {
+                Node n = (Node)model;
+                for (int i=0; i<n.getQuantity(); i++) {
+                    parseModel(level+1, n.getChild(i), normalMap);
+                }
+            } else if (model instanceof Geometry) {
+                Geometry geo = (Geometry)model;
+                
+                SavableString str = (SavableString)geo.getUserData("MTGameShaderFlag");
+                if (geo instanceof TriMesh && str.getValue() != null) {
+                    //System.out.println("Generating Tangents: " + geo);
+                    TangentBinormalGenerator.generate((TriMesh)geo);
+                    //System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
+                    //System.out.println("Normal Buffer: " + geo.getNormalBuffer());
+                    //System.out.println("Color Buffer: " + geo.getColorBuffer());
+                    //System.out.println("TC 0 Buffer: " + geo.getTextureCoords(0));
+                    //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
+                    //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
+                    //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
+                    assignShader(geo, str.getValue(), normalMap);
+                }                
             }
         }
-    }
-    
-    /**
-     * Create 50 randomly placed teapots, with roughly half of them transparent
-     */
-    private void createRandomTeapots(WorldManager wm) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        boolean transparent = false;
-        int numTeapots = 200;
-        Random r = new Random();
-        RenderComponent sc = null;
-        JMECollisionComponent cc = null;
-        Entity e = null;
-        JMECollisionSystem collisionSystem = (JMECollisionSystem) 
-                wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*100.0f) - 50.0f;
-            y = (r.nextFloat()*100.0f) - 50.0f;
-            z = (r.nextFloat()*100.0f) - 50.0f;
-            transparent = r.nextBoolean();
-            Node teapot = createTeapotModel(x, y, z, transparent);
-            
-            e = new Entity("Teapot " + i);
-            sc = wm.getRenderManager().createRenderComponent(teapot);
-            cc = collisionSystem.createCollisionComponent(teapot);
-            e.addComponent(RenderComponent.class, sc);
-            e.addComponent(CollisionComponent.class, cc);
-
-            
-            ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
-            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));       
-            pcc.addProcessor(rp);
-            e.addComponent(ProcessorCollectionComponent.class, pcc);
-            wm.addEntity(e);
-                        
+        void assignShader(Geometry geo, String shaderFlag, boolean normalMap) {
+            if (shaderFlag.equals("MTGAMEDiffuseNormalMap")) {
+                if (normalMap) {
+                    DiffuseNormalMap shader = new DiffuseNormalMap(wm);
+                    shader.applyToGeometry(geo);
+                } else {
+                    DiffuseMap shader = new DiffuseMap(wm);
+                    shader.applyToGeometry(geo);
+                }
+                //System.out.println("Assigning Shader: " + shaderFlag);
+            }
         }
-    }
-    
-    private Node createTeapotModel(float x, float y, float z, boolean transparent) {
-        Node node = new Node();
-        Teapot teapot = new Teapot();
-        teapot.resetData();
-        node.attachChild(teapot);
-
-        Triangle[] tris = new Triangle[teapot.getTriangleCount()];
-
-        BoundingBox bbox = new BoundingBox();
-        bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
-
-        ColorRGBA color = new ColorRGBA();
-
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
-        if (transparent) {
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
-            as.setEnabled(true);
-            as.setBlendEnabled(true);
-            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-            node.setRenderState(as);
-            
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-            
-            color.set(0.0f, 1.0f, 1.0f, 0.75f);
-        }
-
-        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-        matState.setDiffuse(color);
-        
-        node.setRenderState(matState);
-        node.setRenderState(buf);
-        node.setLocalTranslation(x, y, z);
-        node.setModelBound(bbox); 
-        
-        return (node);
     }
 }

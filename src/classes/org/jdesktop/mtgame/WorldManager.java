@@ -248,6 +248,20 @@ public class WorldManager {
     }
     
     /**
+     * Set the flag which tells the processors to run or not
+     */
+    public void setProcessorsRunning(boolean flag) {
+        processorManager.setRunning(flag);
+    }
+    
+    /**
+     * Get whether or not the processors are running
+     */
+    public boolean getProcessorsRunning() {
+        return (processorManager.getRunning());
+    }
+    
+    /**
      * Allocate an event id to be used by postEvent.
      */
     public long allocateEvent() {

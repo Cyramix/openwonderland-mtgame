@@ -53,6 +53,7 @@ import com.jmex.awt.jogl.JOGLAWTCanvasConstructor;
 import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
 import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
+import java.lang.reflect.Method;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -233,6 +234,11 @@ class Renderer extends Thread {
      * This flag tells the renderer when it is done.
      */
     private boolean done = false;
+           
+    /**
+     * This flag tells the renderer whether or not to run
+     */
+    private boolean running = true;
     
     /**
      * The commit process list - to be processed as we can at the
@@ -669,6 +675,55 @@ class Renderer extends Thread {
         }
     }
     
+    void setRunning(boolean flag) {
+        running = flag;
+    }
+    
+    boolean getRunning() {
+        return (running);
+    }
+    
+    // We need to call this method reflectively because it isn't available in Java 5
+    // BTW: we don't support Java 5 on Linux, so this is okay.
+    private static boolean isLinux = System.getProperty("os.name").equals("Linux");
+    private static Method isAWTLockHeldByCurrentThreadMethod;
+    
+    static {
+        if (isLinux) {
+            try {
+                Class awtToolkitClass = Class.forName("sun.awt.SunToolkit");
+                isAWTLockHeldByCurrentThreadMethod =
+                        awtToolkitClass.getMethod("isAWTLockHeldByCurrentThread");
+            } catch (ClassNotFoundException ex) {
+            } catch (NoSuchMethodException ex) {
+            }
+        }
+    }
+  
+    void releaseSwingLock() {
+        // Linux-specific workaround: On Linux JOGL holds the SunToolkit AWT lock in mtgame commit methods.
+        // In order to avoid deadlock with any threads which are already holding the AWT lock and which
+        // want to acquire the lock on the dirty rectangle so they can draw (e.g Embedded Swing threads)
+        // we need to temporarily release the AWT lock before we lock the dirty rectangle and then reacquire
+        // the AWT lock afterward.
+        if (isAWTLockHeldByCurrentThreadMethod != null) {
+            try {
+                Boolean ret = (Boolean) isAWTLockHeldByCurrentThreadMethod.invoke(null);
+                if (ret.booleanValue()) {
+                    glContext.release();
+                }
+            } catch (Exception ex) {
+            }
+        }
+    }
+    
+    void acquireSwingLock() {
+        // Linux-specific workaround: Reacquire the lock if necessary.
+        if (glContext != null) {
+            glContext.makeCurrent();
+        }
+    }
+      
     /**
      * The render loop
      */
@@ -680,6 +735,15 @@ class Renderer extends Thread {
                     
         initRenderer();   
         while (!done) {
+            // Pause running if flag is set
+            while (!running) {
+                try {
+                    Thread.sleep(333, 0);
+                } catch (InterruptedException e) {
+                    System.out.println(e);
+                }             
+            }
+            
             // Snapshot the current time
             frameStartTime = System.nanoTime();
 
@@ -906,13 +970,25 @@ class Renderer extends Thread {
             // TODO: Work on partial commits
             while (/*elapsedTime < processTime &&*/currentCommit != commitList.length) {
                 pc = commitList[currentCommit++];
-                pc.commit(pc.getCurrentTriggerCollection());
+                if (pc.getSwingSafe()) {
+                    releaseSwingLock();
+                    pc.commit(pc.getCurrentTriggerCollection());
+                    acquireSwingLock();
+                } else {
+                    pc.commit(pc.getCurrentTriggerCollection());
+                }
                 pc.clearTriggerCollection();
 
                 // Process the chain
                 pc = pc.getNextInChain();
                 while (pc != null) {
-                    pc.commit(pc.getCurrentTriggerCollection());
+                    if (pc.getSwingSafe()) {
+                        releaseSwingLock();
+                        pc.commit(pc.getCurrentTriggerCollection());
+                        acquireSwingLock();
+                    } else {
+                        pc.commit(pc.getCurrentTriggerCollection());
+                    }
                     pc.clearTriggerCollection();
                     pc = pc.getNextInChain();
                 }
@@ -973,7 +1049,13 @@ class Renderer extends Thread {
         for (int i = 0; i < procs.length; i++) {
             pc = procs[i];
             pc.compute(pc.getCurrentTriggerCollection());
-            pc.commit(pc.getCurrentTriggerCollection());
+            if (pc.getSwingSafe()) {
+                releaseSwingLock();
+                pc.commit(pc.getCurrentTriggerCollection());
+                acquireSwingLock();
+            } else {
+                pc.commit(pc.getCurrentTriggerCollection());
+            }
             pc.clearTriggerCollection();
             worldManager.armProcessorComponent(pc.getArmingCondition());
             
@@ -981,7 +1063,13 @@ class Renderer extends Thread {
             pc = pc.getNextInChain();
             while (pc != null) {
                 pc.compute(pc.getCurrentTriggerCollection());
-                pc.commit(pc.getCurrentTriggerCollection());
+                if (pc.getSwingSafe()) {
+                    releaseSwingLock();
+                    pc.commit(pc.getCurrentTriggerCollection());
+                    acquireSwingLock();
+                } else {
+                    pc.commit(pc.getCurrentTriggerCollection());
+                }
                 pc.clearTriggerCollection();
                 pc = pc.getNextInChain();
             }

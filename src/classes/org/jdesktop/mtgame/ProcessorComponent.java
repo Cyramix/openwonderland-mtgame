@@ -73,6 +73,12 @@ public abstract class ProcessorComponent extends EntityComponent {
     * A flag to indicate that this processor is enabled
     */
    private boolean enabled = true;
+   
+   /**
+    * A flag indicating that this methods commit method should be executed 
+    * in a manner that it is safe to make swing methods calls
+    */
+   private boolean swingSafe = false;
 
    /**
     * The compute callback to be defined by the subclass.
@@ -131,6 +137,23 @@ public abstract class ProcessorComponent extends EntityComponent {
 
        prevPC.nextInChain = currentPC.nextInChain;
        proc.nextInChain = null;
+   }
+   
+   /**
+    * Set the SwingSafe flag on this ProcessorComponent.  If true, it is safe
+    * for this ProcessComponent to make Swing method calls in the processor
+    * commit method.  The default value of this flag is false, so it is not safe
+    * to make Swing method calls from a ProcessorComponent commit method.
+    */
+   public void setSwingSafe(boolean flag) {
+       swingSafe = flag;
+   }
+   
+   /**
+    * Get the current value of the SwingSafe flag
+    */
+   public boolean getSwingSafe() {
+       return (swingSafe);
    }
 
    /**
