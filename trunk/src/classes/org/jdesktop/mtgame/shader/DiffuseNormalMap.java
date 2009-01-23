@@ -21,50 +21,80 @@ public class DiffuseNormalMap implements RenderUpdater {
      */
     private static final String vertexShader =
         "attribute vec3 tangent;" +
-        "attribute vec3 binormal;" +
+//        "attribute vec3 binormal;" +
         "varying vec3 EyeDir;" +
-        "varying vec3 LightDir;" +
+        "varying vec3 LightDir[2];" +
         "void main(void)" +
         "{" +
         "        vec3 n = normalize(gl_NormalMatrix * gl_Normal);" +
         "        vec3 t = normalize(gl_NormalMatrix * tangent);" +
-        "        vec3 b = normalize(gl_NormalMatrix * binormal);" +
+        "        vec3 b = cross(n, t);" +
         "        gl_Position = ftransform();" +
-        "        EyeDir = vec3(gl_ModelViewMatrix * gl_Vertex);" +   
+        "        vec3 vVertex = vec3(gl_ModelViewMatrix * gl_Vertex);" +   
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
         "        gl_TexCoord[1] = gl_MultiTexCoord1;" +
         "" +
         "        vec3 v;" +
-        "        v.x = dot(gl_LightSource[0].position.xyz, t);" +
-        "        v.y = dot(gl_LightSource[0].position.xyz, b);" +
-        "        v.z = dot(gl_LightSource[0].position.xyz, n);" +
-        "        LightDir = normalize(v);" +
+        "        vec3 tmpVec = normalize(gl_LightSource[0].position.xyz - vVertex);" + 
+        "        v.x = dot(tmpVec, t);" +
+        "        v.y = dot(tmpVec, b);" +
+        "        v.z = dot(tmpVec, n);" +
+        "        LightDir[0] = normalize(v);" +
+        "        tmpVec = normalize(gl_LightSource[1].position.xyz - vVertex);" +
+        "        v.x = dot(tmpVec, t);" +
+        "        v.y = dot(tmpVec, b);" +
+        "        v.z = dot(tmpVec, n);" +
+        "        LightDir[1] = normalize(v);" +
         "" +
-        "        v.x = dot(EyeDir, t);" +
-        "        v.y = dot(EyeDir, b);" +
-        "        v.z = dot(EyeDir, n);" +
+        "        tmpVec = vVertex;" +
+        "        v.x = dot(tmpVec, t);" +
+        "        v.y = dot(tmpVec, b);" +
+        "        v.z = dot(tmpVec, n);" +
         "        EyeDir = normalize(v);" +
         "}";
     
     private static final String fragmentShader = 
         "varying vec3 EyeDir;" +
-        "varying vec3 LightDir;" +
+        "varying vec3 LightDir[2];" +
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D NormalMapIndex;" +
         "vec3 FragLocalNormal;" +
         "vec3 finalColor;" +
+        "vec3 diffuseColor;" +    
+        "vec3 specularColor;" +
         "float NdotL;" +
+        "float spec;" +
+        "vec3 reflectDir;" +
         "void main(void) { " +
-        "        finalColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
+                 // Do some setup
+        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
         "        FragLocalNormal = normalize(texture2D(NormalMapIndex, gl_TexCoord[0].st).xyz * 2.0 - 1.0);" +
-        "        NdotL = clamp(dot(FragLocalNormal, LightDir), 0.0, 1.0);" +
-        "        finalColor = finalColor * NdotL;" +
+        "        specularColor = vec3(1.0, 1.0, 1.0);" +
+        "        finalColor = gl_FrontMaterial.ambient.rgb * gl_LightSource[0].ambient.rgb;" +
+        
+                 // Compute diffuse for light0
+        "        NdotL = clamp(dot(FragLocalNormal, LightDir[0]), 0.0, 1.0);" +
+        "        finalColor += diffuseColor * NdotL * gl_LightSource[0].diffuse.rgb;" +
+   
+                 // Compte specular for light0       
+        "        reflectDir = reflect(LightDir[0], FragLocalNormal);" +
+        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
+        "        spec = pow(spec, 32.0);" +
+        "        finalColor += spec * specularColor * gl_LightSource[0].specular.rgb;" + 
+        
+                 // Compute diffuse for light1
+        "        finalColor += gl_FrontMaterial.ambient.rgb * gl_LightSource[1].ambient.rgb;" +
+        "        NdotL = clamp(dot(FragLocalNormal, LightDir[1]), 0.0, 1.0);" +
+        "        finalColor += diffuseColor * NdotL * gl_LightSource[1].diffuse.rgb;" +
+        
+                 // Compte specular for light1       
+        "        reflectDir = reflect(LightDir[1], FragLocalNormal);" +
+        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
+        "        spec = pow(spec, 32.0);" +
+        "        finalColor = min(finalColor + (spec * specularColor * gl_LightSource[1].specular.rgb), vec3(1.0));" +   
+                 
+                 // Final assignment
         "        gl_FragColor = vec4(finalColor, 1.0);" +
-        "" + 
-//        "        vec3 reflectDir = reflect(LightDir, FragLocalNormal);" +
-//        "        float spec = max(dot(EyeDir, reflectDir), 0.0);" +
-//        "        spec = pow(spec, 6.0) * 0.5;" +
-//        "        finalColor = min(finalColor + spec, vec3(1.0));" +        "        gl_FragColor = vec4(finalColor, 1.0);" +
         "}";
     
     /**
@@ -89,7 +119,7 @@ public class DiffuseNormalMap implements RenderUpdater {
      * This applies this shader to the given geometry
      */
     public void applyToGeometry(Geometry geo) {
-        shaderState.setAttributePointer("binormal", 3, false, 0, geo.getBinormalBuffer());
+//        shaderState.setAttributePointer("binormal", 3, false, 0, geo.getBinormalBuffer());
         shaderState.setAttributePointer("tangent", 3, false, 0, geo.getTangentBuffer()); 
         shaderState.setUniform("DiffuseMapIndex", 0);
         shaderState.setUniform("NormalMapIndex", 1);

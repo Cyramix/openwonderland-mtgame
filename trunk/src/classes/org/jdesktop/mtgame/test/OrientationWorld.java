@@ -95,6 +95,10 @@ import java.nio.FloatBuffer;
 import com.jme.scene.TexCoords;
 import com.jme.util.export.SavableString;
 import com.jme.util.geom.TangentBinormalGenerator;
+import com.jme.scene.Skybox;
+import com.jme.image.Texture;
+import com.jme.util.TextureManager;
+import com.jme.scene.Spatial.TextureCombineMode;
 
 
 /**
@@ -102,7 +106,7 @@ import com.jme.util.geom.TangentBinormalGenerator;
  * 
  * @author Doug Twilleager
  */
-public class ColladaLoader {
+public class OrientationWorld {
     /**
      * The WorldManager for this world
      */
@@ -154,26 +158,20 @@ public class ColladaLoader {
         
     private Canvas canvas = null;
     private RenderBuffer rb = null;
+    private JMECollisionSystem collisionSystem = null;
     
     private SwingFrame frame = null;
-    //private String loadfile = "/Users/runner/Desktop/CGFXTest.dae";
     private String loadfile = "/Users/runner/Desktop/Orientation/terrain.dae";
+    private Skybox skybox = null;
+
     
-    public ColladaLoader(String[] args) {
+    public OrientationWorld(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
         
-        lightNode = new LightNode();
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        //light.setLocation(new Vector3f(10, 10, 10));
-        light.setEnabled(true);
-        lightNode.setLight(light);
-        lightNode.setLocalTranslation(100.0f, 100.0f, 100.0f);
-        wm.getRenderManager().addLight(lightNode);
+        collisionSystem = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
         LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
                 lightNode, new Vector3f(0, 0, 100), (float) (1.0f * Math.PI / 180.0f));
@@ -182,17 +180,104 @@ public class ColladaLoader {
         //wm.addEntity(e);
         
         createUI(wm);  
-        createCameraEntity(wm);   
-        createGrid(wm);
-        wm.addEntity(grid);
-        createAxis();
-        wm.addEntity(axis);
+        createCameraEntity(wm);  
+        setGlobalLights();
+        createSkybox(wm);
         frame.loadFile(loadfile, true);
         //frame.loadFile(loadfile, false);
         //createRandomTeapots(wm);
         
     }
     
+    public void setGlobalLights() {
+        LightNode globalLight1 = new LightNode();
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.95f, 0.95f, 0.95f, 1.0f));
+        //light.setAmbient(new ColorRGBA(0.85f, 0.85f, 0.85f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setEnabled(true);
+        globalLight1.setLight(light);
+        globalLight1.setLocalTranslation(0.0f, 500.0f, 500.0f);
+
+        LightNode globalLight2 = new LightNode();
+        light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setEnabled(true);
+        globalLight2.setLight(light);
+        globalLight2.setLocalTranslation(0.0f, -500.0f, -500.0f);
+        wm.getRenderManager().addLight(globalLight1);
+        wm.getRenderManager().addLight(globalLight2);
+    }
+    
+    private void createSkybox(WorldManager wm) {
+        Texture north = null;
+        Texture south = null;
+        Texture east = null;
+        Texture west = null;
+        Texture up = null;
+        Texture down = null;
+        skybox = new Skybox("skybox", 500, 500, 500);
+        String urlpath = "file:/Users/runner/NetBeansProjects/jme-20/trunk/src/";
+        String dir = urlpath + "jmetest/data/skybox1/";
+        
+        try {
+        URL url = new URL(dir + "1.jpg");
+        north = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        url = new URL(dir + "3.jpg");
+        south = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        url = new URL(dir + "2.jpg");
+        east = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        url = new URL(dir + "4.jpg");
+        west = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        url = new URL(dir + "6.jpg");
+        up = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        url = new URL(dir + "5.jpg");
+        down = TextureManager.loadTexture(url,
+                Texture.MinificationFilter.BilinearNearestMipMap,
+                Texture.MagnificationFilter.Bilinear);
+        } catch (MalformedURLException e) {
+            System.out.println(e);
+        }
+
+        skybox.setTexture(Skybox.Face.North, north);
+        skybox.setTexture(Skybox.Face.West, west);
+        skybox.setTexture(Skybox.Face.South, south);
+        skybox.setTexture(Skybox.Face.East, east);
+        skybox.setTexture(Skybox.Face.Up, up);
+        skybox.setTexture(Skybox.Face.Down, down);
+
+        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        cullState.setEnabled(true);
+        skybox.setRenderState(cullState);
+
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        //zState.setEnabled(false);
+        skybox.setRenderState(zState);
+
+        skybox.setLightCombineMode(Spatial.LightCombineMode.Off);
+        skybox.setCullHint(Spatial.CullHint.Never);
+        skybox.setTextureCombineMode(TextureCombineMode.Replace);
+        skybox.updateRenderState();
+
+        skybox.lockBounds();        
+        
+        Entity e = new Entity("Skybox");
+        SkyboxComponent sbc = wm.getRenderManager().createSkyboxComponent(skybox, true);
+        e.addComponent(SkyboxComponent.class, sbc);
+        wm.addEntity(e);
+    }
+
     private void createCameraEntity(WorldManager wm) {
         Node cameraSG = createCameraGraph(wm);
         
@@ -200,28 +285,16 @@ public class ColladaLoader {
         Entity camera = new Entity("DefaultCamera");
         CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
-        //CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
-        //        width, height, 1.0f, 1000.0f, -100, 100, 100, -100, true);
         rb.setCameraComponent(cc);
         camera.addComponent(CameraComponent.class, cc);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera);
-        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
+        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false);
         eventProcessor.setRunInRenderer(true);
-        
-        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
-        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-        //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-        //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-
-        //selector.setRunInRenderer(true);
-        
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        //pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -230,77 +303,15 @@ public class ColladaLoader {
     private Node createCameraGraph(WorldManager wm) {
         Node cameraSG = new Node("MyCamera SG");        
         cameraNode = new CameraNode("MyCamera", null);
-        cameraSG.attachChild(cameraNode);
-        
+        cameraSG.attachChild(cameraNode);        
         return (cameraSG);
-    }
-    
-    private void createGrid(WorldManager wm) {
-        float startx = 0.0f, startz = 0.0f;
-        float endx = 0.0f, endz = 0.0f;
-
-        int numLines = (gridWidth/5)*2 + 2;       
-        Vector3f[] points = new Vector3f[numLines*2];       
-        int numSegs = numLines/2;
-        
-        // Start with the Z lines
-        startx = -gridWidth/2.0f;
-        startz = -gridWidth/2.0f;
-        endx = -gridWidth/2.0f;
-        endz = gridWidth/2.0f;
-        int pointNum = 0;
-        for (int i=0; i<numSegs; i++) {
-            points[pointNum++] = new Vector3f(startx, 0.0f, startz);
-            points[pointNum++] = new Vector3f(endx, 0.0f, endz);
-            startx += 5.0f;
-            endx += 5.0f;
-        }
-        
-        // Now the Z lines
-        startx = -gridWidth/2.0f;
-        startz = -gridWidth/2.0f;
-        endx = gridWidth/2.0f;
-        endz = -gridWidth/2.0f;
-        for (int i=0; i<numSegs; i++) {
-            points[pointNum++] = new Vector3f(startx, 0.0f, startz);
-            points[pointNum++] = new Vector3f(endx, 0.0f, endz);
-            startz += 5.0f;
-            endz += 5.0f;
-        }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-         
-        Node gridSG = new Node("Grid");
-        Line gridG = new Line("Grid", points, null, null, null);
-        gridSG.attachChild(gridG);
-        gridSG.setRenderState(buf);
-        
-        RenderComponent rc = wm.getRenderManager().createRenderComponent(gridSG);
-        rc.setLightingEnabled(false);
-        grid.addComponent(RenderComponent.class, rc);
-    }
-    
-    private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-            
-        Node axisSG = new Node("Axis");
-        AxisRods axisG = new AxisRods("Axis", true, 10.0f, 0.2f);
-        axisSG.attachChild(axisG);
-        axisSG.setRenderState(buf);
-        
-        RenderComponent rc = wm.getRenderManager().createRenderComponent(axisSG);
-        rc.setLightingEnabled(false);
-        axis.addComponent(RenderComponent.class, rc);
     }
     
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        ColladaLoader worldBuilder = new ColladaLoader(args);
+        OrientationWorld worldBuilder = new OrientationWorld(args);
         
     }
     
@@ -342,11 +353,8 @@ public class ColladaLoader {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/";
-        String textureSubdirName = "/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/";
-        //String textureSubdir = "file:/Users/runner/Desktop/";
-        //String textureSubdirName = "/Users/runner/Desktop/";
-
+        String textureSubdir = "file:/Users/runner/Desktop/Orientation/textures/";
+        String textureSubdirName = "/Users/runner/Desktop/Orientation/textures/";
 
         // Construct the frame
         public SwingFrame(WorldManager wm) {
@@ -454,6 +462,8 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
+            JMECollisionComponent cc = collisionSystem.createCollisionComponent(modelRoot);
+            e.addComponent(JMECollisionComponent.class, cc);
             e.addComponent(RenderComponent.class, sc);
             wm.addEntity(e);              
         }
@@ -465,11 +475,9 @@ public class ColladaLoader {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    wm.removeEntity(axis);
                     System.out.println("Turning Coordinates Off");
                 } else {
                     coordsOn = true;
-                    wm.addEntity(axis);
                     System.out.println("Turning Coordinates On");
                 }
             }
@@ -477,33 +485,10 @@ public class ColladaLoader {
             if (e.getSource() == gridButton) {
                 if (gridOn) {
                     gridOn = false;
-                    wm.removeEntity(grid);
                     System.out.println("Turning Grid Off");
                 } else {
                     gridOn = true;
-                    wm.addEntity(grid);
                     System.out.println("Turning Grid On");
-                }
-            }
-            
-            if (e.getSource() == loadItem) {
-                FileInputStream fileStream = null;
-                JFileChooser chooser = new JFileChooser();
-                int returnVal = chooser.showOpenDialog(this);
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    System.out.println("You chose to open this file: " +
-                            chooser.getSelectedFile().getName());
-                    try {
-                        fileStream = new FileInputStream(chooser.getSelectedFile());
-                    } catch (FileNotFoundException ex) {
-                        System.out.println(ex);
-                    }
-                    
-                    // Now load the model
-                    ColladaImporter.load(fileStream, "Model");
-                    Node model = ColladaImporter.getModel();
-                    parseModel(0, model, false);
-                    addModel(model);                 
                 }
             }
             
@@ -564,7 +549,6 @@ public class ColladaLoader {
             if (shaderFlag.equals("MTGAMEDiffuseNormalMap")) {
                 if (normalMap) {
                     DiffuseNormalMap shader = new DiffuseNormalMap(wm);
-                    System.out.println("Assigning to " + geo);
                     shader.applyToGeometry(geo);
                 } else {
                     DiffuseMap shader = new DiffuseMap(wm);
