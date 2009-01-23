@@ -34,10 +34,14 @@ package org.jdesktop.mtgame.processor;
 import org.jdesktop.mtgame.*;
 import com.jme.math.Vector3f;
 import com.jme.math.Matrix3f;
+import com.jme.math.Ray;
 import com.jme.math.Quaternion;
 import com.jme.scene.Node;
 import com.jme.scene.shape.Sphere;
 import com.jme.intersection.TriangleCollisionResults;
+import com.jme.light.PointLight;
+import com.jme.renderer.ColorRGBA;
+import com.jme.light.LightNode;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.KeyEvent;
@@ -91,7 +95,7 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
     /**
      * Our current position
      */
-    private Vector3f position = new Vector3f(0.0f, 10.0f, -30.0f);
+    private Vector3f position = new Vector3f(0.0f, 100.0f, -30.0f);
     
     /**
      * A sphere for initial avatar collisions
@@ -134,6 +138,31 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
     private Node target = null;
     
     /**
+     * A boolean to signal that we should have a point light on the camera
+     */
+    private boolean light = false;
+    
+    /**
+     * The light node for the camera
+     */
+    LightNode lightNode = null;
+    
+    /**
+     * A boolean to signal that we should adjust the height to follow the ground
+     */
+    private boolean collide = false;
+    
+    /**
+     * The collision system - if we are tracking collision.
+     */
+    private CollisionSystem collisionSystem = null;
+    
+    /**
+     * A Ray used for collision
+     */
+    private Ray ray = new Ray();
+    
+    /**
      * The WorldManager
      */
     private WorldManager worldManager = null;
@@ -142,7 +171,7 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
      * The default constructor
      */
     public FPSCameraProcessor(AWTInputComponent listener, Node cameraNode,
-            WorldManager wm, Entity myEntity) {
+            WorldManager wm, Entity myEntity, boolean collide, boolean light) {
         super(listener);
         target = cameraNode;
         worldManager = wm;
@@ -151,49 +180,26 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
         collection = new ProcessorArmingCollection(this);
         collection.addCondition(new AwtEventCondition(this));
         collection.addCondition(new NewFrameCondition(this));
-        /*
-        bounds.setModelBound(new BoundingSphere(1.5f, new Vector3f()));
+        this.collide = collide;
+        this.light = light;
         
-        Entity e = new Entity("Collision", null);
-        SceneComponent sc = new SceneComponent();
-        Node root = new Node();
+        if (collide) {
+            collisionSystem = wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
+            ray = new Ray();
+            ray.origin = position;
+            ray.direction = new Vector3f(0.0f, -1.0f, 0.0f);
+        }
         
-        ZBufferState buf = (ZBufferState)wm.createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled( true );
-        buf.setFunction( ZBufferState.CF_LEQUAL );
-        root.setRenderState( buf );
-        
-        PointLight light = new PointLight();
-        light.setDiffuse( new ColorRGBA( 0.75f, 0.75f, 0.75f, 0.75f ) );
-        light.setAmbient( new ColorRGBA( 0.5f, 0.5f, 0.5f, 1.0f ) );
-        light.setLocation( new Vector3f( 100, 100, 100 ) );
-        light.setEnabled( true );
-
-        /** Attach the light to a lightState and the lightState to rootNode. */
-        /*
-        LightState lightState = (LightState)wm.createRendererState(RenderState.RS_LIGHT);
-        lightState.setEnabled( true );
-        lightState.attach( light );
-        root.setRenderState( lightState );
-       
-        MaterialState matState = (MaterialState)wm.createRendererState(RenderState.RS_MATERIAL);
-        ColorRGBA diffColor = new ColorRGBA(0.05f, 0.0f, 1.0f, 0.5f);
-        matState.setDiffuse(diffColor);
-        root.setRenderState(matState);
-       
-        AlphaState as = (AlphaState)wm.createRendererState(RenderState.RS_ALPHA);
-        as.setBlendEnabled(true);
-        as.setSrcFunction(AlphaState.SB_SRC_ALPHA);
-        as.setDstFunction(AlphaState.DB_ONE_MINUS_SRC_ALPHA);
-        as.setEnabled(true);
-        root.setRenderState(as);
-        
-        root.attachChild(bounds);
-        sc.setSceneRoot(root);
-        e.addComponent(SceneComponent.class, sc);
-        
-        wm.addEntity(e);
-        */
+        if (light) {
+            lightNode = new LightNode();
+            PointLight pointLight = new PointLight();
+            pointLight.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+            pointLight.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+            pointLight.setEnabled(true);
+            lightNode.setLight(pointLight);
+            lightNode.setLocalTranslation(position);
+            wm.getRenderManager().addLight(lightNode);
+        }
     }
     
     public void initialize() {
@@ -226,14 +232,6 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
         }
         
         updatePosition();
-        //results.clear();
-        //worldManager.findCollisions(bounds, results);
-        //System.out.println("=================================================");
-        //for (int i=0; i<results.getNumber(); i++) {
-        //    CollisionData cd = results.getCollisionData(i);
-        //    System.out.println("Collided with: " + cd.getSourceMesh().getName());
-        //    System.out.println(cd.getSourceMesh().getWorldBound());
-        //}
     }
     
     private void processRotations(MouseEvent me) {
@@ -314,6 +312,15 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
                 position.z -= (walkInc * rotatedSideDirection.z);
                 break;  
         }
+        
+        if (collide) {
+            PickInfo pi = collisionSystem.pickAllWorldRay(ray, true, false);
+            if (pi.size() != 0) {
+                // Grab the first one
+                PickDetails pd = pi.get(0);
+                position.y = pd.getPosition().y + 7.0f;
+            }
+        }
     }
     /**
      * The commit methods
@@ -321,7 +328,9 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
     public void commit(ProcessorArmingCollection collection) {
         target.setLocalRotation(quaternion);
         target.setLocalTranslation(position);
-
+        if (light) {
+            lightNode.setLocalTranslation(position);
+        }
         worldManager.addToUpdateList(target);
     }
 
