@@ -93,10 +93,12 @@ public class Entity {
     * Add a component to the entity
     */
    public void addComponent(Class key, EntityComponent component) {
-       componentMap.put(key, component);
-       component.setEntity(this);
-       if (worldManager != null) {
-           worldManager.addComponent(component);
+       synchronized (this) {
+           componentMap.put(key, component);
+           component.setEntity(this);
+           if (worldManager != null) {
+               worldManager.addComponent(component);
+           }
        }
    }
    
@@ -104,7 +106,12 @@ public class Entity {
     * Get a component from the entity.
     */
    public EntityComponent getComponent(Class key) {
-       return((EntityComponent)componentMap.get(key));
+       EntityComponent ec = null;
+       
+       synchronized (this) {
+           ec = (EntityComponent)componentMap.get(key);
+       }
+       return(ec);
    }
    
    /**
@@ -120,18 +127,25 @@ public class Entity {
     * @return
     */
    public Iterable<EntityComponent> getComponents() {
-       return componentMap.values();
+       Iterable<EntityComponent> comps = null;
+       
+       synchronized (this) {
+           comps = (Iterable<EntityComponent>)componentMap.values();
+       }
+       return (comps);
    }
 
    /**
     * Remove a component from the entity
     */
    public void removeComponent(Class key) {
-       EntityComponent c = (EntityComponent) componentMap.remove(key);
-       if (c != null) {
-           c.setEntity(null);
-           if (worldManager != null) {
-               worldManager.removeComponent(c);
+       synchronized (this) {
+           EntityComponent c = (EntityComponent) componentMap.remove(key);
+           if (c != null) {
+               c.setEntity(null);
+               if (worldManager != null) {
+                   worldManager.removeComponent(c);
+               }
            }
        }
    }
@@ -155,10 +169,11 @@ public class Entity {
     * Add a SubEntity to this entity.  It is managed by the parent Entity.
     */
    public void addEntity(Entity entity) {
-       entity.setParent(this);
-       entity.setWorldManager(worldManager);
-       subEntities.add(entity);
-       
+       synchronized (this) {
+           entity.setParent(this);
+           entity.setWorldManager(worldManager);
+           subEntities.add(entity);
+       }
        // If we have a world manager, we are live and therefore need
        // to add via the world manager
        if (worldManager != null) {
@@ -175,10 +190,12 @@ public class Entity {
        if (worldManager != null) {
            worldManager.removeEntity(entity);
        }
-       
-       subEntities.remove(entity);
-       entity.setParent(null);
-       entity.setWorldManager(null);
+
+       synchronized (this) {
+           subEntities.remove(entity);
+           entity.setParent(null);
+           entity.setWorldManager(null);
+       }
    }
    
    /**
