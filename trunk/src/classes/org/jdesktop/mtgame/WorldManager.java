@@ -146,19 +146,22 @@ public class WorldManager {
      * This adds an already created entity to the system
      */
     public void addEntity(Entity e) {
-        EntityComponent c = null;
-        e.setWorldManager(this);
-        
-        Iterator comps = e.getComponents().iterator(); 
-        while (comps.hasNext()) {
-            c = (EntityComponent) comps.next();
-            addComponent(c);
-        }
-        entities.add(e);
-        
-        // Now add the sub-entities
-        for (int i=0; i<e.numEntities(); i++) {
-            addEntity((Entity)e.getEntity(i));
+        synchronized (e) {
+            EntityComponent c = null;
+            e.setWorldManager(this);
+
+            Iterator comps = e.getComponents().iterator();
+            while (comps.hasNext()) {
+                c = (EntityComponent) comps.next();
+                addComponent(c);
+            }
+
+            entities.add(e);
+
+            // Now add the sub-entities
+            for (int i = 0; i < e.numEntities(); i++) {
+                addEntity((Entity) e.getEntity(i));
+            }
         }
     }   
     
@@ -168,19 +171,21 @@ public class WorldManager {
     public void removeEntity(Entity e) {
         EntityComponent c = null;
         
-        Iterator comps = e.getComponents().iterator();
-        while (comps.hasNext()) {
-            c = (EntityComponent) comps.next();
-            removeComponent(c);
-        }
+        synchronized (e) {
+            Iterator comps = e.getComponents().iterator();
+            while (comps.hasNext()) {
+                c = (EntityComponent) comps.next();
+                removeComponent(c);
+            }
 
-        // remove the sub-entities
-        for (int i=0; i<e.numEntities(); i++) {
-            removeEntity((Entity)e.getEntity(i));
+            // remove the sub-entities
+            for (int i = 0; i < e.numEntities(); i++) {
+                removeEntity((Entity) e.getEntity(i));
+            }
+
+            entities.remove(e);
+            e.setWorldManager(null);
         }
-        
-        entities.remove(e);
-        e.setWorldManager(null);
     } 
     
     /**
