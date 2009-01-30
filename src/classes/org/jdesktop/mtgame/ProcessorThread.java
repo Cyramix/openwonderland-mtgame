@@ -115,11 +115,21 @@ class ProcessorThread extends Thread {
             pc = getNextProcessorComponent();
             
             // Now compute this process and all of it's chains.
-            pc.compute(pc.getCurrentTriggerCollection());
-            
+            try {
+                pc.compute(pc.getCurrentTriggerCollection());
+            } catch (Exception e) {
+                System.out.println("MTGame: Exception Caught in Processor compute: " + e);
+                e.printStackTrace();
+            }
+
             pc = pc.getNextInChain();
             while (pc != null) {
-                pc.compute(pc.getCurrentTriggerCollection());
+                try {
+                    pc.compute(pc.getCurrentTriggerCollection());
+                } catch (Exception e) {
+                    System.out.println("MTGame: Exception Caught in Processor compute: " + e);
+                    e.printStackTrace();
+                }
                 pc = pc.getNextInChain();
             }
         }

@@ -54,6 +54,7 @@ import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
 import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
 import java.lang.reflect.Method;
+import java.lang.Exception;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -870,7 +871,12 @@ class Renderer extends Thread {
             for (int i=0; i<renderUpdateList.size(); i++) {
                 RenderUpdater ru = (RenderUpdater) renderUpdateList.get(i);
                 Object obj = renderUpdateArgs.get(i);
-                ru.update(obj);
+                try {
+                    ru.update(obj);
+                } catch (Exception e) {
+                    System.out.println("MTGame: Exception Caught in renderer update: " + e);
+                    e.printStackTrace();
+                }
             }
             renderUpdateList.clear();
             renderUpdateArgs.clear();
@@ -972,10 +978,20 @@ class Renderer extends Thread {
                 pc = commitList[currentCommit++];
                 if (pc.getSwingSafe()) {
                     releaseSwingLock();
-                    pc.commit(pc.getCurrentTriggerCollection());
+                    try {
+                        pc.commit(pc.getCurrentTriggerCollection());
+                    } catch (Exception e) {
+                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                        e.printStackTrace();
+                    }
                     acquireSwingLock();
                 } else {
-                    pc.commit(pc.getCurrentTriggerCollection());
+                    try {
+                        pc.commit(pc.getCurrentTriggerCollection());
+                    } catch (Exception e) {
+                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                        e.printStackTrace();
+                    }
                 }
                 pc.clearTriggerCollection();
 
@@ -984,10 +1000,20 @@ class Renderer extends Thread {
                 while (pc != null) {
                     if (pc.getSwingSafe()) {
                         releaseSwingLock();
-                        pc.commit(pc.getCurrentTriggerCollection());
+                        try {
+                            pc.commit(pc.getCurrentTriggerCollection());
+                        } catch (Exception e) {
+                            System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                            e.printStackTrace();
+                        }
                         acquireSwingLock();
                     } else {
-                        pc.commit(pc.getCurrentTriggerCollection());
+                        try {
+                            pc.commit(pc.getCurrentTriggerCollection());
+                        } catch (Exception e) {
+                            System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                            e.printStackTrace();
+                        }
                     }
                     pc.clearTriggerCollection();
                     pc = pc.getNextInChain();
@@ -1051,10 +1077,20 @@ class Renderer extends Thread {
             pc.compute(pc.getCurrentTriggerCollection());
             if (pc.getSwingSafe()) {
                 releaseSwingLock();
-                pc.commit(pc.getCurrentTriggerCollection());
+                try {
+                    pc.commit(pc.getCurrentTriggerCollection());
+                } catch (Exception e) {
+                    System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                    e.printStackTrace();
+                }
                 acquireSwingLock();
             } else {
-                pc.commit(pc.getCurrentTriggerCollection());
+                try {
+                    pc.commit(pc.getCurrentTriggerCollection());
+                } catch (Exception e) {
+                    System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                    e.printStackTrace();
+                }
             }
             pc.clearTriggerCollection();
             worldManager.armProcessorComponent(pc.getArmingCondition());
@@ -1065,10 +1101,20 @@ class Renderer extends Thread {
                 pc.compute(pc.getCurrentTriggerCollection());
                 if (pc.getSwingSafe()) {
                     releaseSwingLock();
-                    pc.commit(pc.getCurrentTriggerCollection());
+                    try {
+                        pc.commit(pc.getCurrentTriggerCollection());
+                    } catch (Exception e) {
+                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                        e.printStackTrace();
+                    }
                     acquireSwingLock();
                 } else {
-                    pc.commit(pc.getCurrentTriggerCollection());
+                    try {
+                        pc.commit(pc.getCurrentTriggerCollection());
+                    } catch (Exception e) {
+                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
+                        e.printStackTrace();
+                    }
                 }
                 pc.clearTriggerCollection();
                 pc = pc.getNextInChain();
