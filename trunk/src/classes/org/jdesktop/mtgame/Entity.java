@@ -105,13 +105,13 @@ public class Entity {
    /**
     * Get a component from the entity.
     */
-   public EntityComponent getComponent(Class key) {
+   public <T extends EntityComponent> T getComponent(Class<T> key) {
        EntityComponent ec = null;
        
        synchronized (this) {
-           ec = (EntityComponent)componentMap.get(key);
+           ec = componentMap.get(key);
        }
-       return(ec);
+       return (T)ec;
    }
    
    /**
