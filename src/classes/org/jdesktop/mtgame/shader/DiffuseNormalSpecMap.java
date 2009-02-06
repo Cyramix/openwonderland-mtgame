@@ -15,7 +15,7 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalMap implements RenderUpdater {
+public class DiffuseNormalSpecMap implements RenderUpdater {
     /**
      * The vertex and fragment shader
      */
@@ -58,6 +58,7 @@ public class DiffuseNormalMap implements RenderUpdater {
         "varying vec3 LightDir[2];" +
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D NormalMapIndex;" +
+        "uniform sampler2D SpecularMapIndex;" +
         "vec3 FragLocalNormal;" +
         "vec3 finalColor;" +
         "vec3 diffuseColor;" +    
@@ -69,7 +70,7 @@ public class DiffuseNormalMap implements RenderUpdater {
                  // Do some setup
         "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
         "        FragLocalNormal = normalize(texture2D(NormalMapIndex, gl_TexCoord[0].st).xyz * 2.0 - 1.0);" +
-        "        specularColor = vec3(1.0, 1.0, 1.0);" +
+        "        specularColor = texture2D(SpecularMapIndex, gl_TexCoord[0].st).rgb;" +
         "        finalColor = gl_FrontMaterial.ambient.rgb * gl_LightSource[0].ambient.rgb;" +
         
                  // Compute diffuse for light0
@@ -102,7 +103,7 @@ public class DiffuseNormalMap implements RenderUpdater {
      */
     private GLSLShaderObjectsState shaderState = null;
     
-    public DiffuseNormalMap(WorldManager worldManager) {
+    public DiffuseNormalSpecMap(WorldManager worldManager) {
         shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
                 createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
         worldManager.addRenderUpdater(this, this);        
@@ -123,6 +124,7 @@ public class DiffuseNormalMap implements RenderUpdater {
 //        shaderState.setAttributePointer("tangent", 3, false, 0, geo.getTangentBuffer()); 
         shaderState.setUniform("DiffuseMapIndex", 0);
         shaderState.setUniform("NormalMapIndex", 1);
+        shaderState.setUniform("SpecularMapIndex", 2);
         geo.setRenderState(shaderState);
     }
     

@@ -38,6 +38,10 @@ import java.awt.event.*;
 import com.jme.scene.Node;
 import com.jme.scene.Skybox;
 import com.jme.scene.Spatial;
+import com.jme.scene.Geometry;
+import com.jme.scene.shape.Quad;
+import com.jme.scene.Spatial.CullHint;
+import com.jme.math.Quaternion;
 import com.jme.light.LightNode;
 import com.jme.system.*;
 import com.jme.renderer.*;
@@ -325,7 +329,7 @@ class Renderer extends Thread {
     private boolean initialized = false;
     
     ColorRGBA bgColor = new ColorRGBA();
-               
+                
     /**
      * The constructor
      */
@@ -636,7 +640,7 @@ class Renderer extends Thread {
         for (int i = 0; i < renderScenes.size(); i++) {
             RenderComponent scene = (RenderComponent) renderScenes.get(i);
             Node sceneRoot = scene.getSceneRoot();
-            if (excludeList == null || !excludeList.contains(sceneRoot)) {
+            if (excludeList == null || !excludeList.contains(sceneRoot)) {                
                 jmeRenderer.draw(sceneRoot);
             }
         }
@@ -648,6 +652,21 @@ class Renderer extends Thread {
 
         // This actually does the rendering
         jmeRenderer.renderQueue();     
+    }
+    
+    void printGraph(Spatial s) {
+        System.out.println("Rendering: " + s);
+        System.out.println("Rendering B: " + s.getWorldBound());
+        System.out.println("Rendering T: " + s.getWorldTranslation());
+        System.out.println("Rendering R: " + s.getWorldRotation());
+        System.out.println("Rendering S: " + s.getWorldScale());
+
+        if (Node.class.isInstance(s)) {
+            Node n = (Node) s;
+            for (int i = 0; i < n.getQuantity(); i++) {
+                printGraph(n.getChild(i));
+            }
+        }
     }
     
     /**
@@ -1679,7 +1698,6 @@ class Renderer extends Thread {
      */
     void processSceneGraph(RenderComponent sc) {
         Node sg = sc.getSceneRoot();
-        
         traverseGraph(sg, sc.getOrtho());
     }
     

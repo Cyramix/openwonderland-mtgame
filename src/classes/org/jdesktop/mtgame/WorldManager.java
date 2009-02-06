@@ -30,6 +30,7 @@
  */
 
 package org.jdesktop.mtgame;
+
 import com.jme.scene.Spatial;
 import com.jme.renderer.pass.Pass;
 
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.awt.Canvas;
+import java.io.InputStream;
 
 
 /**
@@ -93,6 +95,11 @@ public class WorldManager {
     private HashMap userData = new HashMap();
     
     /**
+     * The config manager
+     */
+    private ConfigManager configManager = null;
+    
+    /**
      * The Default Constructor
      */
     public WorldManager(String name) {
@@ -104,6 +111,7 @@ public class WorldManager {
         inputManager.initialize(this); 
         collisionManager = new CollisionManager(this);
         physicsManager = new PhysicsManager(this);
+        configManager = new ConfigManager(this);
         //System.out.println("Done Initializing!");
     }
     
@@ -316,22 +324,42 @@ public class WorldManager {
         // What about multiple renderers
         renderManager.addToPassUpdateList(pass);
     }
+
+    /**
+     * Add user data
+     */
+    public void addUserData(Class key, Object data) {
+        userData.put(key, data);
+    }
+   
+    /**
+     * Get user data
+     */
+    public Object getUserData(Class key) {
+        return (userData.get(key));
+    }
+
+    /**
+     * Set the texture directory
+     */
+    public void setTextureDirectory(String dir) {
+        configManager.setTextureDirectory(dir);
+    }
     
-       
-   /**
-    * Add user data
-    */
-   public void addUserData(Class key, Object data) {
-       userData.put(key, data);
-   }
-   
-   /**
-    * Get user data
-    */
-   public Object getUserData(Class key) {
-       return(userData.get(key));
-   }
-   
+    /**
+     * Load the configuration data given by the InputStream
+     */
+    public void loadConfiguration(InputStream stream) {
+        configManager.loadConfiguration(stream);
+    }
+    
+    /**
+     * Apply the configuration map information to a jME graph
+     */
+    public void applyConfig(Spatial s) {
+        configManager.applyConfig(s);
+    }
+    
     /**
      * Pass along an awt event trigger to the process controller
      */
