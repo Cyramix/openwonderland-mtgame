@@ -41,6 +41,7 @@ import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.processor.FPSCameraProcessor;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.shader.DiffuseMap;
+//import org.jdesktop.mtgame.shader.FlatShader;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.Spatial;
@@ -92,6 +93,7 @@ import java.util.Random;
 import java.net.URL;
 import java.net.MalformedURLException;
 import java.nio.FloatBuffer;
+import java.io.FileInputStream;
 import com.jme.scene.TexCoords;
 import com.jme.util.export.SavableString;
 import com.jme.util.geom.TangentBinormalGenerator;
@@ -161,12 +163,22 @@ public class OrientationWorld {
     private JMECollisionSystem collisionSystem = null;
     
     private SwingFrame frame = null;
-    private String loadfile = "/Users/runner/Desktop/Orientation/terrain.dae";
+    private String loadfile = "/Users/runner/Desktop/Orientation/terrain_test.dae";
+    private String configFile = "/Users/runner/Desktop/Orientation/terrain_test.mtg";
+    private String textureDir = "/Users/runner/Desktop/Orientation/textures";
     private Skybox skybox = null;
 
     
     public OrientationWorld(String[] args) {
         wm = new WorldManager("TestWorld");
+        
+        try {
+            FileInputStream fs = new FileInputStream(configFile);
+            wm.loadConfiguration(fs);
+        } catch (java.io.FileNotFoundException e) {
+            System.out.println(e);
+        }
+        wm.setTextureDirectory(textureDir);
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
@@ -193,7 +205,7 @@ public class OrientationWorld {
         LightNode globalLight1 = new LightNode();
         PointLight light = new PointLight();
         light.setDiffuse(new ColorRGBA(0.95f, 0.95f, 0.95f, 1.0f));
-        //light.setAmbient(new ColorRGBA(0.85f, 0.85f, 0.85f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
         light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
         light.setEnabled(true);
         globalLight1.setLight(light);
@@ -203,6 +215,7 @@ public class OrientationWorld {
         light = new PointLight();
         light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f));
         light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
         light.setEnabled(true);
         globalLight2.setLight(light);
         globalLight2.setLocalTranslation(0.0f, -500.0f, -500.0f);
@@ -355,6 +368,7 @@ public class OrientationWorld {
         JMenuItem createTeapotItem = null;
         String textureSubdir = "file:/Users/runner/Desktop/Orientation/textures/";
         String textureSubdirName = "/Users/runner/Desktop/Orientation/textures/";
+        int normalIndex = 0;
 
         // Construct the frame
         public SwingFrame(WorldManager wm) {
@@ -510,24 +524,44 @@ public class OrientationWorld {
             // Now load the model
             ColladaImporter.load(fileStream, "Model");
             Node model = ColladaImporter.getModel();
-            if (normalMap) {
-                model.setLocalTranslation(10.0f, 0.0f, 0.0f);
-            } else {
-                model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
-            }
-            model.setLocalScale(5.0f);
-            parseModel(0, model, normalMap);
+            wm.applyConfig(model);
+            
+            int normalCount = countNormals(model, 0);
+            System.out.println("Number of NORMALS: " + normalCount);
+            Vector3f[] lineData = new Vector3f[normalCount*2]; 
+            normalIndex = 0;
+            parseModel(0, model, lineData);
+            Line normalGeometry = new Line("Normal Geometry", lineData, null, null, null);
+            //FlatShader shader = new FlatShader(wm);
+            //shader.applyToGeometry(normalGeometry);
+            Node normalNode = new Node();
+            normalNode.attachChild(normalGeometry);
             addModel(model);
+            //addModel(normalNode);
         }
         
-        void parseModel(int level, Spatial model, boolean normalMap) {
+        int countNormals(Spatial model, int currentCount) {
             if (model instanceof Node) {
-                Node n = (Node)model;
-                for (int i=0; i<n.getQuantity(); i++) {
-                    parseModel(level+1, n.getChild(i), normalMap);
+                Node n = (Node) model;
+                for (int i = 0; i < n.getQuantity(); i++) {
+                    currentCount = countNormals(n.getChild(i), currentCount);
                 }
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
+                currentCount += geo.getVertexCount();
+            }
+            return (currentCount);
+        }
+        
+        void parseModel(int level, Spatial model, Vector3f[] lineData) {
+            if (model instanceof Node) {
+                Node n = (Node)model;
+                for (int i=0; i<n.getQuantity(); i++) {
+                    parseModel(level+1, n.getChild(i), lineData);
+                }
+            } else if (model instanceof Geometry) {
+                Geometry geo = (Geometry)model;
+                System.out.println("FOUND GEOMETRY: " + geo.getName());
                 
                 SavableString str = (SavableString)geo.getUserData("MTGameShaderFlag");
                 if (geo instanceof TriMesh && str.getValue() != null) {
@@ -540,8 +574,25 @@ public class OrientationWorld {
                     //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
                     //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
                     //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
-                    assignShader(geo, str.getValue(), normalMap);
-                }                
+                    assignShader(geo, str.getValue(), true);
+                }    
+                
+                FloatBuffer nBuffer = geo.getNormalBuffer();
+                FloatBuffer vBuffer = geo.getVertexBuffer();
+                vBuffer.rewind();
+                nBuffer.rewind();
+                float nScale = 2.0f;
+                for (int i=0; i<geo.getVertexCount(); i++) {
+                    lineData[normalIndex] = new Vector3f();
+                    lineData[normalIndex].x = vBuffer.get();
+                    lineData[normalIndex].y = vBuffer.get();
+                    lineData[normalIndex].z = vBuffer.get();
+                    lineData[normalIndex+1] = new Vector3f();
+                    lineData[normalIndex+1].x = lineData[normalIndex].x + nScale * nBuffer.get();
+                    lineData[normalIndex+1].y = lineData[normalIndex].y + nScale * nBuffer.get();
+                    lineData[normalIndex+1].z = lineData[normalIndex].z + nScale * nBuffer.get();
+                    normalIndex += 2;
+                }
             }
         }
         

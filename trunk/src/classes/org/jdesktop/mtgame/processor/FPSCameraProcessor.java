@@ -318,7 +318,7 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
             if (pi.size() != 0) {
                 // Grab the first one
                 PickDetails pd = pi.get(0);
-                position.y = pd.getPosition().y + 7.0f;
+                position.y = pd.getPosition().y + 2.0f;
             }
         }
     }
