@@ -193,6 +193,21 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
      * TODO: Need to implement this
      */
     public PickInfo pickAllWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData) {
-        return (null);    
+        return (null);
+    }
+
+
+    /**
+     * TODO: Need to implement this
+     */
+    public PickInfo pickAllWithOrthoEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData) {
+        return (null);
+    }
+
+    /**
+     * TODO: Need to implement this
+     */
+    public PickInfo pickAllWithOrthoWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, CameraComponent cc) {
+        return (null);
     }
 }

@@ -29,72 +29,86 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.jdesktop.mtgame;
+package org.jdesktop.mtgame.processor;
 
-import java.util.LinkedList;
+import org.jdesktop.mtgame.*;
+import com.jme.scene.Geometry;
+import com.jme.renderer.ColorRGBA;
 
 /**
- * This is the object returned by a picking query.  It holds the query information
- * as well as a linked list of the results. The results are held in PickDetails objects.
+ * This is a simple test processor that increments/decrements alpha
  * 
  * @author Doug Twilleager
  */
-public class PickInfo {
+public class AlphaProcessor extends ProcessorComponent {     
     /**
-     * A boolean indication whether geometry picking is enabled
+     * The WorldManager - used for adding to update list
      */
-    private boolean geometryPick = true;
+    private WorldManager worldManager = null;
+    /**
+     * The current alpha
+     */
+    private float alpha = 0.0f;
+
+    /**
+     * The increment apply each frame
+     */
+    private float increment = 0.0f;
     
     /**
-     * A boolean indicating whether interpolated data is generated
+     * The geometry target
      */
-    private boolean interpolateGeometry = false;
+    private Geometry target = null;
     
     /**
-     * The linked list of PickDetail's
+     * A name
      */
-    private LinkedList pickDetails = new LinkedList();
+    private String name = null;
     
     /**
-     * The default constructor
+     * The constructor
      */
-    PickInfo(boolean geomPick, boolean interpolateData) {
-        geometryPick = geomPick;
-        interpolateGeometry = interpolateData;
+    public AlphaProcessor(String name, WorldManager worldManager, Geometry target, float increment) {
+        this.worldManager = worldManager;
+        this.target = target;
+        this.increment = increment;
+        this.name = name;
+        alpha = target.getDefaultColor().a;
+        setArmingCondition(new NewFrameCondition(this));
+    }
+    
+    public String toString() {
+        return (name);
     }
     
     /**
-     * Add a PickDetails to the list
+     * The initialize method
      */
-    void addPickDetail(PickDetails pd) {
-        pickDetails.add(pd);
+    public void initialize() {
+        //setArmingCondition(new NewFrameCondition(this));
+    }
+    
+    /**
+     * The Calculate method
+     */
+    public void compute(ProcessorArmingCollection collection) {
+        alpha += increment;
+        if (alpha > 1.0f) {
+            increment = -increment;
+            alpha = 1.0f;
+        } else if (alpha < 0.0f) {
+            increment = -increment;
+            alpha = 0.0f;
+        }
     }
 
     /**
-     * Add a PickDetails to the list
+     * The commit method
      */
-    void addPickDetail(int index, PickDetails pd) {
-        pickDetails.add(index, pd);
-    }
-
-    /**
-     * Remove a PickDetails from the list
-     */
-    public void removePickDetails(PickDetails pd) {
-        pickDetails.remove(pd);
-    }
-    
-    /**
-     * Get the size of the list
-     */
-    public int size() {
-        return (pickDetails.size());
-    }
-    
-    /**
-     * Get the element specified by the index
-     */
-    public PickDetails get(int i) {
-        return ((PickDetails)pickDetails.get(i));
+    public void commit(ProcessorArmingCollection collection) {
+        ColorRGBA color = target.getDefaultColor();
+        color.a = alpha;
+        target.setDefaultColor(color);
+        worldManager.addToUpdateList(target);
     }
 }
