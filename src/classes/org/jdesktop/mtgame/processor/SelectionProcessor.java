@@ -223,7 +223,7 @@ public class SelectionProcessor extends AWTEventProcessorComponent {
                     ray.setDirection(direction);
                     pr.clear();
                     clearVisibleBounds();
-                    collisionSystem.pickAll(ray, pr);
+                    collisionSystem.pickAll(ray, pr, cc);
                     //System.out.println(pr.getNumber() + " Geometries were picked");
                     for (int j = 0; j < pr.getNumber(); j++) {
                         PickData pd = pr.getPickData(j);

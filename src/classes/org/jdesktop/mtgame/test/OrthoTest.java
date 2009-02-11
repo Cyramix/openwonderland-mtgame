@@ -35,10 +35,11 @@ import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
 import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
-import org.jdesktop.mtgame.processor.PostEventProcessor;
+import org.jdesktop.mtgame.processor.AlphaProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
+import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
@@ -81,6 +82,12 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
 
+import com.jme.util.TextureManager;
+import com.jme.scene.state.TextureState;
+import com.jme.image.Texture;
+import java.net.URL;
+import java.net.MalformedURLException;
+
 import java.util.Random;
 
 
@@ -117,6 +124,7 @@ public class OrthoTest {
      */
     private boolean coordsOn = true;
     private boolean gridOn = true;
+    private boolean orthoOn = false;
     
     /**
      * The width of the grid
@@ -134,7 +142,9 @@ public class OrthoTest {
     private Entity axis = new Entity("Axis");
     
     private RenderComponent orthoRC = null;
-    private Quad quadGeo = null;
+    private Node quadsRoot = null;
+    QuadEntity quadsEntityRoot = null;
+    String urlpath = "file:/Users/runner/NetBeansProjects/jme-20/trunk/src/";
     
     /**
      * A list of the models we are looking at
@@ -157,8 +167,7 @@ public class OrthoTest {
         createAxis();
         wm.addEntity(axis);
         createGlobalLight();
-        createRandomTeapots(wm);
-        createOrthoObjects();
+        createQuadObjects();
        
     }
               
@@ -191,7 +200,7 @@ public class OrthoTest {
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
-        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //EyeSelectionProcessor selector = new EyeSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
         //SelectionProcessor selector = new SelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
 
@@ -199,7 +208,7 @@ public class OrthoTest {
         
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        //pcc.addProcessor(selector);
+        pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -315,7 +324,7 @@ public class OrthoTest {
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Ortho", true);
+        JToggleButton orthoButton = new JToggleButton("Ortho", true);
         JToggleButton gridButton = new JToggleButton("Grid", true);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
@@ -374,8 +383,8 @@ public class OrthoTest {
             // The options panel
             optionsPanel.setLayout(new GridBagLayout());
             
-            coordButton.addActionListener(this);
-            optionsPanel.add(coordButton);
+            orthoButton.addActionListener(this);
+            optionsPanel.add(orthoButton);
           
             gridButton.addActionListener(this);
             optionsPanel.add(gridButton);
@@ -501,21 +510,15 @@ public class OrthoTest {
          * The method which gets the state change from the buttons
          */
         public void actionPerformed(ActionEvent e) {
-            if (e.getSource() == coordButton) {
-                if (coordsOn) {
-                    coordsOn = false;
-                    orthoRC.getSceneRoot().setLocalTranslation(0.0f, 0.0f, 0.0f);
-                    quadGeo.resize(50, 50);
-                    wm.removeEntity(axis);        
-                    System.out.println("Turning Coordinates Off");
+            if (e.getSource() == orthoButton) {
+                if (orthoOn) {
+                    orthoOn = false;
+                    System.out.println("Turning Ortho Off");
                 } else {
-                    coordsOn = true;
-                    orthoRC.getSceneRoot().setLocalTranslation(width/2, height/2, 0.0f);
-                    quadGeo.resize(width/2, height/2);
-                    wm.addEntity(axis);
-                    System.out.println("Turning Coordinates On");
+                    orthoOn = true;
+                    System.out.println("Turning Ortho On");
                 }
-                orthoRC.setOrtho(coordsOn);
+                processOrtho(orthoOn);
             }
             
             if (e.getSource() == gridButton) {
@@ -558,111 +561,160 @@ public class OrthoTest {
                 createTeapot();
             }
         }
-    }
-    
-    /**
-     * Create 50 randomly placed teapots, with roughly half of them transparent
-     */
-    private void createRandomTeapots(WorldManager wm) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        boolean transparent = false;
-        int numTeapots = 100;
-        Random r = new Random();
-        RenderComponent sc = null;
-        JMECollisionComponent cc = null;
-        Entity e = null;
-        JMECollisionSystem collisionSystem = (JMECollisionSystem) 
-                wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
-        
-        for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*100.0f) - 50.0f;
-            y = (r.nextFloat()*100.0f) - 50.0f;
-            z = (r.nextFloat()*100.0f) - 50.0f;
-            transparent = r.nextBoolean();
-            Node teapot = createTeapotModel(x, y, z, transparent);
-            
-            e = new Entity("Teapot " + i);
-            sc = wm.getRenderManager().createRenderComponent(teapot);
-            cc = collisionSystem.createCollisionComponent(teapot);
-            e.addComponent(RenderComponent.class, sc);
-            e.addComponent(CollisionComponent.class, cc);
 
-            
-            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));
-            e.addComponent(ProcessorComponent.class, rp);
-                        wm.addEntity(e);
-                        
+        void processOrtho(boolean on) {
+            parseNode(quadsEntityRoot, on);
+            quadsEntityRoot.getComponent(RenderComponent.class).setOrtho(on);
+        }
+
+        void parseNode(QuadEntity e, boolean on) {
+            e.processOrtho(on);
+
+            for (int i=0; i<e.numEntities(); i++) {
+                parseNode((QuadEntity)e.getEntity(i), on);
+            }
+
         }
     }
     
-    private void createOrthoObjects() {
-        Node orthoQuad = new Node();
-        quadGeo = new Quad("Ortho", 50, 50);
-        Entity e = new Entity("Ortho ");
-        
-        orthoQuad.attachChild(quadGeo);
-        
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        orthoQuad.setRenderState(buf);
-        
-        orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
-        orthoRC.setOrtho(false);
-        e.addComponent(RenderComponent.class, orthoRC);
+    private void createQuadObjects() {
+        quadsRoot = new Node();
+        RenderComponent quadsRC = null;
+        Quad quad = null;
+        Node quadNode = null;
 
-        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                orthoQuad, (float) (6.0f * Math.PI / 180.0f));
-        //e.addComponent(ProcessorComponent.class, rp);
-        wm.addEntity(e);
+        CollisionManager cm = wm.getCollisionManager();
+        JMECollisionSystem jcs = (JMECollisionSystem)cm.loadCollisionSystem(JMECollisionSystem.class);
+
+        // Now the parent quad
+        quadsEntityRoot = new QuadEntity(null, "Parent", new Vector3f(100.0f, 100.0f, 0.0f), 200, 200, 2,
+                new Vector3f(), 100, 100, new ColorRGBA(0.8f, 0.8f, 0.8f, 0.7f), true, true);
+
+        QuadEntity qe = new QuadEntity(quadsEntityRoot, "Child 1", new Vector3f(20.0f, 20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(20.0f, 20.0f, 1.0f), 20, 20, new ColorRGBA(1.0f, 0.0f, 0.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 2", new Vector3f(20.0f, -20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(20.0f, -20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 1.0f, 0.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 3", new Vector3f(-20.0f, -20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(-20.0f, -20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 0.0f, 1.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 4", new Vector3f(-20.0f, 20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(-20.0f, 20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 1.0f, 1.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        JMECollisionComponent jcc = jcs.createCollisionComponent(quadsEntityRoot.getComponent(RenderComponent.class).getSceneRoot());
+        quadsEntityRoot.addComponent(JMECollisionComponent.class, jcc);
+        wm.addEntity(quadsEntityRoot);
     }
-    
-    private Node createTeapotModel(float x, float y, float z, boolean transparent) {
-        Node node = new Node();
-        Teapot teapot = new Teapot();
-        teapot.resetData();
-        node.attachChild(teapot);
 
-        Triangle[] tris = new Triangle[teapot.getTriangleCount()];
 
-        BoundingBox bbox = new BoundingBox();
-        bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
 
-        ColorRGBA color = new ColorRGBA();
+    class QuadEntity extends Entity implements RenderUpdater {
+        Vector3f orthoTrans = new Vector3f();
+        int oWidth = 0;
+        int oHeight = 0;
+        int oZOrder = -1;
+        Vector3f perspTrans = new Vector3f();
+        int pWidth = 0;
+        int pHeight = 0;
+        boolean ortho = false;
+        Quad quad = null;
+        Teapot teapot = null;
+        ColorRGBA color = null;
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        public QuadEntity(Entity parent, String name, Vector3f oTrans, int oWidth, int oHeight,
+                int oZorder, Vector3f pTrans, int pWidth, int pHeight, ColorRGBA color,
+                boolean addTexture, boolean alphaProcessor) {
+            super(name);
+            orthoTrans.set(oTrans);
+            perspTrans.set(pTrans);
+            this.oWidth = oWidth;
+            this.oHeight = oHeight;
+            this.pWidth = pWidth;
+            this.pHeight = pHeight;
+            this.oZOrder = oZorder;
+            this.color = color;
+            Quad quad = null;
 
-        if (transparent) {
+            Node node = new Node();
+            node.setLocalTranslation(perspTrans);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            buf.setEnabled(true);
+            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+            node.setRenderState(buf);
+
             BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
-            
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-            
-            color.set(0.0f, 1.0f, 1.0f, 0.75f);
+
+            node.setZOrder(oZOrder, false);
+            quad = createQuad(color, oZOrder, addTexture);
+            node.attachChild(quad);
+            RenderComponent rc = wm.getRenderManager().createRenderComponent(node);
+            rc.setLightingEnabled(false);
+            if (parent != null) {
+                RenderComponent parentRc = parent.getComponent(RenderComponent.class);
+                rc.setAttachPoint(parentRc.getSceneRoot());
+            }
+            addComponent(RenderComponent.class, rc);
+
+            if (alphaProcessor) {
+                AlphaProcessor proc = new AlphaProcessor("", wm, quad, 0.01f);
+                addComponent(AlphaProcessor.class, proc);
+            }
         }
 
-        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-        matState.setDiffuse(color);
-        
-        node.setRenderState(matState);
-        node.setRenderState(buf);
-        node.setLocalTranslation(x, y, z);
-        node.setModelBound(bbox); 
-        
-        return (node);
-    }
+        private Quad createQuad(ColorRGBA color, int oZOrder, boolean addTexture) {
+            URL url = null;
+            quad = new Quad("Ortho " + color, pWidth, pHeight);
+            quad.setModelBound(new BoundingBox(new Vector3f(), pWidth, pHeight, 1.0f));
+            quad.setDefaultColor(color);
+            quad.setZOrder(oZOrder, false);
 
+            if (addTexture) {
+                TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+                try {
+                    url = new URL(urlpath + "jmetest/data/texture/wall.jpg");
+                } catch (MalformedURLException e) {
+                    System.out.println(e);
+                }
+                Texture t0 = TextureManager.loadTexture(url,
+                        Texture.MinificationFilter.Trilinear,
+                        Texture.MagnificationFilter.Bilinear);
+                t0.setWrap(Texture.WrapMode.Repeat);
+                ts.setTexture(t0);
+                quad.setRenderState(ts);
+            }
+
+            return (quad);
+        }
+
+        void processOrtho(boolean on) {
+            ortho = on;
+            wm.addRenderUpdater(this, null);
+
+        }
+
+        public void update(Object o) {
+            RenderComponent rc = getComponent(RenderComponent.class);
+            if (ortho) {
+                rc.getSceneRoot().setLocalTranslation(orthoTrans);
+                quad.resize(oWidth, oHeight);
+                rc.getSceneRoot().setCullHint(Spatial.CullHint.Never);
+            } else {
+                rc.getSceneRoot().setLocalTranslation(perspTrans);
+                quad.resize(pWidth, pHeight);
+                rc.getSceneRoot().setCullHint(Spatial.CullHint.Inherit);
+            }
+        }
+        
+    }
 
 }

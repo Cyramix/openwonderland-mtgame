@@ -93,7 +93,6 @@ import java.net.URL;
 import java.net.MalformedURLException;
 import java.nio.FloatBuffer;
 import com.jme.scene.TexCoords;
-import com.jme.util.export.SavableString;
 import com.jme.util.geom.TangentBinormalGenerator;
 
 
@@ -544,8 +543,8 @@ public class ColladaLoader {
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
                 
-                SavableString str = (SavableString)geo.getUserData("MTGameShaderFlag");
-                if (geo instanceof TriMesh && str.getValue() != null) {
+                String str = "";
+                if (geo instanceof TriMesh && str != null) {
                     //System.out.println("Generating Tangents: " + geo);
                     TangentBinormalGenerator.generate((TriMesh)geo);
                     //System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
@@ -555,7 +554,7 @@ public class ColladaLoader {
                     //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
                     //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
                     //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
-                    assignShader(geo, str.getValue(), normalMap);
+                    assignShader(geo, str, normalMap);
                 }                
             }
         }

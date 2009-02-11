@@ -150,16 +150,19 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                     //System.out.println("Ray starts at: " + eyeRay.origin.x + ", " + eyeRay.origin.y + ", " + eyeRay.origin.z);
                     //System.out.println("And has direction: " + eyeRay.direction.x + ", " + eyeRay.direction.y + ", " + eyeRay.direction.z);
                     clearVisibleBounds();
-                    JMEPickInfo pickInfo = (JMEPickInfo) collisionSystem.pickAllWorldRay(eyeRay, true, false);
+                    JMEPickInfo pickInfo = (JMEPickInfo) collisionSystem.pickAllWithOrthoWorldRay(eyeRay, true, false, cc);
                     //System.out.println(pickInfo.size() + " Geometries were picked");
                     for (int j = 0; j < pickInfo.size(); j++) {
-                        JMEPickDetails pd = (JMEPickDetails)pickInfo.get(j);
-                        //System.out.println("================ Geometry " + j + " ================");
-                        //System.out.println("\tDistance: " + pd.getDistance());
-                        //System.out.println("\tEntity: " + pd.getEntity());
-                        //System.out.println("\tCollision Component: " + pd.getCollisionComponent());
-                        //System.out.println("\tGeometry: " + pd.getPickData().getTargetMesh());
-                        addToVisibleBounds(pd.getPickData().getTargetMesh());
+                        JMEPickDetails pd = (JMEPickDetails) pickInfo.get(j);
+                            //System.out.println("================ Geometry " + j + " ================");
+                            //System.out.println("\tDistance: " + pd.getDistance());
+                            //System.out.println("\tEntity: " + pd.getEntity());
+                            //System.out.println("\tCollision Component: " + pd.getCollisionComponent());
+                            //System.out.println("\tGeometry: " + pd.getPickData().getTargetMesh());
+                        if (pd.getPickData().getTargetMesh().getRenderQueueMode() !=
+                                com.jme.renderer.Renderer.QUEUE_ORTHO) {
+                            addToVisibleBounds(pd.getPickData().getTargetMesh());
+                        }
                     }
                 }
             }

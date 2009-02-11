@@ -95,7 +95,6 @@ import java.net.MalformedURLException;
 import java.nio.FloatBuffer;
 import java.io.FileInputStream;
 import com.jme.scene.TexCoords;
-import com.jme.util.export.SavableString;
 import com.jme.util.geom.TangentBinormalGenerator;
 import com.jme.scene.Skybox;
 import com.jme.image.Texture;
@@ -561,21 +560,7 @@ public class OrientationWorld {
                 }
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
-                System.out.println("FOUND GEOMETRY: " + geo.getName());
-                
-                SavableString str = (SavableString)geo.getUserData("MTGameShaderFlag");
-                if (geo instanceof TriMesh && str.getValue() != null) {
-                    //System.out.println("Generating Tangents: " + geo);
-                    TangentBinormalGenerator.generate((TriMesh)geo);
-                    //System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
-                    //System.out.println("Normal Buffer: " + geo.getNormalBuffer());
-                    //System.out.println("Color Buffer: " + geo.getColorBuffer());
-                    //System.out.println("TC 0 Buffer: " + geo.getTextureCoords(0));
-                    //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
-                    //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
-                    //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
-                    assignShader(geo, str.getValue(), true);
-                }    
+                System.out.println("FOUND GEOMETRY: " + geo.getName()); 
                 
                 FloatBuffer nBuffer = geo.getNormalBuffer();
                 FloatBuffer vBuffer = geo.getVertexBuffer();

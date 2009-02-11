@@ -440,6 +440,12 @@ class Renderer extends Thread {
         CameraComponent cc = rb.getCameraComponent();
         if (cc != null) {
             Camera camera = cc.getCamera();
+            if (rb.getWidth() != canvas.getWidth() ||
+                rb.getHeight() != canvas.getHeight()) {
+                rb.setWidth(canvas.getWidth());
+                rb.setHeight(canvas.getHeight());
+                camera.resize(canvas.getWidth(), canvas.getHeight());
+            }
             camera.update();
             jmeRenderer.setCamera(camera);
             rb.getBackgroundColor(bgColor);
