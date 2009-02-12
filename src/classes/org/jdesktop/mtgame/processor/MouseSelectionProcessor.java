@@ -43,6 +43,7 @@ import com.jme.scene.state.*;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
+import com.jme.intersection.TrianglePickData;
 
 import com.jme.renderer.Camera;
 
@@ -150,7 +151,7 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                     //System.out.println("Ray starts at: " + eyeRay.origin.x + ", " + eyeRay.origin.y + ", " + eyeRay.origin.z);
                     //System.out.println("And has direction: " + eyeRay.direction.x + ", " + eyeRay.direction.y + ", " + eyeRay.direction.z);
                     clearVisibleBounds();
-                    JMEPickInfo pickInfo = (JMEPickInfo) collisionSystem.pickAllWithOrthoWorldRay(eyeRay, true, false, cc);
+                    JMEPickInfo pickInfo = (JMEPickInfo) collisionSystem.pickAllWorldRay(eyeRay, true, false, true, cc);
                     //System.out.println(pickInfo.size() + " Geometries were picked");
                     for (int j = 0; j < pickInfo.size(); j++) {
                         JMEPickDetails pd = (JMEPickDetails) pickInfo.get(j);
@@ -159,6 +160,9 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                             //System.out.println("\tEntity: " + pd.getEntity());
                             //System.out.println("\tCollision Component: " + pd.getCollisionComponent());
                             //System.out.println("\tGeometry: " + pd.getPickData().getTargetMesh());
+                            Vector3f pt = new Vector3f();
+                            ((TrianglePickData)pd.getPickData()).getIntersectionPoint(pt);
+                            //System.out.println("\tPoint: " + pt);
                         if (pd.getPickData().getTargetMesh().getRenderQueueMode() !=
                                 com.jme.renderer.Renderer.QUEUE_ORTHO) {
                             addToVisibleBounds(pd.getPickData().getTargetMesh());

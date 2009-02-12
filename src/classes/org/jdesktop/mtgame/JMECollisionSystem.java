@@ -101,7 +101,7 @@ public class JMECollisionSystem extends CollisionSystem {
     /**
      * A pick routine, which will pick against every scene rendered
      */
-    public void pickAll(Ray ray, PickResults result, CameraComponent camera) {
+    public void pickAll(Ray ray, PickResults result, boolean includeOrtho, CameraComponent camera) {
         //System.out.println("==================== pickAll =====================");
         synchronized (worldManager.getRenderManager().getCollisionLock()) {
             synchronized (collisionComponents) {
@@ -109,10 +109,11 @@ public class JMECollisionSystem extends CollisionSystem {
                     JMECollisionComponent cc = (JMECollisionComponent) collisionComponents.get(i);
                     if (cc.isPickable()) {
                         Node node = cc.getNode();
-                        if (camera != null && node.getRenderQueueMode() == com.jme.renderer.Renderer.QUEUE_ORTHO) {
+                        if (includeOrtho && node.getRenderQueueMode() == com.jme.renderer.Renderer.QUEUE_ORTHO) {
                             processOrthoPick(node, ray, result, camera);
+                        } else {
+                            node.findPick(ray, result);
                         }
-                        node.findPick(ray, result);
                     }
                 }
             }
@@ -139,7 +140,13 @@ public class JMECollisionSystem extends CollisionSystem {
             Vector3f screenPt, Ray ray) {
         if (s instanceof TriMesh) {
             if (checkMeshForIntersection((TriMesh)s, result, cc, screenPt)) {
-                result.addPickData(new PickData(ray, (TriMesh)s, false));
+                if (result instanceof TrianglePickResults) {
+                    TrianglePickData pd = new TrianglePickData(ray, (TriMesh)s, null, false);
+                    pd.setIntersectionPoint(screenPt);
+                    result.addPickData(pd);
+                } else {
+                    result.addPickData(new PickData(ray, (TriMesh)s, false));
+                }
             }
         } else if (s instanceof Node) {
             Node n = (Node)s;
@@ -291,32 +298,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * is calculated.
      */
     public PickInfo pickAllEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData) {
-        Ray eRay = new Ray();
-        Ray wRay = new Ray();
-        
-        eRay.direction.set(eyeRay.direction);
-        eRay.origin.set(eyeRay.origin);
-
-        AbstractCamera ac = (AbstractCamera)cc.getCamera();
-        Matrix4f mvMatrix = ac.getModelViewMatrix();
-        
-        if (!mvMatrix.equals(camMatrix)) {
-            camMatrix.set(mvMatrix);
-            camInverse = camMatrix.invert();
-        }
-
-        //System.out.println("Matrix: " + camMatrix);
-        camInverse.multAcross(eRay.origin, wRay.origin);
-        camMatrix.mult(eRay.direction, wRay.direction);
-        wRay.direction.normalizeLocal();
-               
-        //System.out.println("Eye Ray: " + eRay.origin + ", " + eRay.direction);
-        //System.out.println("World Ray: " + wRay.origin + ", " + wRay.direction);
-        // convert the eye ray to world ray, then call the pick routine
-        JMEPickInfo pickInfo = (JMEPickInfo)pickAllWorldRay(wRay, geometryPick, interpolataData);
-        pickInfo.setEyeRay(eRay);
-        
-        return (pickInfo);
+        return (pickAllEyeRay(eyeRay, cc, geometryPick, interpolataData, false));
     }
 
     /**
@@ -325,7 +307,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * data or just bounds.  interpolateData signals whether or not interpolated data
      * is calculated.
      */
-    public PickInfo pickAllWithOrthoEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData) {
+    public PickInfo pickAllEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData, boolean includeOrtho) {
         Ray eRay = new Ray();
         Ray wRay = new Ray();
 
@@ -348,7 +330,7 @@ public class JMECollisionSystem extends CollisionSystem {
         //System.out.println("Eye Ray: " + eRay.origin + ", " + eRay.direction);
         //System.out.println("World Ray: " + wRay.origin + ", " + wRay.direction);
         // convert the eye ray to world ray, then call the pick routine
-        JMEPickInfo pickInfo = (JMEPickInfo)pickAllWithOrthoWorldRay(wRay, geometryPick, interpolataData, cc);
+        JMEPickInfo pickInfo = (JMEPickInfo)pickAllWorldRay(wRay, geometryPick, interpolataData, includeOrtho, cc);
         pickInfo.setEyeRay(eRay);
 
         return (pickInfo);
@@ -361,51 +343,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * is calculated.
      */
     public PickInfo pickAllWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData) {
-        PickInfo pickInfo = null;
-        PickResults pickResults = null;
-        int j = 0;
-
-        // create the correct pick results
-        if (geometryPick) {
-            pickResults = new TrianglePickResults();
-        } else {
-            pickResults = new BoundingPickResults();
-        }
-        pickResults.setCheckDistance(true);
-
-        // Do the actual query
-        pickAll(worldRay, pickResults, null);
-
-        //System.out.println("PickResults: " + pickResults.getNumber());
-
-        // Create out pick info
-        pickInfo = new JMEPickInfo(geometryPick, interpolataData, worldRay);
-
-        // Now add data from the pickResults
-        for (int i=0; i<pickResults.getNumber(); i++) {
-            PickData pickData = pickResults.getPickData(i);
-
-            // Prune out non-hits in geometry case
-            if (geometryPick && pickData.getDistance() == Float.POSITIVE_INFINITY) {
-                continue;
-            }
-            JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
-            pickInfo.addPickDetail(pickDetails);
-
-            // Add more details in geometry pick case
-            if (geometryPick) {
-                TrianglePickData tpd = (TrianglePickData) pickData;
-                Vector3f intersectionPoint = new Vector3f();
-                tpd.getIntersectionPoint(intersectionPoint);
-                pickDetails.setPosition(intersectionPoint);
-
-                if (interpolataData) {
-                    // TODO calculate this
-                    }
-            }
-        }
-
-        return (pickInfo);
+        return (pickAllWorldRay(worldRay, geometryPick, interpolataData, false, null));
     }
 
     /**
@@ -414,7 +352,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * data or just bounds.  interpolateData signals whether or not interpolated data
      * is calculated.
      */
-    public PickInfo pickAllWithOrthoWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, CameraComponent cc) {
+    public PickInfo pickAllWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, boolean includeOrtho, CameraComponent cc) {
         PickInfo pickInfo = null;
         PickResults pickResults = null;
         int j = 0;
@@ -428,32 +366,34 @@ public class JMECollisionSystem extends CollisionSystem {
         pickResults.setCheckDistance(true);
         
         // Do the actual query
-        pickAll(worldRay, pickResults, cc);
+        pickAll(worldRay, pickResults, includeOrtho, cc);
         
         //System.out.println("PickResults: " + pickResults.getNumber());
-        
+
         // Create out pick info
         pickInfo = new JMEPickInfo(geometryPick, interpolataData, worldRay);
 
-        // Run through the list picking out orthos
-        for (int i=0; i<pickResults.getNumber(); i++) {
-            PickData pickData = pickResults.getPickData(i);
-            // Handle the Ortho case
-            if (pickData.getTargetMesh().getRenderQueueMode() == com.jme.renderer.Renderer.QUEUE_ORTHO) {
-                JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
-                // Look through current pickInfo list to see where to put this one
-                // based upon it's z order
-                int len = pickInfo.size();
-                for (j=0; j<len; j++) {
-                    JMEPickDetails pd = (JMEPickDetails)pickInfo.get(j);
-                    if (pickData.getTargetMesh().getZOrder() <=
-                            pd.getPickData().getTargetMesh().getZOrder()) {
-                        pickInfo.addPickDetail(j, pickDetails);
-                        break;
+        if (includeOrtho) {
+            // Run through the list picking out orthos
+            for (int i = 0; i < pickResults.getNumber(); i++) {
+                PickData pickData = pickResults.getPickData(i);
+                // Handle the Ortho case
+                if (pickData.getTargetMesh().getRenderQueueMode() == com.jme.renderer.Renderer.QUEUE_ORTHO) {
+                    JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
+                    // Look through current pickInfo list to see where to put this one
+                    // based upon it's z order
+                    int len = pickInfo.size();
+                    for (j = 0; j < len; j++) {
+                        JMEPickDetails pd = (JMEPickDetails) pickInfo.get(j);
+                        if (pickData.getTargetMesh().getZOrder() <=
+                                pd.getPickData().getTargetMesh().getZOrder()) {
+                            pickInfo.addPickDetail(j, pickDetails);
+                            break;
+                        }
                     }
-                }
-                if (j==len) {
-                   pickInfo.addPickDetail(pickDetails);
+                    if (j == len) {
+                        pickInfo.addPickDetail(pickDetails);
+                    }
                 }
             }
         }
