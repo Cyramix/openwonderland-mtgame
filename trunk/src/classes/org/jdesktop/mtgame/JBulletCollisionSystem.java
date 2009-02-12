@@ -146,14 +146,14 @@ public class JBulletCollisionSystem extends CollisionSystem implements Geometric
     /**
      * TODO: Need to implement this
      */
-    public PickInfo pickAllWithOrthoEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData) {
+    public PickInfo pickAllEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData, boolean includeOrtho) {
         return (null);
     }
 
     /**
      * TODO: Need to implement this
      */
-    public PickInfo pickAllWithOrthoWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, CameraComponent cc) {
+    public PickInfo pickAllWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, boolean includeOrtho, CameraComponent cc) {
         return (null);
     }
 

@@ -77,11 +77,11 @@ public abstract class CollisionSystem {
     /**
      * Collision Systems need to implment this query
      */
-    public abstract PickInfo pickAllWithOrthoEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData);
+    public abstract PickInfo pickAllEyeRay(Ray eyeRay, CameraComponent cc, boolean geometryPick, boolean interpolataData, boolean includeOrtho);
 
     /**
      * Collision Systems need to implment this query
      */
-    public abstract PickInfo pickAllWithOrthoWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, CameraComponent cc);
+    public abstract PickInfo pickAllWorldRay(Ray worldRay, boolean geometryPick, boolean interpolataData, boolean includeOrtho, CameraComponent cc);
 
 }
