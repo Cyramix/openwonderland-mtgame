@@ -369,7 +369,7 @@ class Renderer extends Thread {
         }
         //System.out.println("CANVAS: " + canvas);
 
-        MyImplementor impl = new MyImplementor(this, (Canvas)canvas, width, height);
+        MyImplementor impl = new MyImplementor(this, rb, (Canvas)canvas, width, height);
         canvas.setImplementor(impl);
          
         return ((Canvas)canvas);
@@ -1667,27 +1667,29 @@ class Renderer extends Thread {
          * The Renderer to notify
          */
         private Renderer mtrenderer = null;
+        private RenderBuffer renderBuffer = null;
         private Canvas canvas = null;
+        private boolean first = true;
 
-        public MyImplementor(Renderer renderer, Canvas c, int width, int height) {
+        public MyImplementor(Renderer renderer, RenderBuffer rb, Canvas c, int width, int height) {
             super(width, height);
             this.canvas = c;
             this.mtrenderer = renderer;
+            renderBuffer = rb;
         }
 
         public void simpleSetup() {
-            if (!useJOGL) {
-                mtrenderer.addCanvas(canvas);
-                //System.out.println("In simple setup: ");
+            //System.out.println("In simple setup: ");
+            mtrenderer.addCanvas(canvas);
+            BufferUpdater bu = renderBuffer.getBufferUpdater();
+            if (bu != null) {
+                bu.init(renderBuffer);
             }
-            
+        //System.out.println("In simple setup: ");
         }
 
         public void simpleUpdate() {
-            if (useJOGL) {
-                mtrenderer.addCanvas(canvas);
-                //System.out.println("In simple update");
-            }
+            //System.out.println("In simple update: ");
         }
     }
     
