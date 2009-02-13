@@ -76,7 +76,13 @@ public abstract class RenderBuffer {
      * render.
      */
     private RenderUpdater renderUpdater = null;
-     
+
+    /**
+     * A callback for applications that want to be notified when the
+     * render buffer is ready.
+     */
+    private BufferUpdater bufferUpdater = null;
+
     /**
      * The list of Spatials to render into this buffer
      * This list is only accessed if manage render scenes is true.
@@ -127,7 +133,21 @@ public abstract class RenderBuffer {
     void setInitialized(boolean flag) {
         initialized = flag;
     }
-        
+
+    /**
+     * Set the Render Updater
+     */
+    public void setBufferUpdater(BufferUpdater updater) {
+        bufferUpdater = updater;
+    }
+
+    /**
+     * Set the Render Updater
+     */
+    public BufferUpdater getBufferUpdater() {
+        return (bufferUpdater);
+    }
+
     /**
      * Set the Render Updater
      */
