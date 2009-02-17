@@ -380,6 +380,12 @@ public class JMECollisionSystem extends CollisionSystem {
                 // Handle the Ortho case
                 if (pickData.getTargetMesh().getRenderQueueMode() == com.jme.renderer.Renderer.QUEUE_ORTHO) {
                     JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
+                    if (geometryPick) {
+                        TrianglePickData tpd = (TrianglePickData) pickData;
+                        Vector3f intersectionPoint = new Vector3f();
+                        tpd.getIntersectionPoint(intersectionPoint);
+                        pickDetails.setPosition(intersectionPoint);
+                    }
                     // Look through current pickInfo list to see where to put this one
                     // based upon it's z order
                     int len = pickInfo.size();

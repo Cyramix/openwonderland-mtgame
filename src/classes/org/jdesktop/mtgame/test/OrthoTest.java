@@ -118,6 +118,9 @@ public class OrthoTest {
     private int width = 800;
     private int height = 600;
     private float aspect = 800.0f/600.0f;
+
+    private int orthoWidth = 100;
+    private int orthoHeight = 50;
     
     /**
      * Some options state variables
@@ -145,6 +148,7 @@ public class OrthoTest {
     private Node quadsRoot = null;
     QuadEntity quadsEntityRoot = null;
     String urlpath = "file:/Users/runner/NetBeansProjects/jme-20/trunk/src/";
+    private CameraComponent cameraComponent = null;
     
     /**
      * A list of the models we are looking at
@@ -187,10 +191,10 @@ public class OrthoTest {
         
         // Add the camera
         Entity camera = new Entity("DefaultCamera");
-        CameraComponent cc = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode, 
+        cameraComponent = wm.getRenderManager().createCameraComponent(cameraSG, cameraNode,
                 width, height, 45.0f, aspect, 1.0f, 1000.0f, true);
-        rb.setCameraComponent(cc);
-        camera.addComponent(CameraComponent.class, cc);
+        rb.setCameraComponent(cameraComponent);
+        camera.addComponent(CameraComponent.class, cameraComponent);
 
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
