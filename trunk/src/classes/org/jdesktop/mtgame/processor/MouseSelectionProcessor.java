@@ -160,9 +160,9 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                             //System.out.println("\tEntity: " + pd.getEntity());
                             //System.out.println("\tCollision Component: " + pd.getCollisionComponent());
                             //System.out.println("\tGeometry: " + pd.getPickData().getTargetMesh());
-                            Vector3f pt = new Vector3f();
-                            ((TrianglePickData)pd.getPickData()).getIntersectionPoint(pt);
-                            //System.out.println("\tPoint: " + pt);
+                            //Vector3f pt = new Vector3f();
+                            //((TrianglePickData)pd.getPickData()).getIntersectionPoint(pt);
+                            //System.out.println("\tPoint: " + pd.getPosition());
                         if (pd.getPickData().getTargetMesh().getRenderQueueMode() !=
                                 com.jme.renderer.Renderer.QUEUE_ORTHO) {
                             addToVisibleBounds(pd.getPickData().getTargetMesh());
