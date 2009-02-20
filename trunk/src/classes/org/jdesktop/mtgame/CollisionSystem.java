@@ -63,6 +63,7 @@ public abstract class CollisionSystem {
      * Systems need to define this for themselves
      */
     public abstract void addCollisionComponent(CollisionComponent cc);
+    public abstract void removeCollisionComponent(CollisionComponent cc);
 
     /**
      * Collision Systems need to implment this query

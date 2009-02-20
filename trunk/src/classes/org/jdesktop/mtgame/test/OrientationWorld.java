@@ -36,7 +36,7 @@ import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
 import org.jdesktop.mtgame.processor.LightNodeRotator;
-import org.jdesktop.mtgame.processor.PostEventProcessor;
+import org.jdesktop.mtgame.processor.TransScaleProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.processor.FPSCameraProcessor;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
@@ -162,8 +162,6 @@ public class OrientationWorld {
     private JMECollisionSystem collisionSystem = null;
     
     private SwingFrame frame = null;
-    private String loadfile = "/Users/runner/Desktop/Orientation/terrain_test.dae";
-    private String configFile = "/Users/runner/Desktop/Orientation/terrain_test.mtg";
     private String textureDir = "/Users/runner/Desktop/Orientation/textures";
     private Skybox skybox = null;
 
@@ -172,8 +170,26 @@ public class OrientationWorld {
         wm = new WorldManager("TestWorld");
         
         try {
-            FileInputStream fs = new FileInputStream(configFile);
+            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/Orientation/terrain.mtg");
             wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/building.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/boulders.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_Appkiosk.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_kiosk.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_lamp.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_trashcan.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/veg_HousePlant.mtg");
+            wm.loadConfiguration(fs);
+            fs = new FileInputStream("/Users/runner/Desktop/Orientation/veg_lilly_001.mtg");
+            wm.loadConfiguration(fs);
+            //fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_sculpture.mtg");
+            //wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException e) {
             System.out.println(e);
         }
@@ -194,7 +210,19 @@ public class OrientationWorld {
         createCameraEntity(wm);  
         setGlobalLights();
         createSkybox(wm);
-        frame.loadFile(loadfile, true);
+        frame.loadFile("/Users/runner/Desktop/Orientation/terrain.dae", true, new Vector3f(), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/building.dae", true, new Vector3f(), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_ApplicationKiosk.dae", true, new Vector3f(13.0f, 0.0f, 50.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_kiosk.dae", true, new Vector3f(19.0f, 0.0f, 50.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_lamp.dae", true, new Vector3f(17.0f, 1.0f, 49.7f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_sculptureA.dae", true, new Vector3f(50.0f, 0.0f, 36.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_trashcan.dae", true, new Vector3f(26.0f, 0.0f, 50.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_housePlant.dae", true, new Vector3f(14.0f, 0.0f, 27.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_001.dae", true, new Vector3f(14.0f, 0.01f, 24.0f), 1.0f, true, false);
+        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_002.dae", true, new Vector3f(14.0f, 0.01f, 30.0f), 1.0f, true, true);
+
+        //frame.loadFile("/Users/runner/Desktop/Orientation/shelter.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, true, true);
+        //frame.loadFile("/Users/runner/Desktop/Orientation/boulders.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, false, true);
         //frame.loadFile(loadfile, false);
         //createRandomTeapots(wm);
         
@@ -461,7 +489,7 @@ public class OrientationWorld {
         /**
          * Add a model to be visualized
          */
-        private void addModel(Node model) {
+        private void addModel(Node model, boolean enableLighting, boolean manipulate) {
             Node modelRoot = new Node("Model");
                     
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
@@ -475,9 +503,17 @@ public class OrientationWorld {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
+            sc.setLightingEnabled(enableLighting);
             JMECollisionComponent cc = collisionSystem.createCollisionComponent(modelRoot);
             e.addComponent(JMECollisionComponent.class, cc);
             e.addComponent(RenderComponent.class, sc);
+
+            if (manipulate) {
+                int eventMask = InputManager.KEY_EVENTS;
+                AWTInputComponent l = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
+                TransScaleProcessor p = new TransScaleProcessor(l, wm, modelRoot);
+                e.addComponent(TransScaleProcessor.class, p);
+            }
             wm.addEntity(e);              
         }
     
@@ -510,7 +546,8 @@ public class OrientationWorld {
             }
         }
         
-        void loadFile(String filename, boolean normalMap) {       
+        void loadFile(String filename, boolean normalMap, Vector3f trans, float scale, boolean enableLighting,
+                boolean manipulate) {
             FileInputStream fileStream = null;
             
             System.out.println("You chose to open this file: " + filename);
@@ -535,7 +572,9 @@ public class OrientationWorld {
             //shader.applyToGeometry(normalGeometry);
             Node normalNode = new Node();
             normalNode.attachChild(normalGeometry);
-            addModel(model);
+            model.setLocalTranslation(trans);
+            model.setLocalScale(scale);
+            addModel(model, enableLighting, manipulate);
             //addModel(normalNode);
         }
         

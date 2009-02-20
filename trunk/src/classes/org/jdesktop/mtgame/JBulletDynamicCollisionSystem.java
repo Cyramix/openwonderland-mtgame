@@ -126,14 +126,15 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
      * Remove the JME collision component from collision consideration
      * @param cc
      */
-    public void removeCollisionComponent(JBulletCollisionComponent cc) {
+    public void removeCollisionComponent(CollisionComponent cc) {
+        JBulletCollisionComponent jcc = (JBulletCollisionComponent) cc;
         synchronized (dynamicsWorld) {
             collisionComponents.remove(cc);         
-            if (cc.getPhysicsComponent() != null) {
-                dynamicsWorld.addRigidBody((RigidBody) cc.getCollisionObject());
+            if (jcc.getPhysicsComponent() != null) {
+                dynamicsWorld.addRigidBody((RigidBody) jcc.getCollisionObject());
             } else {
                 cc.getNode().removeGeometricUpdateListener(this);
-                dynamicsWorld.addCollisionObject(cc.getCollisionObject());
+                dynamicsWorld.addCollisionObject(jcc.getCollisionObject());
             }
         }
     }

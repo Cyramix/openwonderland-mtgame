@@ -90,11 +90,12 @@ public class JBulletCollisionSystem extends CollisionSystem implements Geometric
      * Remove the JME collision component from collision consideration
      * @param cc
      */
-    public void removeCollisionComponent(JBulletCollisionComponent cc) {
+    public void removeCollisionComponent(CollisionComponent cc) {
+        JBulletCollisionComponent jcc = (JBulletCollisionComponent) cc;
         synchronized (collisionComponents) {
-            collisionComponents.remove(cc);
-            cc.getNode().removeGeometricUpdateListener(this);
-            collisionWorld.removeCollisionObject(cc.getCollisionObject());
+            collisionComponents.remove(jcc);
+            jcc.getNode().removeGeometricUpdateListener(this);
+            collisionWorld.removeCollisionObject(jcc.getCollisionObject());
         }
     }
     

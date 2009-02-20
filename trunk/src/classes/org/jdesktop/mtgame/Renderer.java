@@ -107,6 +107,7 @@ class Renderer extends Thread {
      * The list of collision components that need their state updated
      */
     private ArrayList collisionComponents = new ArrayList();
+    private ArrayList removeCollisionComponents = new ArrayList();
     
     /**
      * The list of camera objects that need their state updated
@@ -361,7 +362,7 @@ class Renderer extends Thread {
     Canvas createCanvas(RenderBuffer rb) {
         int width = rb.getWidth();
         int height = rb.getHeight();
-        
+       
         // Create the canvas and it's notification object
         JMECanvas canvas = displaySystem.createCanvas(width, height, "AWT", null);
         if (useJOGL) {
@@ -962,6 +963,13 @@ class Renderer extends Thread {
                 }
                 collisionComponents.clear();
             }
+            if (removeCollisionComponents.size() != 0) {
+                for (int i = 0; i < removeCollisionComponents.size(); i++) {
+                    CollisionComponent cc = (CollisionComponent) removeCollisionComponents.get(i);
+                    cc.getCollisionSystem().removeCollisionComponent(cc);
+                }
+                removeCollisionComponents.clear();
+            }
         }
     }
     
@@ -1214,7 +1222,7 @@ class Renderer extends Thread {
             
             if (c instanceof CollisionComponent) {
                 synchronized (collisionComponents) {
-                    collisionComponents.remove(c);
+                    removeCollisionComponents.add(c);
                 }
             }
                                          

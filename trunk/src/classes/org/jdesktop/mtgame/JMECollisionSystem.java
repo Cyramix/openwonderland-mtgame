@@ -90,7 +90,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * Remove the JME collision component from collision consideration
      * @param cc
      */
-    public void removeCollisionComponent(JMECollisionComponent cc) {
+    public void removeCollisionComponent(CollisionComponent cc) {
         synchronized (collisionComponents) {
             collisionComponents.remove(cc);
             spatialMap.remove(cc.getNode());
@@ -412,7 +412,7 @@ public class JMECollisionSystem extends CollisionSystem {
                 // Prune out non-hits in geometry case
                 if (geometryPick && pickData.getDistance() == Float.POSITIVE_INFINITY) {
                     continue;
-                }
+                }            
                 JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
                 pickInfo.addPickDetail(pickDetails);
 

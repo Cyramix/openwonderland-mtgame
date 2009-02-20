@@ -98,7 +98,7 @@ public class WorldManager {
      * The config manager
      */
     private ConfigManager configManager = null;
-    
+  
     /**
      * The Default Constructor
      */
@@ -178,7 +178,7 @@ public class WorldManager {
      */
     public void removeEntity(Entity e) {
         EntityComponent c = null;
-        
+
         synchronized (e) {
             Iterator comps = e.getComponents().iterator();
             while (comps.hasNext()) {
