@@ -32,12 +32,16 @@
 package org.jdesktop.mtgame;
 
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
+import org.jdesktop.mtgame.shader.DiffuseMapAO;
 import org.jdesktop.mtgame.shader.DiffuseNormalSpecMap;
+import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMap;
+import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMapAlpha;
 import com.jme.scene.Spatial;
 import com.jme.scene.Node;
 import com.jme.scene.Geometry;
 import com.jme.scene.TriMesh;
 import com.jme.scene.state.RenderState;
+import com.jme.scene.state.BlendState;
 import com.jme.scene.state.TextureState;
 import com.jme.image.Texture;
 import com.jme.util.TextureManager;
@@ -193,6 +197,24 @@ public class ConfigManager {
                 DiffuseNormalSpecMap diffuseNormalSpecShader = new DiffuseNormalSpecMap(worldManager);
                 // Assume this is geometry for now
                 diffuseNormalSpecShader.applyToGeometry((Geometry)s);          
+            } else if (ga.getShaderName().equals("DiffuseMapAO")) {
+                DiffuseMapAO diffuseMapAOShader = new DiffuseMapAO(worldManager);
+                // Assume this is geometry for now
+                diffuseMapAOShader.applyToGeometry((Geometry)s);
+            } else if (ga.getShaderName().equals("DiffuseNormalSpecAOMap")) {
+                DiffuseNormalSpecAOMap shader = new DiffuseNormalSpecAOMap(worldManager);
+                // Assume this is geometry for now
+                shader.applyToGeometry((Geometry)s);
+            } else if (ga.getShaderName().equals("DiffuseNormalSpecAOMapAlpha")) {
+                DiffuseNormalSpecAOMapAlpha shader = new DiffuseNormalSpecAOMapAlpha(worldManager);
+                // Assume this is geometry for now
+                shader.applyToGeometry((Geometry)s);
+                BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+                as.setEnabled(true);
+                as.setBlendEnabled(true);
+                as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+                as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+                s.setRenderState(as);
             }
         }
         
@@ -218,6 +240,12 @@ public class ConfigManager {
                 loadTexture(s, textureName, tcIndex);
             } else if (param.startsWith("SpecularMap")) { 
                 param = param.substring(11).trim();
+                int index = param.indexOf(' ');
+                textureName = param.substring(0, index);
+                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
+                loadTexture(s, textureName, tcIndex);
+            } else if (param.startsWith("AmbientOccMap")) {
+                param = param.substring(13).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
