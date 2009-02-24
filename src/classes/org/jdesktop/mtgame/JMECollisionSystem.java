@@ -96,7 +96,22 @@ public class JMECollisionSystem extends CollisionSystem {
             spatialMap.remove(cc.getNode());
         }
     }
-    
+
+    public void addReportingNode(Node n, CollisionComponent cc) {
+        synchronized (collisionComponents) {
+            spatialMap.put(n, cc);
+        }
+    }
+
+    /**
+     * Remove the JME collision component from collision consideration
+     * @param cc
+     */
+    public void removeReportingNode(Node n) {
+        synchronized (collisionComponents) {
+            spatialMap.remove(n);
+        }
+    }
     
     /**
      * A pick routine, which will pick against every scene rendered
