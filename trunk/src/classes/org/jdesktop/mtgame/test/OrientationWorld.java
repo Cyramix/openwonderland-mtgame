@@ -101,6 +101,9 @@ import com.jme.image.Texture;
 import com.jme.util.TextureManager;
 import com.jme.scene.Spatial.TextureCombineMode;
 
+import com.jmex.model.converters.X3dToJme;
+import java.util.HashMap;
+
 
 /**
  * A World test application
@@ -170,30 +173,11 @@ public class OrientationWorld {
         wm = new WorldManager("TestWorld");
         
         try {
-            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/Orientation/terrain.mtg");
+            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/OrientationWorld/worldConfig.mtg");
             wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/building.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/boulders.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_Appkiosk.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_kiosk.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_lamp.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_trashcan.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/veg_HousePlant.mtg");
-            wm.loadConfiguration(fs);
-            fs = new FileInputStream("/Users/runner/Desktop/Orientation/veg_lilly_001.mtg");
-            wm.loadConfiguration(fs);
-            //fs = new FileInputStream("/Users/runner/Desktop/Orientation/obj_sculpture.mtg");
-            //wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException e) {
             System.out.println(e);
         }
-        wm.setTextureDirectory(textureDir);
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
@@ -210,24 +194,73 @@ public class OrientationWorld {
         createCameraEntity(wm);  
         setGlobalLights();
         createSkybox(wm);
-        frame.loadFile("/Users/runner/Desktop/Orientation/terrain.dae", true, new Vector3f(), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/building.dae", true, new Vector3f(), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_ApplicationKiosk.dae", true, new Vector3f(13.0f, 0.0f, 50.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_kiosk.dae", true, new Vector3f(19.0f, 0.0f, 50.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_lamp.dae", true, new Vector3f(17.0f, 1.0f, 49.7f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_sculptureA.dae", true, new Vector3f(50.0f, 0.0f, 36.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_trashcan.dae", true, new Vector3f(26.0f, 0.0f, 50.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_housePlant.dae", true, new Vector3f(14.0f, 0.0f, 27.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_001.dae", true, new Vector3f(14.0f, 0.01f, 24.0f), 1.0f, true, false);
-        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_002.dae", true, new Vector3f(14.0f, 0.01f, 30.0f), 1.0f, true, true);
+        try {
+            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/OrientationWorld/worldData.mtg");
+            wm.loadConfiguration(fs);
+        } catch (java.io.FileNotFoundException ex) {
+            System.out.println(ex);
+        }
+//        frame.loadFile("/Users/runner/Desktop/Orientation/terrain.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/building.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_ApplicationKiosk.dae", true, new Vector3f(13.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_kiosk.dae", true, new Vector3f(19.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_lamp.dae", true, new Vector3f(17.0f, 1.0f, 49.7f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_sculptureA.dae", true, new Vector3f(50.0f, 0.0f, 36.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_trashcan.dae", true, new Vector3f(26.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_housePlant.dae", true, new Vector3f(14.0f, 0.0f, 27.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_001.dae", true, new Vector3f(22.0f, -1.15f, 3.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_002.dae", true, new Vector3f(19.0f, -1.15f, 3.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_shrub_002.dae", true, new Vector3f(-39.0f, -1.0f, 0.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_shrub_003.dae", true, new Vector3f(0.0f, 0.0f, 4.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_tree_001.dae", true, new Vector3f(0.0f, 2.3f, 20.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_tree_002.dae", true, new Vector3f(-18.2f, 1.2f, 18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_treeRed.dae", true, new Vector3f(13.0f, 3.0f, -18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_YellowTree_002.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/red_tree.dae", true, new Vector3f(13.0f, 3.0f, -18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/green_tree.dae", true, new Vector3f(23.0f, 3.0f, -24.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orientation/yellow_tree.dae", true, new Vector3f(21.0f, 3.0f, -35.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
+//        frame.loadFile("/Users/runner/Desktop/Orient/shelter.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
 
+        //loadViaX3D("/Users/runner/Desktop/Orientation/veg_tree_001.x3d", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
         //frame.loadFile("/Users/runner/Desktop/Orientation/shelter.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, true, true);
         //frame.loadFile("/Users/runner/Desktop/Orientation/boulders.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, false, true);
         //frame.loadFile(loadfile, false);
         //createRandomTeapots(wm);
         
     }
-    
+
+    void loadViaX3D(String filename, boolean normalMap, Vector3f trans,
+            Vector3f scale, boolean enableLighting, boolean manipulate) {
+        FileInputStream fileStream = null;
+        try {
+            fileStream = new FileInputStream(filename);
+        } catch (FileNotFoundException ex) {
+            System.out.println(ex);
+        }
+
+        HashMap texData = new HashMap();
+        X3dToJme loader = null;
+        try {
+            loader = new X3dToJme();
+        } catch (InstantiationException ie) {
+            System.out.println(ie);
+        }
+
+        Spatial scene = null;
+        try {
+            scene = loader.loadScene(fileStream, texData, null);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        wm.applyConfig(scene);
+
+        frame.parseModel(0, scene, null);
+
+        scene.setLocalTranslation(trans);
+        scene.setLocalScale(scale);
+        frame.addModel((Node)scene, enableLighting, manipulate);
+    }
+
     public void setGlobalLights() {
         LightNode globalLight1 = new LightNode();
         PointLight light = new PointLight();
@@ -393,8 +426,8 @@ public class OrientationWorld {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:/Users/runner/Desktop/Orientation/textures/";
-        String textureSubdirName = "/Users/runner/Desktop/Orientation/textures/";
+        String textureSubdir = "file:/Users/runner/Desktop/OrientationWorld/textures/";
+        String textureSubdirName = "/Users/runner/Desktop/OrientationWorld/textures/";
         int normalIndex = 0;
 
         // Construct the frame
@@ -457,7 +490,7 @@ public class OrientationWorld {
 
             pack();
             
-            ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
+            //ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
         }
         
         /**
@@ -546,7 +579,7 @@ public class OrientationWorld {
             }
         }
         
-        void loadFile(String filename, boolean normalMap, Vector3f trans, float scale, boolean enableLighting,
+        void loadFile(String filename, boolean normalMap, Vector3f trans, Vector3f scale, boolean enableLighting,
                 boolean manipulate) {
             FileInputStream fileStream = null;
             
@@ -600,22 +633,24 @@ public class OrientationWorld {
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
                 System.out.println("FOUND GEOMETRY: " + geo.getName()); 
-                
-                FloatBuffer nBuffer = geo.getNormalBuffer();
-                FloatBuffer vBuffer = geo.getVertexBuffer();
-                vBuffer.rewind();
-                nBuffer.rewind();
-                float nScale = 2.0f;
-                for (int i=0; i<geo.getVertexCount(); i++) {
-                    lineData[normalIndex] = new Vector3f();
-                    lineData[normalIndex].x = vBuffer.get();
-                    lineData[normalIndex].y = vBuffer.get();
-                    lineData[normalIndex].z = vBuffer.get();
-                    lineData[normalIndex+1] = new Vector3f();
-                    lineData[normalIndex+1].x = lineData[normalIndex].x + nScale * nBuffer.get();
-                    lineData[normalIndex+1].y = lineData[normalIndex].y + nScale * nBuffer.get();
-                    lineData[normalIndex+1].z = lineData[normalIndex].z + nScale * nBuffer.get();
-                    normalIndex += 2;
+
+                if (lineData != null) {
+                    FloatBuffer nBuffer = geo.getNormalBuffer();
+                    FloatBuffer vBuffer = geo.getVertexBuffer();
+                    vBuffer.rewind();
+                    nBuffer.rewind();
+                    float nScale = 2.0f;
+                    for (int i = 0; i < geo.getVertexCount(); i++) {
+                        lineData[normalIndex] = new Vector3f();
+                        lineData[normalIndex].x = vBuffer.get();
+                        lineData[normalIndex].y = vBuffer.get();
+                        lineData[normalIndex].z = vBuffer.get();
+                        lineData[normalIndex + 1] = new Vector3f();
+                        lineData[normalIndex + 1].x = lineData[normalIndex].x + nScale * nBuffer.get();
+                        lineData[normalIndex + 1].y = lineData[normalIndex].y + nScale * nBuffer.get();
+                        lineData[normalIndex + 1].z = lineData[normalIndex].z + nScale * nBuffer.get();
+                        normalIndex += 2;
+                    }
                 }
             }
         }
