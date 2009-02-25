@@ -959,6 +959,14 @@ class Renderer extends Thread {
     void processCollisionUpdates(float referenceTime) {
         // TODO: remove duplicate updates between this and render components
         synchronized (collisionComponents) {
+            if (removeCollisionComponents.size() != 0) {
+                for (int i = 0; i < removeCollisionComponents.size(); i++) {
+                    CollisionComponent cc = (CollisionComponent) removeCollisionComponents.get(i);
+                    cc.getCollisionSystem().removeCollisionComponent(cc);
+                }
+                removeCollisionComponents.clear();
+            }
+
             if (collisionComponents.size() != 0) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
                     CollisionComponent cc = (CollisionComponent) collisionComponents.get(i);
@@ -972,13 +980,7 @@ class Renderer extends Thread {
                 }
                 collisionComponents.clear();
             }
-            if (removeCollisionComponents.size() != 0) {
-                for (int i = 0; i < removeCollisionComponents.size(); i++) {
-                    CollisionComponent cc = (CollisionComponent) removeCollisionComponents.get(i);
-                    cc.getCollisionSystem().removeCollisionComponent(cc);
-                }
-                removeCollisionComponents.clear();
-            }
+
         }
     }
     
@@ -1170,7 +1172,7 @@ class Renderer extends Thread {
      */
     void addComponent(EntityComponent c) {
         synchronized (entityLock) {
-              
+
             // Lot's of things can have a camera
             if (c instanceof CameraComponent) {
                 cameras.add(c);
@@ -1220,7 +1222,6 @@ class Renderer extends Thread {
      */    
     void removeComponent(EntityComponent c) {
         synchronized (entityLock) {
-                   
             // Lot's of things can have a camera
             if (c instanceof CameraComponent) {
                 cameras.remove(c);
@@ -1759,14 +1760,11 @@ class Renderer extends Thread {
             if (blendState != null) {
                 if (blendState.isBlendEnabled()) {
                     s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_TRANSPARENT);
-                //System.out.println("In Transparent Queue: " + s);
                 } else {
                     s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_OPAQUE);
-                //System.out.println("In Opaque Queue: " + s);
                 }
             } else {
                 s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_INHERIT);
-            //System.out.println("Inheriting (No Blend State): " + s);
             }
         }
     }
