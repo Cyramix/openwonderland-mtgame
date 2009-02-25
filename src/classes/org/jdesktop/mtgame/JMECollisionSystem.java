@@ -467,7 +467,7 @@ public class JMECollisionSystem extends CollisionSystem {
         }
         entity = cc.getEntity();        
         
-        pickDetails = new JMEPickDetails(this, entity, cc, pickInfo, 
+        pickDetails = new JMEPickDetails(this, entity, node, cc, pickInfo,
                 pickData, pickData.getDistance());
         return (pickDetails);
     }

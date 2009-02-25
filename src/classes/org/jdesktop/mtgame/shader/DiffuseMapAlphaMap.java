@@ -15,7 +15,7 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseMap implements RenderUpdater {
+public class DiffuseMapAlphaMap implements RenderUpdater {
     /**
      * The vertex and fragment shader
      */
@@ -29,7 +29,6 @@ public class DiffuseMap implements RenderUpdater {
         "        gl_Position = ftransform();" +
         "        EyeDir = vec3(gl_ModelViewMatrix * gl_Vertex);" +   
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
-        "        gl_TexCoord[1] = gl_MultiTexCoord1;" +
         "        LightDir = normalize(gl_LightSource[0].position.xyz - EyeDir);" +
         "}";
     
@@ -37,14 +36,18 @@ public class DiffuseMap implements RenderUpdater {
         "varying vec3 LightDir;" +
         "varying vec3 VNormal;" +
         "uniform sampler2D DiffuseMapIndex;" +
+        "uniform sampler2D AlphaMapIndex;" +
         "vec3 FragLocalNormal;" +
-        "vec3 finalColor;" +
+        "vec4 finalColor;" +
+        "vec3 alpha;" +
         "float NdotL;" +
         "void main(void) { " +
-        "        finalColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
+        "        finalColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
+        "        alpha = texture2D(AlphaMapIndex, gl_TexCoord[0].st).rgb;" +
         "        NdotL = clamp(dot(VNormal, LightDir), 0.0, 1.0);" +
-        "        finalColor = finalColor * NdotL;" +
-        "        gl_FragColor = vec4(finalColor, 1.0);" +
+        "        finalColor.rgb = finalColor.rgb * NdotL;" +
+        "        finalColor.a = alpha.r;" +
+        "        gl_FragColor = finalColor;" +
         "" + 
 //        "        vec3 reflectDir = reflect(LightDir, FragLocalNormal);" +
 //        "        float spec = max(dot(EyeDir, reflectDir), 0.0);" +
@@ -57,7 +60,7 @@ public class DiffuseMap implements RenderUpdater {
      */
     private GLSLShaderObjectsState shaderState = null;
     
-    public DiffuseMap(WorldManager worldManager) {
+    public DiffuseMapAlphaMap(WorldManager worldManager) {
         shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
                 createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
         worldManager.addRenderUpdater(this, this);        
@@ -75,6 +78,7 @@ public class DiffuseMap implements RenderUpdater {
      */
     public void applyToGeometry(Geometry geo) {
         shaderState.setUniform("DiffuseMapIndex", 0);
+        shaderState.setUniform("AlphaMapIndex", 1);
         geo.setRenderState(shaderState);
     }
     

@@ -893,20 +893,29 @@ class Renderer extends Thread {
      * Process anyone who wants to update in the render thread before rendering
      */
     void processRenderUpdates() {
+        RenderUpdater[] rus = null;
+        Object[] objs = null;
+
         synchronized (renderUpdateList) {
-            for (int i=0; i<renderUpdateList.size(); i++) {
-                RenderUpdater ru = (RenderUpdater) renderUpdateList.get(i);
-                Object obj = renderUpdateArgs.get(i);
-                try {
-                    ru.update(obj);
-                } catch (Exception e) {
-                    System.out.println("MTGame: Exception Caught in renderer update: " + e);
-                    e.printStackTrace();
-                }
+            rus = new RenderUpdater[renderUpdateList.size()];
+            objs = new Object[renderUpdateList.size()];
+            for (int i = 0; i < renderUpdateList.size(); i++) {
+                rus[i] = (RenderUpdater) renderUpdateList.get(i);
+                objs[i] = (Object) renderUpdateArgs.get(i);
             }
             renderUpdateList.clear();
             renderUpdateArgs.clear();
         }
+
+        for (int i = 0; i < rus.length; i++) {
+            try {
+                rus[i].update(objs[i]);
+            } catch (Exception e) {
+                System.out.println("MTGame: Exception Caught in renderer update: " + e);
+                e.printStackTrace();
+            }
+        }
+
     }
     
     /**
@@ -1540,7 +1549,7 @@ class Renderer extends Thread {
                 len--;
             }
         }
-        
+      
         // Now let's look for additions
         for (int i=0; i<scenes.size(); i++) {
             scene = (RenderComponent) scenes.get(i);

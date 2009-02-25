@@ -32,6 +32,7 @@
 package org.jdesktop.mtgame;
 
 import com.jme.intersection.PickData;
+import com.jme.scene.Node;
 
 /**
  * This is the base class for detailed information returned by collision
@@ -44,13 +45,19 @@ public class JMEPickDetails extends PickDetails {
      * The PickData object from jME
      */
     private PickData pickData = null;
+
+    /**
+     * The node to report
+     */
+    private Node node = null;
     
     /**
      * The default constructor
      */
-    JMEPickDetails(CollisionSystem cs, Entity e, CollisionComponent cc, 
+    JMEPickDetails(CollisionSystem cs, Entity e, Node n, CollisionComponent cc,
             PickInfo pi, PickData pd, float distance) {
         super(cs, e, cc, pi, distance);
+        node = n;
         pickData = pd;
     }
     
@@ -59,5 +66,12 @@ public class JMEPickDetails extends PickDetails {
      */
     public PickData getPickData() {
         return (pickData);
+    }
+
+    /**
+     * get the Node that was reported
+     */
+    public Node getReportedNode() {
+        return (node);
     }
 }
