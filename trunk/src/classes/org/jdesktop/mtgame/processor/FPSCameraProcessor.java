@@ -76,7 +76,7 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
      */
     private float scaleX = 0.7f;
     private float scaleY = 0.7f;
-    private float walkInc = 0.5f;
+    private float walkInc = 0.2f;
     
     /**
      * States for movement

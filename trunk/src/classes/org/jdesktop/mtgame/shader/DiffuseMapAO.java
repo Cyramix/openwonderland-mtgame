@@ -15,62 +15,73 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseMapAO implements RenderUpdater {
+public class DiffuseMapAO extends Shader {
     /**
      * The vertex and fragment shader
      */
-    private static final String vertexShader =
-        "vec3 EyeDir;" +
-        "varying vec3 LightDir;" +
+    protected static final String vShader =
+        "varying vec3 EyeDir;" +
+        "varying vec3 LightDir[2];" +
         "varying vec3 VNormal;" +
         "void main(void)" +
         "{" +
         "        VNormal = normalize(gl_NormalMatrix * gl_Normal);" +
         "        gl_Position = ftransform();" +
-        "        EyeDir = vec3(gl_ModelViewMatrix * gl_Vertex);" +   
+        "        vec3 vVertex = vec3(gl_ModelViewMatrix * gl_Vertex);" +
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
         "        gl_TexCoord[1] = gl_MultiTexCoord1;" +
-        "        LightDir = normalize(gl_LightSource[0].position.xyz - EyeDir);" +
+        "" +
+        "        LightDir[0] = normalize(gl_LightSource[0].position.xyz - vVertex);" +
+        "        LightDir[1] = normalize(gl_LightSource[1].position.xyz - vVertex);" +
+        "        EyeDir = normalize(vVertex);" +
         "}";
-    
-    private static final String fragmentShader = 
-        "varying vec3 LightDir;" +
+
+    protected static final String fShader =
+        "varying vec3 LightDir[2];" +
         "varying vec3 VNormal;" +
+        "varying vec3 EyeDir;" +
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D AmbientOccIndex;" +
         "vec3 FragLocalNormal;" +
-        "vec3 finalColor;" +
+        "vec4 finalColor;" +
         "vec3 ambientOcc;" +
+        "vec4 diffuseColor;" +
+        "vec3 specularColor;" +
         "float NdotL;" +
+        "float spec;" +
+        "vec3 reflectDir;" +
         "void main(void) { " +
-        "        finalColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
-        "        ambientOcc = texture2D(AmbientOccIndex, gl_TexCoord[1].st).rgb;" +
-        "        NdotL = clamp(dot(VNormal, LightDir), 0.0, 1.0);" +
-        "        finalColor = finalColor * ambientOcc;" +
-        "        gl_FragColor = vec4(finalColor, 1.0);" +
-        "" + 
-//        "        vec3 reflectDir = reflect(LightDir, FragLocalNormal);" +
-//        "        float spec = max(dot(EyeDir, reflectDir), 0.0);" +
-//        "        spec = pow(spec, 6.0) * 0.5;" +
-//        "        finalColor = min(finalColor + spec, vec3(1.0));" +        "        gl_FragColor = vec4(finalColor, 1.0);" +
+        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
+        "        ambientOcc = texture2D(AmbientOccIndex, gl_TexCoord[0].st).rgb;" +
+        "        specularColor = vec3(1.0, 1.0, 1.0);" +
+        "        finalColor.rgb  = gl_FrontMaterial.ambient.rgb * gl_LightSource[0].ambient.rgb;" +
+                 // Compute diffuse for light0
+        "        NdotL = clamp(dot(VNormal, LightDir[0]), 0.0, 1.0);" +
+        "        finalColor.rgb += diffuseColor.rgb * NdotL * gl_LightSource[0].diffuse.rgb;" +
+
+                 // Compte specular for light0
+        "        reflectDir = reflect(LightDir[0], VNormal);" +
+        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
+        "        spec = pow(spec, 32.0);" +
+        "        finalColor.rgb += spec * specularColor * gl_LightSource[0].specular.rgb;" +
+
+                 // Compute diffuse for light1
+        "        finalColor.rgb += gl_FrontMaterial.ambient.rgb * gl_LightSource[1].ambient.rgb;" +
+        "        NdotL = clamp(dot(VNormal, LightDir[1]), 0.0, 1.0);" +
+        "        finalColor.rgb += diffuseColor.rgb * NdotL * gl_LightSource[1].diffuse.rgb;" +
+
+                 // Compte specular for light1
+        "        reflectDir = reflect(LightDir[1], VNormal);" +
+        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
+        "        spec = pow(spec, 32.0);" +
+        "        finalColor.rgb = min(finalColor.rgb + (spec * specularColor * gl_LightSource[1].specular.rgb), vec3(1.0));" +
+        "        finalColor.rgb = finalColor.rgb * ambientOcc;" +
+                 // Final assignment
+        "        gl_FragColor = finalColor;" +
         "}";
     
-    /**
-     * The shader state object for this shader
-     */
-    private GLSLShaderObjectsState shaderState = null;
-    
     public DiffuseMapAO(WorldManager worldManager) {
-        shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
-                createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
-        worldManager.addRenderUpdater(this, this);        
-    }
-    
-    /**
-     * Get the GLSLShaderObjectsState for this object
-     */
-    public GLSLShaderObjectsState getShaderState() {
-        return (shaderState);
+        super(worldManager, vShader, fShader);
     }
     
     /**
@@ -80,12 +91,5 @@ public class DiffuseMapAO implements RenderUpdater {
         shaderState.setUniform("DiffuseMapIndex", 0);
         shaderState.setUniform("AmbientOccIndex", 1);
         geo.setRenderState(shaderState);
-    }
-    
-    /**
-     * This loads the shader
-     */
-    public void update(Object o) {
-        shaderState.load(vertexShader, fragmentShader);
     }
 }

@@ -15,11 +15,11 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalMap implements RenderUpdater {
+public class DiffuseNormalMap extends Shader {
     /**
      * The vertex and fragment shader
      */
-    private static final String vertexShader =
+    private static final String vShader =
 //        "attribute vec3 tangent;" +
 //        "attribute vec3 binormal;" +
         "varying vec3 EyeDir;" +
@@ -53,7 +53,7 @@ public class DiffuseNormalMap implements RenderUpdater {
         "        EyeDir = normalize(v);" +
         "}";
     
-    private static final String fragmentShader = 
+    private static final String fShader = 
         "varying vec3 EyeDir;" +
         "varying vec3 LightDir[2];" +
         "uniform sampler2D DiffuseMapIndex;" +
@@ -74,47 +74,33 @@ public class DiffuseNormalMap implements RenderUpdater {
         
                  // Compute diffuse for light0
         "        NdotL = clamp(dot(FragLocalNormal, LightDir[0]), 0.0, 1.0);" +
-        "        finalColor += diffuseColor * NdotL * gl_LightSource[0].diffuse.rgb;" +
+        "        finalColor += (diffuseColor * NdotL * gl_LightSource[0].diffuse.rgb);" +
    
                  // Compte specular for light0       
         "        reflectDir = reflect(LightDir[0], FragLocalNormal);" +
         "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
         "        spec = pow(spec, 32.0);" +
-        "        finalColor += spec * specularColor * gl_LightSource[0].specular.rgb;" + 
+        "        finalColor += (spec * specularColor * gl_LightSource[0].specular.rgb);" +
         
                  // Compute diffuse for light1
         "        finalColor += gl_FrontMaterial.ambient.rgb * gl_LightSource[1].ambient.rgb;" +
         "        NdotL = clamp(dot(FragLocalNormal, LightDir[1]), 0.0, 1.0);" +
-        "        finalColor += diffuseColor * NdotL * gl_LightSource[1].diffuse.rgb;" +
+        "        finalColor += (diffuseColor * NdotL * gl_LightSource[1].diffuse.rgb);" +
         
                  // Compte specular for light1       
         "        reflectDir = reflect(LightDir[1], FragLocalNormal);" +
         "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
         "        spec = pow(spec, 32.0);" +
-        "        finalColor = min(finalColor + (spec * specularColor * gl_LightSource[1].specular.rgb), vec3(1.0));" +   
+        "        finalColor = min(finalColor + (spec * specularColor * gl_LightSource[1].specular.rgb), vec3(1.0));" +
                  
                  // Final assignment
         "        gl_FragColor = vec4(finalColor, 1.0);" +
         "}";
     
-    /**
-     * The shader state object for this shader
-     */
-    private GLSLShaderObjectsState shaderState = null;
-    
     public DiffuseNormalMap(WorldManager worldManager) {
-        shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
-                createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
-        worldManager.addRenderUpdater(this, this);        
+        super(worldManager, vShader, fShader);
     }
-    
-    /**
-     * Get the GLSLShaderObjectsState for this object
-     */
-    public GLSLShaderObjectsState getShaderState() {
-        return (shaderState);
-    }
-    
+
     /**
      * This applies this shader to the given geometry
      */
@@ -124,12 +110,5 @@ public class DiffuseNormalMap implements RenderUpdater {
         shaderState.setUniform("DiffuseMapIndex", 0);
         shaderState.setUniform("NormalMapIndex", 1);
         geo.setRenderState(shaderState);
-    }
-    
-    /**
-     * This loads the shader
-     */
-    public void update(Object o) {
-        shaderState.load(vertexShader, fragmentShader);
     }
 }

@@ -15,7 +15,7 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalSpecAOMapAlpha extends Shader {
+public class DiffuseNormalSpecMapAlpha extends Shader {
     /**
      * The vertex and fragment shader
      */
@@ -59,12 +59,10 @@ public class DiffuseNormalSpecAOMapAlpha extends Shader {
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D NormalMapIndex;" +
         "uniform sampler2D SpecularMapIndex;" +
-        "uniform sampler2D AmbientOccIndex;" +
         "vec3 FragLocalNormal;" +
         "vec3 finalColor;" +
         "vec4 diffuseColor;" +
         "vec3 specularColor;" +
-        "vec3 ambientOcc;" +
         "float NdotL;" +
         "float spec;" +
         "vec3 reflectDir;" +
@@ -73,12 +71,11 @@ public class DiffuseNormalSpecAOMapAlpha extends Shader {
         "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
         "        FragLocalNormal = normalize(texture2D(NormalMapIndex, gl_TexCoord[0].st).xyz * 2.0 - 1.0);" +
         "        specularColor = texture2D(SpecularMapIndex, gl_TexCoord[0].st).rgb;" +
-        "        ambientOcc = texture2D(AmbientOccIndex, gl_TexCoord[1].st).rgb;" +
         "        finalColor = gl_FrontMaterial.ambient.rgb * gl_LightSource[0].ambient.rgb;" +
         
                  // Compute diffuse for light0
         "        NdotL = clamp(dot(FragLocalNormal, LightDir[0]), 0.0, 1.0);" +
-        "        finalColor += diffuseColor.rgb * NdotL * ambientOcc * gl_LightSource[0].diffuse.rgb;" +
+        "        finalColor += diffuseColor.rgb * NdotL * gl_LightSource[0].diffuse.rgb;" +
    
                  // Compte specular for light0       
         "        reflectDir = reflect(LightDir[0], FragLocalNormal);" +
@@ -89,7 +86,7 @@ public class DiffuseNormalSpecAOMapAlpha extends Shader {
                  // Compute diffuse for light1
         "        finalColor += gl_FrontMaterial.ambient.rgb * gl_LightSource[1].ambient.rgb;" +
         "        NdotL = clamp(dot(FragLocalNormal, LightDir[1]), 0.0, 1.0);" +
-        "        finalColor += diffuseColor.rgb * NdotL * ambientOcc * gl_LightSource[1].diffuse.rgb;" +
+        "        finalColor += diffuseColor.rgb * NdotL * gl_LightSource[1].diffuse.rgb;" +
         
                  // Compte specular for light1       
         "        reflectDir = reflect(LightDir[1], FragLocalNormal);" +
@@ -101,7 +98,7 @@ public class DiffuseNormalSpecAOMapAlpha extends Shader {
         "        gl_FragColor = vec4(finalColor, diffuseColor.a);" +
         "}";
 
-    public DiffuseNormalSpecAOMapAlpha(WorldManager worldManager) {
+    public DiffuseNormalSpecMapAlpha(WorldManager worldManager) {
         super(worldManager, vShader, fShader);
     }
 
@@ -114,7 +111,6 @@ public class DiffuseNormalSpecAOMapAlpha extends Shader {
         shaderState.setUniform("DiffuseMapIndex", 0);
         shaderState.setUniform("NormalMapIndex", 1);
         shaderState.setUniform("SpecularMapIndex", 2);
-        shaderState.setUniform("AmbientOccIndex", 3);
         geo.setRenderState(shaderState);
     }
 }

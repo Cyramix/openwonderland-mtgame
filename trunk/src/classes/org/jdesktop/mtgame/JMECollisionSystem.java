@@ -181,7 +181,7 @@ public class JMECollisionSystem extends CollisionSystem {
         Vector3f v0 = new Vector3f();
         Vector3f v1 = new Vector3f();
         Vector3f v2 = new Vector3f();
-
+        
         int numTris = ibuf.capacity()/3;
         ibuf.rewind();
         vbuf.rewind();

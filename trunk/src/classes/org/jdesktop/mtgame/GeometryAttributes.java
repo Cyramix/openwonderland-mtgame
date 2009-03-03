@@ -49,12 +49,27 @@ public class GeometryAttributes {
      * The Shader name for this geometry
      */
     private String shaderName = null;
-    
+
+    /**
+     * The Shader name for this geometry
+     */
+    private String lowShaderName = null;
+
     /**
      * The list of shader params
      */
     private ArrayList shaderParams = new ArrayList();
-    
+
+    /**
+     * The list of shader params
+     */
+    private ArrayList lowShaderParams = new ArrayList();
+
+    /**
+     * The distance cutoff for lod
+     */
+    private float distance = 10.0f;
+
     /**
      * The default constructor
      */
@@ -68,28 +83,28 @@ public class GeometryAttributes {
     public String getGeometryName() {
         return (name);
     }
-    
+
     /**
      * Get the shader name
      */
     public String getShaderName() {
         return (shaderName);
     }
-    
+
     /**
      * Set the shader name
      */
     public void setShaderName(String name) {
         shaderName = name;
     }
-        
+
     /**
      * Get the CollisionComponent
      */
     public void addShaderParam(String param) {
         shaderParams.add(param);
     }
-    
+
     /**
      * Get the PickInfo
      */
@@ -99,5 +114,51 @@ public class GeometryAttributes {
             params[i] = (String) shaderParams.get(i);
         }
         return (params);
+    }
+    
+    /**
+     * Get the shader name
+     */
+    public String getLowShaderName() {
+        return (lowShaderName);
+    }
+    
+    /**
+     * Set the shader name
+     */
+    public void setLowShaderName(String name) {
+        lowShaderName = name;
+    }
+        
+    /**
+     * Get the CollisionComponent
+     */
+    public void addLowShaderParam(String param) {
+        lowShaderParams.add(param);
+    }
+    
+    /**
+     * Get the PickInfo
+     */
+    public String[] getLowShaderParams() {
+        String[] params = new String[lowShaderParams.size()];
+        for (int i=0; i<params.length; i++) {
+            params[i] = (String) lowShaderParams.get(i);
+        }
+        return (params);
+    }
+
+    /**
+     * Get the distance cutoff for LOD
+     */
+    public float getDistance() {
+        return (distance);
+    }
+
+    /**
+     * Set the distance cutoff for LOD
+     */
+    public void setDistance(float d) {
+        distance = d;
     }
 }

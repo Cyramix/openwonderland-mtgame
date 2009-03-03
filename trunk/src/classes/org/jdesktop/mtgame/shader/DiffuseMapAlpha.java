@@ -15,11 +15,11 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseMapAlpha implements RenderUpdater {
+public class DiffuseMapAlpha extends Shader {
     /**
      * The vertex and fragment shader
      */
-    private static final String vertexShader =
+    private static final String vShader =
         "varying vec3 EyeDir;" +
         "varying vec3 LightDir[2];" +
         "varying vec3 VNormal;" +
@@ -36,7 +36,7 @@ public class DiffuseMapAlpha implements RenderUpdater {
         "        EyeDir = normalize(vVertex);" +
         "}";
     
-    private static final String fragmentShader = 
+    private static final String fShader = 
         "varying vec3 LightDir[2];" +
         "varying vec3 VNormal;" +
         "varying vec3 EyeDir;" +
@@ -78,22 +78,8 @@ public class DiffuseMapAlpha implements RenderUpdater {
         "        gl_FragColor = finalColor;" +
         "}";
     
-    /**
-     * The shader state object for this shader
-     */
-    private GLSLShaderObjectsState shaderState = null;
-    
     public DiffuseMapAlpha(WorldManager worldManager) {
-        shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
-                createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
-        worldManager.addRenderUpdater(this, this);        
-    }
-    
-    /**
-     * Get the GLSLShaderObjectsState for this object
-     */
-    public GLSLShaderObjectsState getShaderState() {
-        return (shaderState);
+        super(worldManager, vShader, fShader);
     }
     
     /**
@@ -102,12 +88,5 @@ public class DiffuseMapAlpha implements RenderUpdater {
     public void applyToGeometry(Geometry geo) {
         shaderState.setUniform("DiffuseMapIndex", 0);
         geo.setRenderState(shaderState);
-    }
-    
-    /**
-     * This loads the shader
-     */
-    public void update(Object o) {
-        shaderState.load(vertexShader, fragmentShader);
     }
 }
