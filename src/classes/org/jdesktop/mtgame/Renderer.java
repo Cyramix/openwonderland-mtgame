@@ -41,7 +41,7 @@ import com.jme.scene.Spatial;
 import com.jme.scene.Geometry;
 import com.jme.scene.shape.Quad;
 import com.jme.scene.Spatial.CullHint;
-import com.jme.math.Quaternion;
+import com.jme.math.Vector3f;
 import com.jme.light.LightNode;
 import com.jme.system.*;
 import com.jme.renderer.*;
@@ -58,6 +58,7 @@ import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
 import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
 import java.lang.reflect.Method;
+import javolution.util.FastMap;
 import java.lang.Exception;
 
 /**
@@ -214,6 +215,16 @@ class Renderer extends Thread {
      * A boolean indicating that the orthos list has changed
      */
     private boolean orthosChanged = false;
+
+    /**
+     * A hashmap of geometry objects to track via geometry lod
+     */
+    private FastMap geometryLODMap = new FastMap();
+
+    /**
+     * The list of geometry lod's to update each frame
+     */
+    private ArrayList geometryLODs = new ArrayList();
        
     /**
      * The array list of render components waiting
@@ -602,6 +613,12 @@ class Renderer extends Thread {
             processUpdates(updateTime);
             processPassUpdates(updateTime);
             processCollisionUpdates(updateTime);
+        }
+
+        Vector3f position = jmeRenderer.getCamera().getLocation();
+        for (int i=0; i<geometryLODs.size(); i++) {
+            GeometryLOD lod = (GeometryLOD) geometryLODs.get(i);
+            lod.applyShader(position);
         }
     }
     
@@ -1288,6 +1305,15 @@ class Renderer extends Thread {
         }
         addToUpdateList(sceneRoot);
     }
+
+    /**
+     * Add a geometry lod to track.
+     */
+    public void addGeometryLOD(GeometryLOD lod) {
+        synchronized (geometryLODMap) {
+            geometryLODMap.put(lod.getGeometry(), lod);
+        }
+    }
     
     /**
      * Add a node to be updated
@@ -1547,6 +1573,7 @@ class Renderer extends Thread {
             } else {
                 // remove the scene, this will shift things down
                 renderScenes.remove(scene);
+                processGraphRemove(scene.getSceneRoot());
                 len--;
             }
         }
@@ -1556,6 +1583,7 @@ class Renderer extends Thread {
             scene = (RenderComponent) scenes.get(i);
             if (!renderScenes.contains(scene)) {
                 scene.updateLightState(globalLights);
+                processGraphAddition(scene.getSceneRoot());
                 renderScenes.add(scene);
                 addToUpdateList(scene.getSceneRoot());
             }
@@ -1566,6 +1594,40 @@ class Renderer extends Thread {
             System.out.println("Error, Scene sizes differ: " + scenes.size() + ", " + renderScenes.size()); 
         }
        
+    }
+
+    private void processGraphAddition(Node node) {
+        synchronized (geometryLODMap) {
+            processGeometryLod(node, true);
+        }
+    }
+
+    private void processGraphRemove(Node node) {
+        synchronized (geometryLODMap) {
+            processGeometryLod(node, false);
+        }
+    }
+
+    /**
+     * Examine this node and travese it's children
+     */
+    void processGeometryLod(Spatial sg, boolean add) {
+        GeometryLOD lod = (GeometryLOD)geometryLODMap.get(sg);
+        if (lod != null) {
+            if (add) {
+                geometryLODs.add(lod);
+            } else {
+                geometryLODs.remove(lod);
+            }
+        }
+
+        if (sg instanceof Node) {
+            Node node = (Node)sg;
+            for (int i=0; i<node.getQuantity(); i++) {
+                Spatial child = node.getChild(i);
+                processGeometryLod(child, add);
+            }
+        }
     }
 
     /**

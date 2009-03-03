@@ -38,11 +38,14 @@ import org.jdesktop.mtgame.shader.DiffuseMapAlpha;
 import org.jdesktop.mtgame.shader.DiffuseMapAlphaMap;
 import org.jdesktop.mtgame.shader.DiffuseNormalSpecMap;
 import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMap;
+import org.jdesktop.mtgame.shader.DiffuseNormalSpecMapAlpha;
 import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMapAlpha;
+import org.jdesktop.mtgame.shader.Shader;
 import com.jme.scene.Spatial;
 import com.jme.scene.Node;
 import com.jme.scene.Geometry;
 import com.jme.scene.TriMesh;
+import com.jme.scene.SharedMesh;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.TextureState;
@@ -55,6 +58,7 @@ import com.jme.util.geom.TangentBinormalGenerator;
 import com.jme.scene.VBOInfo;
 import com.jme.math.Vector3f;
 import com.jme.math.Quaternion;
+import java.nio.FloatBuffer;
 
 import java.util.HashMap;
 import java.io.InputStream;
@@ -169,7 +173,16 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("Shader")) {
                 token = token.substring(6).trim();
                 ga.setShaderName(token);
-            }  else if (token.startsWith("DataDir")) {
+            } else if (token.startsWith("LowShaderParam")) {
+                token = token.substring(14).trim();
+                ga.addLowShaderParam(token);
+            }  else if (token.startsWith("LowShaderDist")) {
+                token = token.substring(13).trim();
+                ga.setDistance(Float.parseFloat(token));
+            } else if (token.startsWith("LowShader")) {
+                token = token.substring(9).trim();
+                ga.setLowShaderName(token);
+            } else if (token.startsWith("DataDir")) {
                 token = token.substring(7).trim();
                 setDataDirectory(token);
             } else if (token.startsWith("TextureDir")) {
@@ -194,7 +207,7 @@ public class ConfigManager implements ResourceLocator {
         }
         
         ret = tokens[currentToken++];
-        while (ret.equals("")) {
+        while (ret.equals("") || ret.charAt(0) == '#') {
             if (currentToken == tokens.length) {
                 return (null);
             }
@@ -290,10 +303,10 @@ public class ConfigManager implements ResourceLocator {
      * Apply the configuration map information to a jME graph
      */
     public void applyConfig(Spatial s) {
-        parseModel(s);
+        parseModel(s, 0);
     }
     
-    void parseModel(Spatial model) {
+    void parseModel(Spatial model, int level) {
         GeometryAttributes ga = (GeometryAttributes)configMap.get(model.getName());
         if (ga != null) {
             assignAttributes(model, ga);
@@ -301,7 +314,7 @@ public class ConfigManager implements ResourceLocator {
         if (model instanceof Node) {
             Node n = (Node) model;
             for (int i = 0; i < n.getQuantity(); i++) {
-                parseModel(n.getChild(i));
+                parseModel(n.getChild(i), level+1);
             }
         }
     }
@@ -312,114 +325,141 @@ public class ConfigManager implements ResourceLocator {
      * @param ga
      */
     void assignAttributes(Spatial s, GeometryAttributes ga) {
+        Shader highShader = null;
+        Shader lowShader = null;
+        TextureState highTS = null;
+        TextureState lowTS = null;
+
         if (!ga.getShaderName().equals("None")) {
-            if (s instanceof TriMesh) {
+            if (s instanceof SharedMesh) {
                 VBOInfo vboInfo = new VBOInfo();
                 vboInfo.setVBOTangentEnabled(true);
+                vboInfo.setVBONormalEnabled(true);
+                vboInfo.setVBOVertexEnabled(true);
                 TangentBinormalGenerator.generate((TriMesh) s);
-                ((Geometry)s).setVBOInfo(vboInfo);
-            }
-                    
-            if (ga.getShaderName().equals("DiffuseNormalMap")) {
-                DiffuseNormalMap diffuseNormalShader = new DiffuseNormalMap(worldManager);
-                // Assume this is geometry for now
-                diffuseNormalShader.applyToGeometry((Geometry)s);          
-            } else if (ga.getShaderName().equals("DiffuseNormalSpecMap")) {
-                DiffuseNormalSpecMap diffuseNormalSpecShader = new DiffuseNormalSpecMap(worldManager);
-                // Assume this is geometry for now
-                diffuseNormalSpecShader.applyToGeometry((Geometry)s);          
-            } else if (ga.getShaderName().equals("DiffuseMapAO")) {
-                DiffuseMapAO diffuseMapAOShader = new DiffuseMapAO(worldManager);
-                // Assume this is geometry for now
-                diffuseMapAOShader.applyToGeometry((Geometry)s);
-            } else if (ga.getShaderName().equals("DiffuseNormalSpecAOMap")) {
-                DiffuseNormalSpecAOMap shader = new DiffuseNormalSpecAOMap(worldManager);
-                // Assume this is geometry for now
-                shader.applyToGeometry((Geometry)s);
-            } else if (ga.getShaderName().equals("DiffuseNormalSpecAOMapAlpha")) {
-                DiffuseNormalSpecAOMapAlpha shader = new DiffuseNormalSpecAOMapAlpha(worldManager);
-                // Assume this is geometry for now
-                shader.applyToGeometry((Geometry)s);
-                BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
-                as.setEnabled(true);
-                as.setReference(0.5f);
-                as.setTestFunction(BlendState.TestFunction.GreaterThan);
-                as.setTestEnabled(true);
-                s.setRenderState(as);
-            } else if (ga.getShaderName().equals("DiffuseMap")) {
-                DiffuseMap shader = new DiffuseMap(worldManager);
-                // Assume this is geometry for now
-                shader.applyToGeometry((Geometry)s);
-            } else if (ga.getShaderName().equals("DiffuseMapAlpha")) {
-                DiffuseMapAlpha shader = new DiffuseMapAlpha(worldManager);
-                // Assume this is geometry for now
-                shader.applyToGeometry((Geometry)s);
-                BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
-                as.setEnabled(true);
-                as.setReference(0.5f);
-                as.setTestFunction(BlendState.TestFunction.GreaterThan);
-                as.setTestEnabled(true);
-                s.setRenderState(as);
-            } else if (ga.getShaderName().equals("DiffuseMapAlphaMap")) {
-                DiffuseMapAlphaMap shader = new DiffuseMapAlphaMap(worldManager);
-                // Assume this is geometry for now
-                shader.applyToGeometry((Geometry)s);
-                BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
-                as.setEnabled(true);
-                as.setReference(0.5f);
-                as.setTestFunction(BlendState.TestFunction.GreaterThan);
-                as.setTestEnabled(true);
-                s.setRenderState(as);
+                //((SharedMesh)s).getTarget().setVBOInfo(vboInfo);
             }
 
+            highShader = createShader(ga.getShaderName(), s);
+            highTS = createTextureState(ga.getShaderParams(), s);
+            if (ga.getLowShaderName() != null) {
+                lowShader = createShader(ga.getLowShaderName(), s);
+                lowTS = createTextureState(ga.getLowShaderParams(), s);
+                GeometryLOD geoLOD = new GeometryLOD((Geometry)s, lowShader, highShader,
+                        lowTS, highTS, ga.getDistance());
+                worldManager.getRenderManager().addGeometryLOD(geoLOD);
+            } else {
+                // Just apply and move on...
+                s.setRenderState(highTS);
+                highShader.applyToGeometry((Geometry)s);
+            }
+                    
         }
         
-        // Loop through the shader params
-        String[] params = ga.getShaderParams();
+
+    }
+
+
+    /**
+     * Create a shader, with the given name
+     */
+    private Shader createShader(String name, Spatial s) {
+        Shader shader = null;
+
+        if (name.equals("DiffuseNormalMap")) {
+            shader = new DiffuseNormalMap(worldManager);
+        } else if (name.equals("DiffuseNormalSpecMap")) {
+            shader = new DiffuseNormalSpecMap(worldManager);
+        } else if (name.equals("DiffuseMapAO")) {
+            shader = new DiffuseMapAO(worldManager);
+        } else if (name.equals("DiffuseNormalSpecAOMap")) {
+            shader = new DiffuseNormalSpecAOMap(worldManager);
+        } else if (name.equals("DiffuseNormalSpecAOMapAlpha")) {
+            shader = new DiffuseNormalSpecAOMapAlpha(worldManager);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setReference(0.5f);
+            as.setTestFunction(BlendState.TestFunction.GreaterThan);
+            as.setTestEnabled(true);
+            s.setRenderState(as);
+        } else if (name.equals("DiffuseNormalSpecMapAlpha")) {
+            shader = new DiffuseNormalSpecMapAlpha(worldManager);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setReference(0.5f);
+            as.setTestFunction(BlendState.TestFunction.GreaterThan);
+            as.setTestEnabled(true);
+            s.setRenderState(as);
+        } else if (name.equals("DiffuseMap")) {
+            shader = new DiffuseMap(worldManager);
+        } else if (name.equals("DiffuseMapAlpha")) {
+            shader = new DiffuseMapAlpha(worldManager);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setReference(0.5f);
+            as.setTestFunction(BlendState.TestFunction.GreaterThan);
+            as.setTestEnabled(true);
+            s.setRenderState(as);
+        } else if (name.equals("DiffuseMapAlphaMap")) {
+            shader = new DiffuseMapAlphaMap(worldManager);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            as.setEnabled(true);
+            as.setReference(0.5f);
+            as.setTestFunction(BlendState.TestFunction.GreaterThan);
+            as.setTestEnabled(true);
+            s.setRenderState(as);
+        }
+
+        return (shader);
+    }
+
+
+    private TextureState createTextureState(String[] params, Spatial s) {
+        TextureState ts = ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.RS_TEXTURE);;
+         // Loop through the shader params
         for (int i=0; i<params.length; i++) {
             String param = params[i];
             String textureName = null;
-            
+
             if (param.startsWith("DiffuseMap")) {
                 param = param.substring(10).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex);
-            } else if (param.startsWith("NormalMap")) { 
+                loadTexture(s, textureName, tcIndex, ts);
+            } else if (param.startsWith("NormalMap")) {
                 param = param.substring(9).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex);
-            } else if (param.startsWith("SpecularMap")) { 
+                loadTexture(s, textureName, tcIndex, ts);
+            } else if (param.startsWith("SpecularMap")) {
                 param = param.substring(11).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex);
+                loadTexture(s, textureName, tcIndex, ts);
             } else if (param.startsWith("AmbientOccMap")) {
                 param = param.substring(13).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex);
+                loadTexture(s, textureName, tcIndex, ts);
             } else if (param.startsWith("AlphaMap")) {
                 param = param.substring(8).trim();
                 int index = param.indexOf(' ');
                 textureName = param.substring(0, index);
                 int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex);
+                loadTexture(s, textureName, tcIndex, ts);
             }
         }
+        return (ts);
     }
-            
     /**
      * Load the specified texture
      */
-    void loadTexture(Spatial s, String name, int index) {
+    private void loadTexture(Spatial s, String name, int index, TextureState ts) {
         String textureName = "file:" + textureDir + "/" + name;
-        TextureState ts = (TextureState) s.getRenderState(RenderState.RS_TEXTURE);
         Texture texture = (Texture)textureMap.get(textureName);
 
         if (texture == null) {
@@ -436,14 +476,9 @@ public class ConfigManager implements ResourceLocator {
             texture.setWrap(Texture.WrapMode.Repeat);
             textureMap.put(textureName, texture);
         }
-
-        if (ts == null) {
-            ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
-        }
-
+      
         ts.setEnabled(true);
         ts.setTexture(texture, index);
-        s.setRenderState(ts);
     }
 
     public URL locateResource(String resourceName) {

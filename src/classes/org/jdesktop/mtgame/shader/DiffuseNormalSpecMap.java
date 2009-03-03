@@ -15,11 +15,11 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalSpecMap implements RenderUpdater {
+public class DiffuseNormalSpecMap extends Shader {
     /**
      * The vertex and fragment shader
      */
-    private static final String vertexShader =
+    private static final String vShader =
 //        "attribute vec3 tangent;" +
 //        "attribute vec3 binormal;" +
         "varying vec3 EyeDir;" +
@@ -53,7 +53,7 @@ public class DiffuseNormalSpecMap implements RenderUpdater {
         "        EyeDir = normalize(v);" +
         "}";
     
-    private static final String fragmentShader = 
+    private static final String fShader = 
         "varying vec3 EyeDir;" +
         "varying vec3 LightDir[2];" +
         "uniform sampler2D DiffuseMapIndex;" +
@@ -97,25 +97,11 @@ public class DiffuseNormalSpecMap implements RenderUpdater {
                  // Final assignment
         "        gl_FragColor = vec4(finalColor, 1.0);" +
         "}";
-    
-    /**
-     * The shader state object for this shader
-     */
-    private GLSLShaderObjectsState shaderState = null;
-    
+
     public DiffuseNormalSpecMap(WorldManager worldManager) {
-        shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
-                createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
-        worldManager.addRenderUpdater(this, this);        
+        super(worldManager, vShader, fShader);
     }
-    
-    /**
-     * Get the GLSLShaderObjectsState for this object
-     */
-    public GLSLShaderObjectsState getShaderState() {
-        return (shaderState);
-    }
-    
+
     /**
      * This applies this shader to the given geometry
      */
@@ -126,12 +112,5 @@ public class DiffuseNormalSpecMap implements RenderUpdater {
         shaderState.setUniform("NormalMapIndex", 1);
         shaderState.setUniform("SpecularMapIndex", 2);
         geo.setRenderState(shaderState);
-    }
-    
-    /**
-     * This loads the shader
-     */
-    public void update(Object o) {
-        shaderState.load(vertexShader, fragmentShader);
     }
 }

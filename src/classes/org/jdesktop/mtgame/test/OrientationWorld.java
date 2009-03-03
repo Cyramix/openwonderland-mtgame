@@ -129,9 +129,9 @@ public class OrientationWorld {
     /**
      * The width and height of our 3D window
      */
-    private int width = 800;
-    private int height = 600;
-    private float aspect = 800.0f/600.0f;
+    private int width = 1024;
+    private int height = 768;
+    private float aspect = 1024.0f/768.0f;
     
     /**
      * Some options state variables
@@ -264,9 +264,9 @@ public class OrientationWorld {
     public void setGlobalLights() {
         LightNode globalLight1 = new LightNode();
         PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.95f, 0.95f, 0.95f, 1.0f));
-        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
-        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
         light.setEnabled(true);
         globalLight1.setLight(light);
         globalLight1.setLocalTranslation(0.0f, 500.0f, 500.0f);
@@ -274,8 +274,8 @@ public class OrientationWorld {
         LightNode globalLight2 = new LightNode();
         light = new PointLight();
         light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f));
-        light.setAmbient(new ColorRGBA(0.25f, 0.25f, 0.25f, 1.0f));
-        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
         light.setEnabled(true);
         globalLight2.setLight(light);
         globalLight2.setLocalTranslation(0.0f, -500.0f, -500.0f);

@@ -153,6 +153,14 @@ public class RenderManager {
     public void addRenderBuffer(RenderBuffer rb) {
         renderer.addRenderBuffer(rb);
     }
+
+
+    /**
+     * Add a geometry lod to track.
+     */
+    public void addGeometryLOD(GeometryLOD lod) {
+        renderer.addGeometryLOD(lod);
+    }
     
     /**
      * This method blocks until the renderer is ready to go
