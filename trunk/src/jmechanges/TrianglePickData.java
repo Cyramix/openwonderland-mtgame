@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2008 jMonkeyEngine
+ * Copyright (c) 2003-2009 jMonkeyEngine
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -127,6 +127,11 @@ public class TrianglePickData extends PickData {
 //        logger.warning("Couldn't detect nearest triangle intersection!");
 		return Float.POSITIVE_INFINITY;
 	}
+        
+
+        public void setIntersectionPoint(Vector3f v) {
+            intersectionPoint.set(v);
+        }
         
         public void getIntersectionPoint(Vector3f out) {
             out.set(intersectionPoint);
