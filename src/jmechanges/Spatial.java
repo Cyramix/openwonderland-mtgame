@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2008 jMonkeyEngine
+ * Copyright (c) 2003-2009 jMonkeyEngine
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,7 @@ import com.jme.util.export.Savable;
  * 
  * @author Mark Powell
  * @author Joshua Slack
+ * @version $Revision: 4091 $, $Data$
  */
 public abstract class Spatial implements Serializable, Savable {
 
@@ -268,10 +269,10 @@ public abstract class Spatial implements Serializable, Savable {
 
     /** ArrayList of controllers for this spatial. */
     protected ArrayList<Controller> geometricalControllers;
-    
+        
     /** ArrayList of controllers for this spatial. */
     protected ArrayList<GeometricUpdateListener> geometricUpdateListeners;
-
+    
     private static final Vector3f compVecA = new Vector3f();
     private static final Quaternion compQuat = new Quaternion();
 
@@ -314,36 +315,6 @@ public abstract class Spatial implements Serializable, Savable {
         geometricalControllers.add(controller);
     }
 
-    /**
-     * Adds a Controller to this Spatial's list of controllers.
-     * 
-     * @param controller
-     *            The Controller to add
-     * @see com.jme.scene.Controller
-     */
-    public void addGeometricUpdateListener(GeometricUpdateListener l) {
-        if (geometricUpdateListeners == null) {
-            geometricUpdateListeners = new ArrayList<GeometricUpdateListener>(1);
-        }
-        geometricUpdateListeners.add(l);
-    }
-     
-    /**
-     * Removes a Controller from this Spatial's list of controllers, if it
-     * exist.
-     * 
-     * @param controller
-     *            The Controller to remove
-     * @return True if the Controller was in the list to remove.
-     * @see com.jme.scene.Controller
-     */
-    public boolean removeGeometricUpdateListener(GeometricUpdateListener l) {
-        if (geometricUpdateListeners == null) {
-            return false;
-        }
-        return geometricUpdateListeners.remove(l);
-    }
-    
     /**
      * Removes a Controller from this Spatial's list of controllers, if it
      * exist.
@@ -423,6 +394,37 @@ public abstract class Spatial implements Serializable, Savable {
         return geometricalControllers.size();
     }
 
+    
+    /**
+     * Adds a Controller to this Spatial's list of controllers.
+     * 
+     * @param controller
+     *            The Controller to add
+     * @see com.jme.scene.Controller
+     */
+    public void addGeometricUpdateListener(GeometricUpdateListener l) {
+        if (geometricUpdateListeners == null) {
+            geometricUpdateListeners = new ArrayList<GeometricUpdateListener>(1);
+        }
+        geometricUpdateListeners.add(l);
+    }
+     
+    /**
+     * Removes a Controller from this Spatial's list of controllers, if it
+     * exist.
+     * 
+     * @param controller
+     *            The Controller to remove
+     * @return True if the Controller was in the list to remove.
+     * @see com.jme.scene.Controller
+     */
+    public boolean removeGeometricUpdateListener(GeometricUpdateListener l) {
+        if (geometricUpdateListeners == null) {
+            return false;
+        }
+        return geometricUpdateListeners.remove(l);
+    }
+    
     /**
      * <code>onDraw</code> checks the spatial with the camera to see if it
      * should be culled, if not, the node's draw method is called.
@@ -455,7 +457,6 @@ public abstract class Spatial implements Serializable, Savable {
                 && frustrumIntersects == Camera.FrustumIntersect.Intersects) {
             frustrumIntersects = camera.contains(worldBound);
         }
-
         if (frustrumIntersects != Camera.FrustumIntersect.Outside) {
             draw(r);
         }
@@ -553,18 +554,6 @@ public abstract class Spatial implements Serializable, Savable {
                 propagateBoundToRoot();
             }
         }
-        notifyListeners();
-    }
-    
-    void notifyListeners() {
-        GeometricUpdateListener l = null;
-                
-        if (geometricUpdateListeners != null) {
-            for (int i=0; i<geometricUpdateListeners.size(); i++) {
-                l = (GeometricUpdateListener)geometricUpdateListeners.get(i);
-                l.geometricDataChanged(this);
-            }
-        }
     }
 
     /**
@@ -625,7 +614,7 @@ public abstract class Spatial implements Serializable, Savable {
                     worldTranslation);
         } else {
             worldTranslation.set(localTranslation);
-        }
+        }   
     }
 
     protected void updateWorldRotation() {
@@ -942,9 +931,10 @@ public abstract class Spatial implements Serializable, Savable {
             parent.propagateStatesFromRoot(states);
 
         // push states onto current render state stack
-        for (int x = 0; x < RenderState.RS_MAX_STATE; x++)
-            if (getRenderState(x) != null)
-                states[x].push(getRenderState(x));
+        for (RenderState.StateType type : RenderState.StateType.values()) {
+            if (getRenderState(type) != null)
+                states[type.ordinal()].push(getRenderState(type));
+        }
     }
 
     /**
@@ -1319,6 +1309,7 @@ public abstract class Spatial implements Serializable, Savable {
      */
     public void lock(Renderer r) {
         lockBounds();
+        lockBranch();
         lockTransforms();
         lockMeshes(r);
         lockShadows();
@@ -1336,6 +1327,7 @@ public abstract class Spatial implements Serializable, Savable {
      */
     public void lock() {
         lockBounds();
+        lockBranch();
         lockTransforms();
         lockMeshes();
         lockShadows();
@@ -1417,6 +1409,7 @@ public abstract class Spatial implements Serializable, Savable {
      */
     public void unlock(Renderer r) {
         unlockBounds();
+        unlockBranch();
         unlockTransforms();
         unlockMeshes(r);
         unlockShadows();
@@ -1436,6 +1429,7 @@ public abstract class Spatial implements Serializable, Savable {
      */
     public void unlock() {
         unlockBounds();
+        unlockBranch();
         unlockTransforms();
         unlockMeshes();
         unlockShadows();
@@ -1458,15 +1452,32 @@ public abstract class Spatial implements Serializable, Savable {
      *            a bitwise combination of the locks to establish on this
      *            Spatial.
      */
-    public void setLocks(int locks) {
-        if ((lockedMode & Spatial.LOCKED_BOUNDS) != 0)
+    public void setLocks(int lockedMode) {
+        if ((lockedMode & Spatial.LOCKED_BOUNDS) != 0) {
             lockBounds();
-        if ((lockedMode & Spatial.LOCKED_MESH_DATA) != 0)
+        } else {
+            unlockBounds();
+        }
+        if ((lockedMode & Spatial.LOCKED_BRANCH) != 0) {
+            lockBranch();
+        } else {
+            unlockBranch();
+        }
+        if ((lockedMode & Spatial.LOCKED_MESH_DATA) != 0) {
             lockMeshes();
-        if ((lockedMode & Spatial.LOCKED_SHADOWS) != 0)
+        } else {
+            unlockMeshes();
+        }
+        if ((lockedMode & Spatial.LOCKED_SHADOWS) != 0) {
             lockShadows();
-        if ((lockedMode & Spatial.LOCKED_TRANSFORMS) != 0)
+        } else {
+            unlockShadows();
+        }
+        if ((lockedMode & Spatial.LOCKED_TRANSFORMS) != 0) {
             lockTransforms();
+        } else {
+            unlockTransforms();
+        }
     }
 
     /**
@@ -1518,14 +1529,14 @@ public abstract class Spatial implements Serializable, Savable {
         // first we need to get all the states from parent to us.
         if (initiator) {
             // grab all states from root to here.
-            parentStates = new Stack[RenderState.RS_MAX_STATE];
+            parentStates = new Stack[RenderState.StateType.values().length];
             for (int x = 0; x < parentStates.length; x++)
                 parentStates[x] = new Stack<RenderState>();
             propagateStatesFromRoot(parentStates);
         } else {
-            for (int x = 0; x < RenderState.RS_MAX_STATE; x++) {
-                if (getRenderState(x) != null)
-                    parentStates[x].push(getRenderState(x));
+            for (RenderState.StateType type : RenderState.StateType.values()) {
+                if (getRenderState(type) != null)
+                    parentStates[type.ordinal()].push(getRenderState(type));
             }
         }
 
@@ -1533,9 +1544,10 @@ public abstract class Spatial implements Serializable, Savable {
 
         // restore previous if we are not the initiator
         if (!initiator) {
-            for (int x = 0; x < RenderState.RS_MAX_STATE; x++)
-                if (getRenderState(x) != null)
-                    parentStates[x].pop();
+            for (RenderState.StateType type : RenderState.StateType.values()) {
+                if (getRenderState(type) != null)
+                	parentStates[type.ordinal()].pop();
+            }
         }
 
     }
@@ -1571,11 +1583,12 @@ public abstract class Spatial implements Serializable, Savable {
         }
 
         if (renderStateList == null) {
-            renderStateList = new RenderState[RenderState.RS_MAX_STATE];
+            renderStateList = new RenderState[RenderState.StateType.values().length];
         }
 
-        RenderState oldState = renderStateList[rs.getType()];
-        renderStateList[rs.getType()] = rs;
+        RenderState oldState = renderStateList[rs.getStateType().ordinal()];
+        renderStateList[rs.getStateType().ordinal()] = rs;
+        
         return oldState;
     }
 
@@ -1586,9 +1599,37 @@ public abstract class Spatial implements Serializable, Savable {
      * @param type
      *            the renderstate type to retrieve
      * @return a renderstate at the given position or null
+     * @deprecated As of 2.0, use {@link #getRenderState(com.jme.scene.state.RenderState.StateType)} instead.
      */
     public RenderState getRenderState(int type) {
         return renderStateList != null ? renderStateList[type] : null;
+    }
+
+    /**
+     * Returns the requested RenderState that this Spatial currently has set or
+     * null if none is set.
+     * 
+     * @param type
+     *            the {@link RenderState.StateType} to return
+     * @return a {@link RenderState} that matches the given {@link RenderState.StateType} or null
+     */
+    public RenderState getRenderState(RenderState.StateType type) {
+
+        return renderStateList != null ? renderStateList[type.ordinal()] : null;
+    }
+
+    /**
+     * Clears a given render state index by setting it to null.
+     * 
+     * @param renderStateType
+     *            The index of a RenderState to clear
+     * @see com.jme.scene.state.RenderState#getType()
+     * @deprecated As of 2.0, use {@link #clearRenderState(com.jme.scene.state.RenderState.StateType)} instead.
+     */
+    public void clearRenderState(int renderStateType) {
+        if (renderStateList != null) {
+            renderStateList[renderStateType] = null;
+        }
     }
 
     /**
@@ -1598,9 +1639,9 @@ public abstract class Spatial implements Serializable, Savable {
      *            The index of a RenderState to clear
      * @see com.jme.scene.state.RenderState#getType()
      */
-    public void clearRenderState(int renderStateType) {
+    public void clearRenderState(RenderState.StateType type) {
         if (renderStateList != null) {
-            renderStateList[renderStateType] = null;
+            renderStateList[type.ordinal()] = null;
         }
     }
 
