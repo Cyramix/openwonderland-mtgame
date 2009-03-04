@@ -108,7 +108,6 @@ class Renderer extends Thread {
      * The list of collision components that need their state updated
      */
     private ArrayList collisionComponents = new ArrayList();
-    private ArrayList removeCollisionComponents = new ArrayList();
     
     /**
      * The list of camera objects that need their state updated
@@ -341,6 +340,19 @@ class Renderer extends Thread {
     private boolean initialized = false;
     
     ColorRGBA bgColor = new ColorRGBA();
+
+    /**
+     * A class to hold collision component actions
+     */
+    class CollisionComponentOp {
+        CollisionComponent cc = null;
+        boolean add = false;
+
+        CollisionComponentOp(CollisionComponent cc, boolean add) {
+            this.cc = cc;
+            this.add = add;
+        }
+    }
                 
     /**
      * The constructor
@@ -976,28 +988,23 @@ class Renderer extends Thread {
     void processCollisionUpdates(float referenceTime) {
         // TODO: remove duplicate updates between this and render components
         synchronized (collisionComponents) {
-            if (removeCollisionComponents.size() != 0) {
-                for (int i = 0; i < removeCollisionComponents.size(); i++) {
-                    CollisionComponent cc = (CollisionComponent) removeCollisionComponents.get(i);
-                    cc.getCollisionSystem().removeCollisionComponent(cc);
-                }
-                removeCollisionComponents.clear();
-            }
-
             if (collisionComponents.size() != 0) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
-                    CollisionComponent cc = (CollisionComponent) collisionComponents.get(i);
+                    CollisionComponentOp ccop = (CollisionComponentOp) collisionComponents.get(i);
 
-                    Node node = cc.getNode();
-                    if (node != null) {
-                        node.updateGeometricState(referenceTime, true);
-                        node.updateRenderState();
+                    if (ccop.add) {
+                        Node node = ccop.cc.getNode();
+                        if (node != null) {
+                            node.updateGeometricState(referenceTime, true);
+                            node.updateRenderState();
+                        }
+                        ccop.cc.getCollisionSystem().addCollisionComponent(ccop.cc);
+                    } else {
+                        ccop.cc.getCollisionSystem().removeCollisionComponent(ccop.cc);
                     }
-                    cc.getCollisionSystem().addCollisionComponent(cc);
                 }
                 collisionComponents.clear();
             }
-
         }
     }
     
@@ -1199,7 +1206,8 @@ class Renderer extends Thread {
 
             if (c instanceof CollisionComponent) {
                 synchronized (collisionComponents) {
-                    collisionComponents.add(c);
+                    CollisionComponentOp ccop = new CollisionComponentOp((CollisionComponent)c, true);
+                    collisionComponents.add(ccop);
                 }
             }
                                          
@@ -1249,7 +1257,8 @@ class Renderer extends Thread {
             
             if (c instanceof CollisionComponent) {
                 synchronized (collisionComponents) {
-                    removeCollisionComponents.add(c);
+                    CollisionComponentOp ccop = new CollisionComponentOp((CollisionComponent)c, false);
+                    collisionComponents.add(ccop);
                 }
             }
                                          
