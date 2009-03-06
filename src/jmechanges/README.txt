@@ -6,6 +6,7 @@ BufferUtils.java:
 
 ColladaImporter.java:
     Fixed assignment of texture coordinates
+    Add accessor for upAxis field
 
 CollisionTree.java:
 CollisionTreeManager.java:
@@ -28,6 +29,7 @@ TangentBinormalGenerator.java:
 SavableHashMap.java:
 TextureManager.java:
     Added support to read/write the Texture cache HashMap.
+    Added support to read the Texture cache HashMap for a URL
 
 TrianglePickData.java:
     Added API to set and get the actual intersection point.

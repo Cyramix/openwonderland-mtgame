@@ -900,4 +900,10 @@ final public class TextureManager {
         BinaryImporter importer = new BinaryImporter();
         m_tCache = (SavableHashMap<TextureKey, Texture>) importer.load(location);
     }
+
+    public static void readCache(URL location) throws IOException
+    {
+        BinaryImporter importer = new BinaryImporter();
+        m_tCache = (SavableHashMap<TextureKey, Texture>) importer.load(location);
+    }
 }
