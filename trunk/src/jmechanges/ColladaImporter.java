@@ -507,6 +507,14 @@ public class ColladaImporter {
     }
 
     /**
+     * The up axis for this model, X_UP, Y_UP or Z_UP
+     * @return the up axis
+     */
+    public String getUpAxis() {
+        return upAxis;
+    }
+
+    /**
      * getAssetInformation returns a string of the collected asset information
      * of this COLLADA model. The format is such: <br>
      * AUTHOR REVISION<br>
