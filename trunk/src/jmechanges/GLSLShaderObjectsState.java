@@ -555,7 +555,7 @@ public abstract class GLSLShaderObjectsState extends RenderState {
         // this is hack
         // TODO: make a new ShaderVariable class instead
         if (shaderUniform.matrixBuffer.capacity() < value.length) {
-            System.err.println("Making new MatrixBuffer!");
+//            System.err.println("Making new MatrixBuffer!");
             shaderUniform.matrixBuffer = BufferUtils.createFloatBuffer(value.length);
         }
         shaderUniform.matrixBuffer.clear();
