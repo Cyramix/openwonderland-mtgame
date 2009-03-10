@@ -34,11 +34,13 @@ package org.jdesktop.mtgame;
 import com.jme.scene.Spatial;
 import com.jme.renderer.pass.Pass;
 
+import com.jme.scene.Node;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.awt.Canvas;
 import java.io.InputStream;
+import java.net.URL;
 
 
 /**
@@ -347,10 +349,21 @@ public class WorldManager {
     }
     
     /**
-     * Load the configuration data given by the InputStream
+     * Load the configuration data given by the InputStream, attaching
+     * the loaded entities to the world
      */
     public void loadConfiguration(InputStream stream) {
         configManager.loadConfiguration(stream);
+    }
+
+    /**
+     * Load the configuration data from the specified url, but don't attach
+     * the entities to the world. Instead the ConfigLoadListener will be called
+     * each time an instance is loaded.
+     * @param url
+     */
+    public void loadConfiguration(URL url, ConfigLoadListener listener) {
+        configManager.loadConfiguration(url, listener);
     }
     
     /**
@@ -426,5 +439,8 @@ public class WorldManager {
     void untrackMouseInput(Canvas c, Object listener) {
         renderManager.untrackMouseInput(c, listener);
     }
-    
+
+    public interface ConfigLoadListener {
+        public void entityLoaded(Entity entity);
+    }
 }

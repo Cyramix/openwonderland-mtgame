@@ -31,6 +31,8 @@
 
 package org.jdesktop.mtgame;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.shader.DiffuseMap;
 import org.jdesktop.mtgame.shader.DiffuseMapAO;
@@ -67,6 +69,9 @@ import java.io.FileNotFoundException;
 import com.jmex.model.collada.ColladaImporter;
 import com.jme.util.resource.ResourceLocator;
 import com.jme.util.resource.ResourceLocatorTool;
+import java.io.IOException;
+import java.util.ArrayList;
+import org.jdesktop.mtgame.WorldManager.ConfigLoadListener;
 
 
 /**
@@ -110,14 +115,19 @@ public class ConfigManager implements ResourceLocator {
      * A HashMap to share textures
      */
     HashMap textureMap = new HashMap();
+
+    private ConfigLoadListener loadListener = null;
+
+    private String baseURL = null;
     
+    private boolean localResourceLocatorInstalled = false;
+
     /**
      * The Default Constructor
      */
     public ConfigManager(WorldManager wm) {
         worldManager = wm;
         collisionSystem = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
-        ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
     }
 
     /**
@@ -125,7 +135,6 @@ public class ConfigManager implements ResourceLocator {
      */
     void setTextureDirectory(String dir) {
         textureDir = dir;
-        System.out.println("Texture Dir: " + textureDir);
     }
 
     /**
@@ -139,6 +148,11 @@ public class ConfigManager implements ResourceLocator {
      * Load the configuration data given by the InputStream
      */
     void loadConfiguration(InputStream stream) {
+        if (!localResourceLocatorInstalled) {
+            ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
+            localResourceLocatorInstalled = true;
+        }
+
         try {
             int numBytes = stream.available();
             byte[] data = new byte[numBytes];
@@ -147,6 +161,22 @@ public class ConfigManager implements ResourceLocator {
             parseConfigString(configString);
         } catch (java.io.IOException e) {
             System.out.println(e);
+        }
+    }
+
+    void loadConfiguration(URL url, ConfigLoadListener listener) {
+        try {
+            loadListener = listener;
+            baseURL = url.toExternalForm();
+            baseURL = baseURL.substring(0, baseURL.lastIndexOf('/'));
+
+            setDataDirectory(baseURL);
+            loadConfiguration(url.openStream());
+
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -222,13 +252,17 @@ public class ConfigManager implements ResourceLocator {
      * data directory
      */
     void loadConfigFile(String name) {
-        //System.out.println("loadConfigFile Loading: " + name);
         int lastCurrentToken = currentToken;
         try {
-            FileInputStream fs = new FileInputStream(dataDir + "/" + name);
+            URL url = new URL(dataDir + "/" + name);
+            InputStream fs = url.openStream();
             worldManager.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException e) {
             System.out.println(e);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
         }
         currentToken = lastCurrentToken;
     }
@@ -238,7 +272,7 @@ public class ConfigManager implements ResourceLocator {
      * data directory
      */
     void loadColladaFile(String colladaString) {
-        FileInputStream fileStream = null;
+        InputStream fileStream = null;
 
         String[] tokens = colladaString.split(" ", -1);
 
@@ -262,9 +296,15 @@ public class ConfigManager implements ResourceLocator {
         rot.fromAngleAxis(angle, axis);
 
         try {
-            fileStream = new FileInputStream(dataDir + "/" + colladaFile);
+            URL url;
+            url = new URL(dataDir + "/" + colladaFile);
+            fileStream = url.openStream();
         } catch (FileNotFoundException ex) {
             System.out.println(ex);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         // Now load the model
@@ -295,7 +335,10 @@ public class ConfigManager implements ResourceLocator {
         e.addComponent(JMECollisionComponent.class, cc);
         e.addComponent(RenderComponent.class, sc);
 
-        worldManager.addEntity(e);
+        if (loadListener==null)
+            worldManager.addEntity(e);
+        else
+            loadListener.entityLoaded(e);
     }
 
 
@@ -459,22 +502,33 @@ public class ConfigManager implements ResourceLocator {
      * Load the specified texture
      */
     private void loadTexture(Spatial s, String name, int index, TextureState ts) {
-        String textureName = "file:" + textureDir + "/" + name;
-        Texture texture = (Texture)textureMap.get(textureName);
+        String textureName;
+        
+        if (baseURL==null)
+            textureName = textureDir + "/" + name;
+        else
+            textureName = baseURL + "/" + textureDir + "/" +name;
 
-        if (texture == null) {
-            URL url = null;
-            try {
-                url = new URL(textureName);
-            } catch (MalformedURLException ex) {
-                System.out.println(ex);
+        System.err.println("TEXTURENAME "+textureName);
+
+        Texture texture;
+        synchronized(textureMap) {
+            texture = (Texture)textureMap.get(textureName);
+
+            if (texture == null) {
+                URL url = null;
+                try {
+                    url = new URL(textureName);
+                } catch (MalformedURLException ex) {
+                    System.out.println(ex);
+                }
+
+                texture = TextureManager.loadTexture(url,
+                        Texture.MinificationFilter.Trilinear,
+                        Texture.MagnificationFilter.Bilinear);
+                texture.setWrap(Texture.WrapMode.Repeat);
+                textureMap.put(textureName, texture);
             }
-
-            texture = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.Trilinear,
-                    Texture.MagnificationFilter.Bilinear);
-            texture.setWrap(Texture.WrapMode.Repeat);
-            textureMap.put(textureName, texture);
         }
       
         ts.setEnabled(true);
@@ -484,7 +538,9 @@ public class ConfigManager implements ResourceLocator {
     public URL locateResource(String resourceName) {
         URL url = null;
 
-        //System.out.println("Looking for: " + resourceName);
+        if (textureDir==null)
+            return url;
+
         try {
             if (resourceName.contains(textureDir)) {
                 // We already resolved this one.
