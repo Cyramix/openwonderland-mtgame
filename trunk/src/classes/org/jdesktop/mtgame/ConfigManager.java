@@ -509,8 +509,6 @@ public class ConfigManager implements ResourceLocator {
         else
             textureName = baseURL + "/" + textureDir + "/" +name;
 
-        System.err.println("TEXTURENAME "+textureName);
-
         Texture texture;
         synchronized(textureMap) {
             texture = (Texture)textureMap.get(textureName);
