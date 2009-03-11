@@ -158,7 +158,22 @@ class Renderer extends Thread {
      * A boolean indicating that the scene list has changed
      */
     private boolean scenesChanged = false;
-        
+
+    /**
+     * The current list of scenes
+     */
+    private ArrayList renderAttach = new ArrayList();
+
+    /**
+     * The array list of scene's
+     */
+    private ArrayList attachPoints = new ArrayList();
+
+    /**
+     * A boolean indicating that the scene list has changed
+     */
+    private boolean attachChanged = false;
+
     /**
      * The array list of scene's
      */
@@ -1232,11 +1247,13 @@ class Renderer extends Thread {
                 processSceneGraph((RenderComponent)c);
                 if (((RenderComponent) c).getAttachPoint() != null) {
                     processAttachPoint((RenderComponent) c, true);
+                    attachPoints.add(c);
+                    attachChanged = true;
                 } else {
                     scenes.add(c);
                     scenesChanged = true;
-                    entityChanged = true;
                 }
+                entityChanged = true;
             }
         }
     }
@@ -1282,11 +1299,13 @@ class Renderer extends Thread {
             if (c instanceof RenderComponent) {
                 if (((RenderComponent) c).getAttachPoint() != null) {
                     processAttachPoint((RenderComponent) c, false);
+                    attachPoints.remove(c);
+                    attachChanged = true;
                 } else {
                     scenes.remove(c);
                     scenesChanged = true;
-                    entityChanged = true;
                 }
+                entityChanged = true;
             }
         }
     }
@@ -1475,6 +1494,10 @@ class Renderer extends Thread {
                     processScenesChanged();
                     scenesChanged = false;
                 }
+                if (attachChanged) {
+                    processAttachChanged();
+                    attachChanged = false;
+                }
                 if (camerasChanged) {
                     processCamerasChanged();
                     camerasChanged = false;
@@ -1561,7 +1584,50 @@ class Renderer extends Thread {
         }
                
     }
-    
+
+    /**
+     * Check for scene changes
+     */
+    void processAttachChanged() {
+        int len = 0;
+        RenderComponent scene = null;
+
+        // = (ArrayList)scenes.clone();
+
+        // Minimize the numner of additions to the updateList
+        // First, let's look for removals
+        len = renderAttach.size();
+        for (int i=0; i<len;) {
+            scene = (RenderComponent) renderAttach.get(i);
+            if (attachPoints.contains(scene)) {
+                // move on to the next
+                i++;
+            } else {
+                // remove the scene, this will shift things down
+                renderAttach.remove(scene);
+                processGraphRemove(scene.getSceneRoot());
+                len--;
+            }
+        }
+
+        // Now let's look for additions
+        for (int i=0; i<attachPoints.size(); i++) {
+            scene = (RenderComponent) attachPoints.get(i);
+            if (!renderAttach.contains(scene)) {
+                scene.updateLightState(globalLights);
+                processGraphAddition(scene.getSceneRoot());
+                renderAttach.add(scene);
+                addToUpdateList(scene.getSceneRoot());
+            }
+        }
+
+        // Just a sanity check
+        if (attachPoints.size() != renderAttach.size()) {
+            System.out.println("Error, Attach sizes differ: " + attachPoints.size() + ", " + renderAttach.size());
+        }
+
+    }
+
     /**
      * Check for scene changes
      */
