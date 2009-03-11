@@ -509,24 +509,21 @@ public class ConfigManager implements ResourceLocator {
         else
             textureName = baseURL + "/" + textureDir + "/" +name;
 
-        Texture texture;
-        synchronized(textureMap) {
-            texture = (Texture)textureMap.get(textureName);
+        Texture texture = (Texture)textureMap.get(textureName);
 
-            if (texture == null) {
-                URL url = null;
-                try {
-                    url = new URL(textureName);
-                } catch (MalformedURLException ex) {
-                    System.out.println(ex);
-                }
-
-                texture = TextureManager.loadTexture(url,
-                        Texture.MinificationFilter.Trilinear,
-                        Texture.MagnificationFilter.Bilinear);
-                texture.setWrap(Texture.WrapMode.Repeat);
-                textureMap.put(textureName, texture);
+        if (texture == null) {
+            URL url = null;
+            try {
+                url = new URL(textureName);
+            } catch (MalformedURLException ex) {
+                System.out.println(ex);
             }
+
+            texture = TextureManager.loadTexture(url,
+                    Texture.MinificationFilter.Trilinear,
+                    Texture.MagnificationFilter.Bilinear);
+            texture.setWrap(Texture.WrapMode.Repeat);
+            textureMap.put(textureName, texture);
         }
       
         ts.setEnabled(true);
