@@ -41,7 +41,7 @@ import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.processor.FPSCameraProcessor;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.shader.DiffuseMap;
-//import org.jdesktop.mtgame.shader.FlatShader;
+import org.jdesktop.mtgame.util.Mirror;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.Spatial;
@@ -200,33 +200,18 @@ public class OrientationWorld {
         } catch (java.io.FileNotFoundException ex) {
             System.out.println(ex);
         }
-//        frame.loadFile("/Users/runner/Desktop/Orientation/terrain.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/building.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_ApplicationKiosk.dae", true, new Vector3f(13.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_kiosk.dae", true, new Vector3f(19.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_lamp.dae", true, new Vector3f(17.0f, 1.0f, 49.7f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_sculptureA.dae", true, new Vector3f(50.0f, 0.0f, 36.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/obj_trashcan.dae", true, new Vector3f(26.0f, 0.0f, 50.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_housePlant.dae", true, new Vector3f(14.0f, 0.0f, 27.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_001.dae", true, new Vector3f(22.0f, -1.15f, 3.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_lilly_002.dae", true, new Vector3f(19.0f, -1.15f, 3.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_shrub_002.dae", true, new Vector3f(-39.0f, -1.0f, 0.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_shrub_003.dae", true, new Vector3f(0.0f, 0.0f, 4.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_tree_001.dae", true, new Vector3f(0.0f, 2.3f, 20.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_tree_002.dae", true, new Vector3f(-18.2f, 1.2f, 18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_treeRed.dae", true, new Vector3f(13.0f, 3.0f, -18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        //frame.loadFile("/Users/runner/Desktop/Orientation/Orientation-old/veg_YellowTree_002.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/red_tree.dae", true, new Vector3f(13.0f, 3.0f, -18.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/green_tree.dae", true, new Vector3f(23.0f, 3.0f, -24.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orientation/yellow_tree.dae", true, new Vector3f(21.0f, 3.0f, -35.0f), new Vector3f(1.0f, 1.0f, 1.0f), true, false);
-//        frame.loadFile("/Users/runner/Desktop/Orient/shelter.dae", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
 
-        //loadViaX3D("/Users/runner/Desktop/Orientation/veg_tree_001.x3d", true, new Vector3f(), new Vector3f(1.0f, 1.0f, 1.0f), true, true);
-        //frame.loadFile("/Users/runner/Desktop/Orientation/shelter.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, true, true);
-        //frame.loadFile("/Users/runner/Desktop/Orientation/boulders.dae", true, new Vector3f(0.0f, 5.0f, 0.0f), 1.0f, false, true);
-        //frame.loadFile(loadfile, false);
-        //createRandomTeapots(wm);
+        createMirror();
         
+    }
+
+    void createMirror() {
+        Vector3f trans = new Vector3f(0.0f, 20.0f, 0.0f);
+        Vector3f side = new Vector3f(1.0f, 0.0f, 0.0f);
+        Vector3f up = new Vector3f(0.0f, 0.0f, 1.0f);
+        Vector3f dir = new Vector3f(0.0f, -1.0f, 0.0f);
+
+        Mirror mirror = new Mirror(wm, 10, 10, trans, dir, up, side, 1024, 1024);
     }
 
     void loadViaX3D(String filename, boolean normalMap, Vector3f trans,
