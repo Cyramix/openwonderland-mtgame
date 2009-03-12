@@ -652,7 +652,7 @@ public class WorkProcessorTest {
         public void run() {
             //while (true) {
             for (int j=0; j<100; j++) {
-                wp.startWork(this, null, false);
+                wp.startWork(this, null, true);
                 
                 try {
                     this.sleep(100);
