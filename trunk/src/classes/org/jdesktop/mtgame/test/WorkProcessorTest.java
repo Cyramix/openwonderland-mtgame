@@ -81,6 +81,7 @@ import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
 
 import java.util.Random;
+import org.jdesktop.mtgame.processor.WorkProcessor.WorkCompute;
 
 
 /**
@@ -638,7 +639,7 @@ public class WorkProcessorTest {
         return (node);
     }
     
-    class MyThread extends Thread implements WorkProcessor.WorkDoneListener {
+    class MyThread extends Thread {
         WorldManager wm = null;
         WorkProcessor wp = null;
         public MyThread(WorldManager wm) {
@@ -650,20 +651,17 @@ public class WorkProcessorTest {
         }
         
         public void run() {
-            //while (true) {
             for (int j=0; j<100; j++) {
-                wp.startWork(this, null, true);
-                
-                try {
-                    this.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
+                wp.addWorker(new WorkCompute() {
+
+                    public void compute() {
+                        System.out.println("Compute done");
+                    }
+
+                }, false);
+                System.err.println("addWork returned");
             }
         }
 
-        public void workDone(Object arg) {
-            System.out.println("Work is done from listener");
-        }
     }
 }
