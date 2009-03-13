@@ -190,13 +190,14 @@ class ProcessorManager extends Thread {
             // Gather the list of processor components to execute
             // This includes any chained processors
             runList = waitForProcessorsTriggered();
+            dispatchTasks(runList);
 
-            // Hand off work until we are done with the compute phase
-            for (int i=0; i<runList.length; i++) {
-                // Assign the task.  This will wait for an available processor
-                dispatchTask(runList[i]);
-
-            }
+//            // Hand off work until we are done with the compute phase
+//            for (int i=0; i<runList.length; i++) {
+//                // Assign the task.  This will wait for an available processor
+//                dispatchTask(runList[i]);
+//
+//            }
             
             // Now, let the renderer complete the commit phase
             worldManager.runCommitList(runList);
@@ -207,29 +208,42 @@ class ProcessorManager extends Thread {
     /**
      * This method hands runList work off to the worker threads unit it is done.
      */
-    synchronized void dispatchTask(ProcessorComponent pc) {
+    synchronized void dispatchTasks(ProcessorComponent[] pcs) {
         int i=0;
-        
-        // Wait if no one is available
-        if (availableProcessors == 0) {
+
+        for (int j=0; j<pcs.length; j++) {
+            ProcessorComponent pc = pcs[j];
+
+            // Wait if no one is available
+            if (availableProcessors == 0) {
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    System.out.println(e);
+                }
+            }
+
+            // Find the first available thread.
+            for (i = 0; i < processorThreads.length; i++) {
+                // The processor will return true if it accepted the task
+                //System.out.println("Trying to give task to " + i);
+                //System.out.println("Processor: " + i + ", " + pc);
+                if (processorThreads[i].isAvailable()) {
+                    processorThreads[i].setAvailable(false);
+                    processorThreads[i].runTask(pc);
+                    availableProcessors--;
+                    //System.out.println(entityProcessor[i] + " accepted task: " + pc);
+                    break;
+                }
+            }
+        }
+
+        // Wait for everyone to finish
+        while (availableProcessors != numProcessorThreads) {
             try {
                 wait();
             } catch (InterruptedException e) {
                 System.out.println(e);
-            }
-        }
-        
-        // Find the first available thread.
-        for (i = 0; i < processorThreads.length; i++) {
-            // The processor will return true if it accepted the task
-            //System.out.println("Trying to give task to " + i);
-            //System.out.println("Processor: " + i + ", " + pc);
-            if (processorThreads[i].isAvailable()) {
-                processorThreads[i].setAvailable(false);
-                processorThreads[i].runTask(pc);
-                availableProcessors--;
-                //System.out.println(entityProcessor[i] + " accepted task: " + pc);
-                break;
             }
         }
     }
@@ -637,6 +651,7 @@ class ProcessorManager extends Thread {
                 condition = (PostEventCondition)findCondition(PostEventCondition.class, pc.getArmingCondition());
                 
                 if (pc.isEnabled() && condition.eventsPending()) {
+                    condition.freezeEvents();
                     pc.addTriggerCondition(condition);
 
                     if (addToTriggered(pc) && !anyTriggered) {

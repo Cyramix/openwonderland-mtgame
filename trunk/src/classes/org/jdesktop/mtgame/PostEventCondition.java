@@ -48,6 +48,11 @@ public class PostEventCondition extends ProcessorArmingCondition {
      * The list of triggering events.
      */
     private ArrayList triggerEvents = new ArrayList();
+
+    /**
+     * The list of frozen events.
+     */
+    private ArrayList frozenEvents = new ArrayList();
             
     /**
      * The default constructor
@@ -99,16 +104,37 @@ public class PostEventCondition extends ProcessorArmingCondition {
         long ret[] = null;
         
         synchronized (triggerEvents) {
-            int length = triggerEvents.size();
+            int length = frozenEvents.size();
             ret = new long[length];
 
             for (int i = 0; i < length; i++) {
-                Long l = (Long)triggerEvents.get(i);
+                Long l = (Long)frozenEvents.get(i);
                 ret[i] = l.longValue();
             }
-            triggerEvents.clear();
         }
         
         return (ret);
+    }
+
+    /**
+     * Freeze the events - copy trigger events into the freeze events
+     * and empty the trigger events
+     */
+    void freezeEvents() {
+        synchronized (triggerEvents) {
+            for (int i=0; i<triggerEvents.size(); i++) {
+                frozenEvents.add(triggerEvents.get(i));
+            }
+            triggerEvents.clear();
+        }
+    }
+
+    /**
+     * Unfreeze the events.  This clears the frozen events
+     */
+    void unfreezeEvents() {
+        synchronized (triggerEvents) {
+            frozenEvents.clear();
+        }
     }
 }

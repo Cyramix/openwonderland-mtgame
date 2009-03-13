@@ -201,6 +201,12 @@ public abstract class ProcessorComponent extends EntityComponent {
     * Clear the current trigger condition
     */
    void clearTriggerCollection() {
+       for (int i=0; i<triggerCollection.size(); i++) {
+           ProcessorArmingCondition pac = (ProcessorArmingCondition) triggerCollection.get(i);
+           if (pac instanceof PostEventCondition) {
+               ((PostEventCondition)pac).unfreezeEvents();
+           }
+       }
        triggerCollection.clear();
    }
    
