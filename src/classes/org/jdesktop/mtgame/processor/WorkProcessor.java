@@ -28,9 +28,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package org.jdesktop.mtgame.processor;
 
+import java.util.LinkedList;
+import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jdesktop.mtgame.*;
 
 /**
@@ -39,107 +42,158 @@ import org.jdesktop.mtgame.*;
  * @author Doug Twilleager
  */
 public class WorkProcessor extends ProcessorComponent {
-    public interface WorkDoneListener {
-        public void workDone(Object o);
-    }
 
     /**
      * The world manager
      */
     private WorldManager worldManager = null;
-
     /**
      * The arming condition for this processor
      */
     PostEventCondition condition = null;
-    
     /**
      * A name
      */
     private String name = null;
-    
     /**
      * The list of events which this processor is waiting for
      */
-    private long[] event = new long[1];
+    private LinkedList<WorkRecord> workCommitList = new LinkedList();
+    private LinkedList<WorkRecord> workComputeList = new LinkedList();
+    private long postCommit;
+    private long postCompute;
 
-    /**
-     * A boolean indicating that the work is done
-     */
-    private boolean done = false;
-
-    /**
-     * The listener to use when done doing work
-     */
-    private WorkDoneListener listener = null;
-
-    /**
-     * The argument to doing work
-     */
-    private Object arg = null;
-    
     /**
      * The constructor
      */
     public WorkProcessor(String name, WorldManager wm) {
         worldManager = wm;
-        event[0] = worldManager.allocateEvent();
+        postCommit = worldManager.allocateEvent();
+        postCompute = worldManager.allocateEvent();
         this.name = name;
-        condition = new PostEventCondition(this, event);
+        condition = new PostEventCondition(this, new long[] {postCommit, postCompute});
     }
 
-    /**
-     * Tell the WorkProcess to do some work
-     */
-    public void startWork(WorkDoneListener l, Object arg, boolean wait) {
-        listener = l;
-        this.arg = arg;
-        done = false;
-        worldManager.postEvent(event[0]);
-        if (wait) {
-            while (!done) {
-                try {
-                    Thread.currentThread().sleep(10);
-                } catch (java.lang.InterruptedException e) {
-                    System.out.println(e);
+    @Override
+    public void compute(ProcessorArmingCollection arg0) {
+        synchronized (this) {
+            for (WorkRecord job : workComputeList) {
+                ((WorkCompute) job.worker).compute();
+                if (job.listener != null) {
+                    job.listener.workDone(job.worker);
                 }
             }
+            workComputeList.clear();
         }
     }
 
-    public String toString() {
-        return (name);
+    @Override
+    public void commit(ProcessorArmingCollection arg0) {
+        // Clear the triggering events
+
+        synchronized (this) {
+            if (arg0.size() != 0) {
+                PostEventCondition pec = (PostEventCondition) arg0.get(0);
+            }
+
+            for (WorkRecord job : workCommitList) {
+                ((WorkCommit) job.worker).commit();
+                if (job.listener != null) {
+                    job.listener.workDone(job.worker);
+                }
+            }
+            workCommitList.clear();
+        }
     }
-    
-    /**
-     * The initialize method
-     */
+
+    @Override
     public void initialize() {
         setArmingCondition(condition);
     }
-    
-    /**
-     * The Calculate method
-     */
-    public void compute(ProcessorArmingCollection collection) {
-        PostEventCondition pec = (PostEventCondition)collection.get(0);
-        long[] e = pec.getTriggerEvents();
 
-        doWork(arg);
-        listener.workDone(arg);
-        done = true;
+    public void addWorker(final WorkCommit worker, boolean wait) {
+        final Semaphore semaphore = new Semaphore(0);
+
+        if (wait) {
+            addWorker(worker, new WorkDoneListener() {
+                public void workDone(Object o) {
+                    semaphore.release();
+                }
+            });
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(WorkProcessor.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } else {
+            addWorker(worker);
+        }
     }
 
-    /**
-     * Subclassed will implement this method to do the work
-     */
-    public void doWork(Object arg) {
-        System.out.println("Doing Work....");
+    public void addWorker(WorkCommit worker) {
+        addWorker(worker, null);
     }
 
-    /**
-     * The commit method
-     */
-    public void commit(ProcessorArmingCollection collection) {
+    public void addWorker(WorkCommit worker, WorkDoneListener listener) {
+        synchronized (this) {
+            workCommitList.add(new WorkRecord(worker, listener));
+            worldManager.postEvent(postCommit);
+        }
     }
+
+    public void addWorker(final WorkCompute worker, boolean wait) {
+        final Semaphore semaphore = new Semaphore(0);
+
+        if (wait) {
+            addWorker(worker, new WorkDoneListener() {
+                public void workDone(Object o) {
+                    semaphore.release();
+                }
+            });
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(WorkProcessor.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } else {
+            addWorker(worker);
+        }
+    }
+
+    public void addWorker(WorkCompute worker) {
+        addWorker(worker, null);
+    }
+
+    public void addWorker(WorkCompute worker, WorkDoneListener listener) {
+        synchronized (this) {
+            workComputeList.add(new WorkRecord(worker, listener));
+            worldManager.postEvent(postCompute);
+        }
+    }
+
+    class WorkRecord {
+
+        public Object worker;
+        public WorkDoneListener listener;
+
+        public WorkRecord(Object worker, WorkDoneListener listener) {
+            this.listener = listener;
+            this.worker = worker;
+        }
+    }
+
+    public interface WorkCommit {
+
+        public void commit();
+    }
+
+    public interface WorkCompute {
+
+        public void compute();
+    }
+
+    public interface WorkDoneListener {
+        public void workDone(Object o);
+    }
+
 }
