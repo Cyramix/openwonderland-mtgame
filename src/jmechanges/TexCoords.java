@@ -53,7 +53,7 @@ import java.io.Serializable;
  * 
  * @author Joshua Slack
  */
-public class TexCoords implements Savable {
+public class TexCoords implements Savable, Serializable {
 
     public FloatBuffer coords;
     public int perVert;
