@@ -9,6 +9,7 @@ import org.jdesktop.mtgame.*;
 
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.Node;
+import com.jme.scene.TexCoords;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.Quad;
 import com.jme.scene.shape.AxisRods;
@@ -17,6 +18,9 @@ import com.jme.scene.state.TextureState;
 import com.jme.scene.state.RenderState;
 import com.jme.math.Vector3f;
 import com.jme.math.Quaternion;
+import java.nio.FloatBuffer;
+import java.nio.ByteBuffer;
+import com.jme.util.geom.BufferUtils;
 
 /**
  * This class encapsultes a rendering surface in mtgame.  It can be used
@@ -101,8 +105,18 @@ public class Mirror {
         Node mirror = new Node();
         Quad quad = new Quad("Mirror Quad", width, height);
 
+        FloatBuffer fb = BufferUtils.createVector2Buffer(quad.getVertexCount());
+        fb.rewind();
+        fb.put(1.0f).put(1.0f);
+        fb.put(1.0f).put(0.0f);
+        fb.put(0.0f).put(0.0f);
+        fb.put(0.0f).put(1.0f);
+        TexCoords tc = new TexCoords(fb);
+
+        quad.setTextureCoords(tc);
+
         mirror.attachChild(quad);
-        mirror.attachChild(new AxisRods("Axis", true, 10.0f, 0.2f));
+        //mirror.attachChild(new AxisRods("Axis", true, 10.0f, 0.2f));
         mirror.setLocalTranslation(pos);
         quat.fromAxes(side, up, dir);
         mirror.setLocalRotation(quat);

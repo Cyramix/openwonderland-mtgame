@@ -42,6 +42,7 @@ import org.jdesktop.mtgame.processor.FPSCameraProcessor;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.shader.DiffuseMap;
 import org.jdesktop.mtgame.util.Mirror;
+import org.jdesktop.mtgame.util.RenderCapture;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.Spatial;
@@ -103,7 +104,9 @@ import com.jme.scene.Spatial.TextureCombineMode;
 
 import com.jmex.model.converters.X3dToJme;
 import java.util.HashMap;
-
+import java.awt.Graphics;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 
 /**
  * A World test application
@@ -129,9 +132,9 @@ public class OrientationWorld {
     /**
      * The width and height of our 3D window
      */
-    private int width = 1024;
-    private int height = 768;
-    private float aspect = 1024.0f/768.0f;
+    private int width = 800;
+    private int height = 600;
+    private float aspect = 800.0f/600.0f;
     
     /**
      * Some options state variables
@@ -167,6 +170,7 @@ public class OrientationWorld {
     private SwingFrame frame = null;
     private String textureDir = "/Users/runner/Desktop/Orientation/textures";
     private Skybox skybox = null;
+    private RenderCapture renderCapture = null;
 
     
     public OrientationWorld(String[] args) {
@@ -201,8 +205,8 @@ public class OrientationWorld {
             System.out.println(ex);
         }
 
+        //createAxis();
         createMirror();
-        
     }
 
     void createMirror() {
@@ -211,7 +215,7 @@ public class OrientationWorld {
         Vector3f up = new Vector3f(0.0f, 0.0f, 1.0f);
         Vector3f dir = new Vector3f(0.0f, -1.0f, 0.0f);
 
-        Mirror mirror = new Mirror(wm, 10, 10, trans, dir, up, side, 1024, 1024);
+        Mirror mirror = new Mirror(wm, 25, 25, trans, dir, up, side, 1024, 1024);
     }
 
     void loadViaX3D(String filename, boolean normalMap, Vector3f trans,
@@ -333,6 +337,22 @@ public class OrientationWorld {
         Entity e = new Entity("Skybox");
         SkyboxComponent sbc = wm.getRenderManager().createSkyboxComponent(skybox, true);
         e.addComponent(SkyboxComponent.class, sbc);
+
+        wm.addEntity(e);
+    }
+
+    void createAxis() {
+        Entity e = new Entity("Axis");
+        Node axis = new Node("Axis");
+
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        axis.setRenderState(buf);
+
+        axis.attachChild(new AxisRods("Axis", true, 10.0f, 0.2f));
+        RenderComponent sbc = wm.getRenderManager().createRenderComponent(axis);
+        e.addComponent(RenderComponent.class, sbc);
         wm.addEntity(e);
     }
 
@@ -349,7 +369,7 @@ public class OrientationWorld {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false);
+        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
         eventProcessor.setRunInRenderer(true);
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
@@ -397,11 +417,13 @@ public class OrientationWorld {
         frame.setVisible(true);
     }
     
-    class SwingFrame extends JFrame implements FrameRateListener, ActionListener, ResourceLocator {
+    class SwingFrame extends JFrame implements FrameRateListener, ActionListener, ResourceLocator, RenderCapture.RenderCaptureListener {
 
         JPanel contentPane;
         JPanel menuPanel = new JPanel();
         JPanel canvasPanel = new JPanel();
+        JPanel capturePanel = new JPanel();
+        MyCanvas captureCanvas = null;
         JPanel optionsPanel = new JPanel();
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
@@ -428,7 +450,7 @@ public class OrientationWorld {
 
             contentPane = (JPanel) this.getContentPane();
             contentPane.setLayout(new BorderLayout());
-            
+
             // The Menu Bar
             menuPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
             JMenuBar menuBar = new JMenuBar();
@@ -456,6 +478,13 @@ public class OrientationWorld {
             canvasPanel.setLayout(new GridBagLayout());           
             canvasPanel.add(canvas);
             contentPane.add(canvasPanel, BorderLayout.CENTER);
+
+            renderCapture = new RenderCapture(wm, 400, 300, this);
+            captureCanvas = new MyCanvas(renderCapture);
+            captureCanvas.setSize(400, 300);
+            capturePanel.setLayout(new GridBagLayout());
+            capturePanel.add(captureCanvas);
+            contentPane.add(capturePanel, BorderLayout.EAST);
             
             // The options panel
             optionsPanel.setLayout(new GridBagLayout());
@@ -476,6 +505,27 @@ public class OrientationWorld {
             pack();
             
             //ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
+        }
+
+        public void update(BufferedImage image) {
+            captureCanvas.repaint();
+        }
+
+        public class MyCanvas extends Canvas {
+            private RenderCapture renderCapture = null;
+
+            public MyCanvas(RenderCapture rc) {
+                renderCapture = rc;
+            }
+
+            public void paint(Graphics g) {
+                BufferedImage bi = renderCapture.getBufferedImage();
+                g.setColor(Color.BLACK);
+                g.fillRect(0, 0, 400, 300);
+                if (bi != null) {
+                    g.drawImage(bi, 0, 0, null);
+                }
+            }
         }
         
         /**

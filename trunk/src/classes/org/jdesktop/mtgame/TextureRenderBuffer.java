@@ -12,6 +12,7 @@ import com.jme.image.Texture2D;
 import com.jme.renderer.TextureRenderer;
 
 import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
 import com.jme.util.geom.BufferUtils;
 import com.jme.util.TextureManager;
 import com.jme.scene.state.jogl.JOGLTextureState;
@@ -35,6 +36,8 @@ import javax.media.opengl.glu.GLU;
  */
 public class TextureRenderBuffer extends RenderBuffer { 
     ColorRGBA bgColor = new ColorRGBA();
+
+    ByteBuffer textureReadBuffer = null;
         
     /**
      * The constructor
@@ -55,9 +58,13 @@ public class TextureRenderBuffer extends RenderBuffer {
             if (!isInitialized()) {
                 createTextureRenderer(display);
                 createTextureObjects(gl, display);
-                updateRenderList(skybox, renderComponents);
+                BufferUpdater bu = getBufferUpdater();
+                if (bu != null) {
+                    bu.init(this);
+                }
                 setInitialized(true);
             }
+            updateRenderList(skybox, renderComponents);
         }
     }
     
@@ -114,6 +121,8 @@ public class TextureRenderBuffer extends RenderBuffer {
         if (t.getMinificationFilter().usesMipMapLevels()) {
             gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
         }
+
+        textureReadBuffer = BufferUtils.createByteBuffer(getWidth()*getHeight()*4);
     }
     
     /**
@@ -142,5 +151,19 @@ public class TextureRenderBuffer extends RenderBuffer {
         getBackgroundColor(bgColor);
         getTextureRenderer().setBackgroundColor(bgColor);
         getTextureRenderer().render(getRenderList(), getTextureList(), true);
+        //JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
+        //gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
+    }
+
+    /**
+     * Get the actual texture data
+     */
+    public ByteBuffer getTextureData() {
+        GL gl = GLU.getCurrentGL();
+
+        JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
+        gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
+        //System.out.println("GetErroe: " + gl.glGetError());
+        return (textureReadBuffer);
     }
 }

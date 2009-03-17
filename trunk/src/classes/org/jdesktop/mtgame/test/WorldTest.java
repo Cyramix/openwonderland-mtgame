@@ -127,7 +127,7 @@ public class WorldTest {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent eventListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera, false, false);
+        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera, false, false, null);
         eventProcessor.setRunInRenderer(true);
         camera.addComponent(ProcessorComponent.class, eventProcessor);   
         wm.addEntity(camera);         
