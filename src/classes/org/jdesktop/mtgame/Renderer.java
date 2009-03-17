@@ -342,6 +342,11 @@ class Renderer extends Thread {
     ColorRGBA bgColor = new ColorRGBA();
 
     /**
+     * A lock to aquire when making jme scene graph changes
+     */
+    private Object jmeSGLock = new Object();
+
+    /**
      * A class to hold collision component actions
      */
     class CollisionComponentOp {
@@ -350,6 +355,19 @@ class Renderer extends Thread {
 
         CollisionComponentOp(CollisionComponent cc, boolean add) {
             this.cc = cc;
+            this.add = add;
+        }
+    }
+
+    /**
+     * A class to hold render component actions
+     */
+    class RenderComponentOp {
+        RenderComponent rc = null;
+        boolean add = false;
+
+        RenderComponentOp(RenderComponent rc, boolean add) {
+            this.rc = rc;
             this.add = add;
         }
     }
@@ -816,12 +834,14 @@ class Renderer extends Thread {
             for (int i=0; i<renderCanvases.length; i++) {
                 Canvas canvas = renderCanvases[i];
                 if (setCurrentCanvas(canvas)) {
-                    processJMEUpdates(totalTime / 1000000000.0f);
-                    if (renderBuffers()) {
-                        // If we rendered a buffer, need to reset the camera
-                        setCurrentCanvas(canvas);
+                    synchronized (jmeSGLock) {
+                        processJMEUpdates(totalTime / 1000000000.0f);
+                        if (renderBuffers()) {
+                            // If we rendered a buffer, need to reset the camera
+                            setCurrentCanvas(canvas);
+                        }
+                        renderScene(null);
                     }
-                    renderScene(null);
                     swapAndWait(0);
                 }
                 releaseCurrentCanvas();
@@ -1232,8 +1252,9 @@ class Renderer extends Thread {
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
                 synchronized (scenes) {
-                    processSceneGraph((RenderComponent)c);
-                    scenes.add(c);
+                    processSceneGraph((RenderComponent)c, true);
+                    RenderComponentOp rcop = new RenderComponentOp((RenderComponent)c, true);
+                    scenes.add(rcop);
                     scenesChanged = true;
                     entityChanged = true;
                 }
@@ -1281,7 +1302,9 @@ class Renderer extends Thread {
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
                 synchronized (scenes) {
-                    scenes.remove(c);
+                    processSceneGraph((RenderComponent)c, false);
+                    RenderComponentOp rcop = new RenderComponentOp((RenderComponent)c, false);
+                    scenes.add(rcop);
                     scenesChanged = true;
                     entityChanged = true;
                 }
@@ -1560,53 +1583,23 @@ class Renderer extends Thread {
                
     }
 
-    /**
+        /**
      * Check for scene changes
      */
     void processScenesChanged() {
         int len = 0;
         RenderComponent scene = null;
-        
-        // = (ArrayList)scenes.clone();
-        
-        // Minimize the numner of additions to the updateList
-        // First, let's look for removals
-        len = renderScenes.size();
-        for (int i=0; i<len;) {
-            scene = (RenderComponent) renderScenes.get(i);
-            if (scenes.contains(scene)) {
-                // move on to the next
-                i++;
+
+        for (int i = 0; i < scenes.size(); i++) {
+            RenderComponentOp rcop = (RenderComponentOp) scenes.get(i);
+            if (rcop.add) {
+                renderScenes.add(rcop.rc);
+                addToUpdateList(rcop.rc.getSceneRoot());
             } else {
-                // remove the scene, this will shift things down
-                renderScenes.remove(scene);
-                processGraphRemove(scene.getSceneRoot());
-                if (scene.getAttachPoint() != null) {
-                    processAttachPoint(scene, false);
-                }
-                len--;
+                renderScenes.remove(rcop.rc);
             }
         }
-      
-        // Now let's look for additions
-        for (int i=0; i<scenes.size(); i++) {
-            scene = (RenderComponent) scenes.get(i);
-            if (!renderScenes.contains(scene)) {
-                scene.updateLightState(globalLights);
-                processGraphAddition(scene.getSceneRoot());
-                renderScenes.add(scene);
-                if (scene.getAttachPoint() != null) {
-                    processAttachPoint(scene, true);
-                }
-                addToUpdateList(scene.getSceneRoot());
-            }
-        }
-        
-        // Just a sanity check
-        if (scenes.size() != renderScenes.size()) {
-            System.out.println("Error, Scene sizes differ: " + scenes.size() + ", " + renderScenes.size()); 
-        }
-       
+        scenes.clear();
     }
 
     private void processGraphAddition(Node node) {
@@ -1748,8 +1741,9 @@ class Renderer extends Thread {
         synchronized (orthos) {
             for (int i=0; i<orthos.size(); i++) {
                 RenderComponent rc = (RenderComponent) orthos.get(i);
-                processSceneGraph(rc);
-                addToUpdateList(rc.getSceneRoot());
+                Node sg = rc.getSceneRoot();
+                traverseGraph(sg, rc.getOrtho());
+                addToUpdateList(sg);
             }
             orthos.clear();
         }
@@ -1797,9 +1791,26 @@ class Renderer extends Thread {
     /**
      * Do any pre-processing on the scene graph
      */
-    void processSceneGraph(RenderComponent sc) {
+    void processSceneGraph(RenderComponent sc, boolean add) {
         Node sg = sc.getSceneRoot();
-        traverseGraph(sg, sc.getOrtho());
+
+        synchronized (jmeSGLock) {
+            if (add) {
+                sc.updateLightState(globalLights);
+                processGraphAddition(sg);
+                if (sc.getAttachPoint() != null) {
+                    processAttachPoint(sc, true);
+                }
+                addToUpdateList(sg);
+            } else {
+                processGraphRemove(sg);
+                if (sc.getAttachPoint() != null) {
+                    processAttachPoint(sc, false);
+                }
+            }
+
+            traverseGraph(sg, sc.getOrtho());
+        }
     }
     
     /**

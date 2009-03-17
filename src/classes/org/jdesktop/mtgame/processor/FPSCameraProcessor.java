@@ -46,6 +46,8 @@ import com.jme.light.LightNode;
 import java.awt.event.MouseEvent;
 import java.awt.event.KeyEvent;
 
+import org.jdesktop.mtgame.util.RenderCapture;
+
 
 /**
  * This is simple camera control which mimics the typical first person shooter
@@ -166,15 +168,22 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
      * The WorldManager
      */
     private WorldManager worldManager = null;
+
+    /**
+     * The render capture utility
+     */
+    private RenderCapture renderCapture = null;
     
     /**
      * The default constructor
      */
     public FPSCameraProcessor(AWTInputComponent listener, Node cameraNode,
-            WorldManager wm, Entity myEntity, boolean collide, boolean light) {
+            WorldManager wm, Entity myEntity, boolean collide, boolean light,
+            RenderCapture capture) {
         super(listener);
         target = cameraNode;
         worldManager = wm;
+        renderCapture = capture;
         setEntity(myEntity);
         
         collection = new ProcessorArmingCollection(this);
@@ -328,6 +337,11 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
     public void commit(ProcessorArmingCollection collection) {
         target.setLocalRotation(quaternion);
         target.setLocalTranslation(position);
+
+        if (renderCapture != null) {
+            renderCapture.setCameraData(position, quaternion);
+        }
+
         if (light) {
             lightNode.setLocalTranslation(position);
         }

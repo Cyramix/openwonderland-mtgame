@@ -211,9 +211,9 @@ public class RenderComponent extends EntityComponent {
     /**
      * Create a LightState with the current set of lights
      */
-    void updateLightState(ArrayList globalLights) {    
+    void updateLightState(ArrayList globalLights) {
         Entity e = getEntity();
-        
+
         lightState = (LightState) e.getWorldManager().
                 getRenderManager().createRendererState(RenderState.RS_LIGHT);
         for (int i = 0; i < globalLights.size(); i++) {
@@ -221,7 +221,7 @@ public class RenderComponent extends EntityComponent {
             e.getWorldManager().addToUpdateList(ln);
             lightState.attach(ln.getLight());
         }
-        
+
         for (int i = 0; i < lights.size(); i++) {
             LightNode ln = (LightNode) lights.get(i);
             e.getWorldManager().addToUpdateList(ln);
