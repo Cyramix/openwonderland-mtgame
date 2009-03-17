@@ -171,7 +171,7 @@ public class OrientationWorld {
     private String textureDir = "/Users/runner/Desktop/Orientation/textures";
     private Skybox skybox = null;
     private RenderCapture renderCapture = null;
-
+    private boolean doCapture = false;
     
     public OrientationWorld(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -479,12 +479,14 @@ public class OrientationWorld {
             canvasPanel.add(canvas);
             contentPane.add(canvasPanel, BorderLayout.CENTER);
 
-            renderCapture = new RenderCapture(wm, 400, 300, this);
-            captureCanvas = new MyCanvas(renderCapture);
-            captureCanvas.setSize(400, 300);
-            capturePanel.setLayout(new GridBagLayout());
-            capturePanel.add(captureCanvas);
-            contentPane.add(capturePanel, BorderLayout.EAST);
+            if (doCapture) {
+                renderCapture = new RenderCapture(wm, 400, 300, this);
+                captureCanvas = new MyCanvas(renderCapture);
+                captureCanvas.setSize(400, 300);
+                capturePanel.setLayout(new GridBagLayout());
+                capturePanel.add(captureCanvas);
+                contentPane.add(capturePanel, BorderLayout.EAST);
+            }
             
             // The options panel
             optionsPanel.setLayout(new GridBagLayout());

@@ -283,7 +283,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             rotation.m21 = worldTransform.basis.m21;
             rotation.m22 = worldTransform.basis.m22;
         }
-        collisionSystem.getWorldManager().getRenderManager().addRenderUpdater(this, this);
+        collisionSystem.getWorldManager().getRenderManager().addRenderUpdater(this, this, false);
     }
     
     /**
