@@ -60,30 +60,31 @@ public class WorkProcessor extends ProcessorComponent {
      */
     private LinkedList<WorkRecord> workCommitList = new LinkedList();
     private LinkedList<WorkRecord> workComputeList = new LinkedList();
-    private long postCommit;
-    private long postCompute;
+    private long postId;
 
     /**
      * The constructor
      */
     public WorkProcessor(String name, WorldManager wm) {
         worldManager = wm;
-        postCommit = worldManager.allocateEvent();
-        postCompute = worldManager.allocateEvent();
+        postId = worldManager.allocateEvent();
         this.name = name;
-        condition = new PostEventCondition(this, new long[] {postCommit, postCompute});
+        condition = new PostEventCondition(this, new long[] {postId});
     }
 
     @Override
     public void compute(ProcessorArmingCollection arg0) {
         synchronized (this) {
-            for (WorkRecord job : workComputeList) {
+            LinkedList<WorkRecord> list = workComputeList;
+            workComputeList = new LinkedList();
+
+            for (WorkRecord job : list) {
                 ((WorkCompute) job.worker).compute();
                 if (job.listener != null) {
                     job.listener.workDone(job.worker);
                 }
             }
-            workComputeList.clear();
+            list.clear();
         }
     }
 
@@ -96,13 +97,16 @@ public class WorkProcessor extends ProcessorComponent {
                 PostEventCondition pec = (PostEventCondition) arg0.get(0);
             }
 
-            for (WorkRecord job : workCommitList) {
+            LinkedList<WorkRecord> list = workCommitList;
+            workCommitList = new LinkedList();
+        
+            for (WorkRecord job : list) {
                 ((WorkCommit) job.worker).commit();
                 if (job.listener != null) {
                     job.listener.workDone(job.worker);
                 }
             }
-            workCommitList.clear();
+            list.clear();
         }
     }
 
@@ -137,7 +141,7 @@ public class WorkProcessor extends ProcessorComponent {
     public void addWorker(WorkCommit worker, WorkDoneListener listener) {
         synchronized (this) {
             workCommitList.add(new WorkRecord(worker, listener));
-            worldManager.postEvent(postCommit);
+            worldManager.postEvent(postId);
         }
     }
 
@@ -167,8 +171,13 @@ public class WorkProcessor extends ProcessorComponent {
     public void addWorker(WorkCompute worker, WorkDoneListener listener) {
         synchronized (this) {
             workComputeList.add(new WorkRecord(worker, listener));
-            worldManager.postEvent(postCompute);
+            worldManager.postEvent(postId);
         }
+    }
+
+    @Override
+    protected void finalize() {
+        worldManager.freeEvent(postId);
     }
 
     class WorkRecord {
