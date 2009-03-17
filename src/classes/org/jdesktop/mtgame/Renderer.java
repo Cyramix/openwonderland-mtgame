@@ -97,7 +97,6 @@ class Renderer extends Thread {
      * The list of render updaters
      */
     private ArrayList renderUpdateList = new ArrayList();
-    private ArrayList renderUpdateArgs = new ArrayList();
     
     /**
      * The list of scene objects that need their state updated
@@ -356,6 +355,22 @@ class Renderer extends Thread {
         CollisionComponentOp(CollisionComponent cc, boolean add) {
             this.cc = cc;
             this.add = add;
+        }
+    }
+
+    /**
+     * A class to hold render update operations
+     */
+    class RenderUpdaterOp {
+        RenderUpdater updater = null;
+        Object arg = null;
+        boolean wait = false;
+        boolean done = false;
+
+        RenderUpdaterOp(RenderUpdater up, Object arg, boolean wait) {
+            updater = up;
+            this.arg = arg;
+            this.wait = wait;
         }
     }
 
@@ -907,10 +922,19 @@ class Renderer extends Thread {
     /**
      * Add a RenderUpdater to the list of objects to update in the render thread.
      */
-    void addRenderUpdater(RenderUpdater ru, Object obj) {
+    void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
         synchronized (renderUpdateList) {
-            renderUpdateList.add(ru);
-            renderUpdateArgs.add(obj);
+            RenderUpdaterOp ruop = new RenderUpdaterOp(ru, obj, wait);
+            renderUpdateList.add(ruop);
+            if (wait) {
+                while (!ruop.done) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        System.out.println(e);
+                    }
+                }
+            }
         }
     }
      
@@ -944,23 +968,22 @@ class Renderer extends Thread {
      * Process anyone who wants to update in the render thread before rendering
      */
     void processRenderUpdates() {
-        RenderUpdater[] rus = null;
-        Object[] objs = null;
+        RenderUpdaterOp[] rus = null;
 
         synchronized (renderUpdateList) {
-            rus = new RenderUpdater[renderUpdateList.size()];
-            objs = new Object[renderUpdateList.size()];
+            rus = new RenderUpdaterOp[renderUpdateList.size()];
             for (int i = 0; i < renderUpdateList.size(); i++) {
-                rus[i] = (RenderUpdater) renderUpdateList.get(i);
-                objs[i] = (Object) renderUpdateArgs.get(i);
+                rus[i] = (RenderUpdaterOp) renderUpdateList.get(i);
             }
             renderUpdateList.clear();
-            renderUpdateArgs.clear();
         }
 
         for (int i = 0; i < rus.length; i++) {
             try {
-                rus[i].update(objs[i]);
+                rus[i].updater.update(rus[i].arg);
+                if (rus[i].wait) {
+                    rus[i].done = true;
+                }
             } catch (Exception e) {
                 System.out.println("MTGame: Exception Caught in renderer update: " + e);
                 e.printStackTrace();

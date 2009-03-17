@@ -301,9 +301,16 @@ public class WorldManager {
      * Add a updater to be called in the render thread
      */
     public void addRenderUpdater(RenderUpdater ru, Object obj) {
-        renderManager.addRenderUpdater(ru, obj);
+        renderManager.addRenderUpdater(ru, obj, false);
     }
-    
+
+    /**
+     * Add a updater to be called in the render thread
+     */
+    public void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
+        renderManager.addRenderUpdater(ru, obj, wait);
+    }
+
     /**
      * Remove a listener from the list of listening for scene changes
      */

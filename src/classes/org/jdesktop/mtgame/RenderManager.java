@@ -319,8 +319,8 @@ public class RenderManager {
     /**
      * Add a updater to be called in the render thread
      */
-    void addRenderUpdater(RenderUpdater ru, Object obj) {
-        renderer.addRenderUpdater(ru, obj);
+    void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
+        renderer.addRenderUpdater(ru, obj, wait);
     }
     
     /**
