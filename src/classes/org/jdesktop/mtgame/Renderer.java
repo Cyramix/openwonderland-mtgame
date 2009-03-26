@@ -923,16 +923,16 @@ class Renderer extends Thread {
      * Add a RenderUpdater to the list of objects to update in the render thread.
      */
     void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
+        RenderUpdaterOp ruop = new RenderUpdaterOp(ru, obj, wait);
         synchronized (renderUpdateList) {
-            RenderUpdaterOp ruop = new RenderUpdaterOp(ru, obj, wait);
             renderUpdateList.add(ruop);
-            if (wait) {
-                while (!ruop.done) {
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        System.out.println(e);
-                    }
+        }
+        if (wait) {
+            while (!ruop.done) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    System.out.println(e);
                 }
             }
         }
