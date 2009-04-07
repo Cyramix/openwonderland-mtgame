@@ -171,12 +171,21 @@ public class RenderManager {
 
     /**
      * Get an object from the renderer
+     * @deprecated
      */
     public RenderState createRendererState(int type) {
         renderer.waitUntilReady();
         return (renderer.createRendererState(type));
     }
-         
+
+    /**
+     * Get an object from the renderer
+     */
+    public RenderState createRendererState(RenderState.StateType type) {
+        renderer.waitUntilReady();
+        return (renderer.createRendererState(type));
+    }
+
     /**
      * Add a global light to the scene
      */
@@ -400,6 +409,14 @@ public class RenderManager {
      */
     Object getCollisionLock() {
         return (renderer.getCollisionLock());
+    }
+
+    /**
+     * The jme lock used during graph updates
+     * @return
+     */
+    Object getJMESGLock() {
+        return (renderer.getJMESGLock());
     }
 
 }

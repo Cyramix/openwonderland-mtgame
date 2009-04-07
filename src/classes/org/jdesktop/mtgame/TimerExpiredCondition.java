@@ -41,6 +41,11 @@ public class TimerExpiredCondition extends ProcessorArmingCondition {
      * The time between triggers
      */
     private long time = -1;
+
+    /**
+     * The time that we started this coundown
+     */
+    private long startTime = -1;
     
     /**
      * The default constructor

@@ -141,8 +141,8 @@ public class AttachPointTest implements RenderUpdater {
         wm = new WorldManager("TestWorld");
         
         try {
-            vert = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleVertShader");
-            frag = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleFragShader");
+            vert = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleVertShader");
+            frag = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleFragShader");
         } catch (MalformedURLException e) {
             System.out.println(e);
         }
@@ -231,7 +231,7 @@ public class AttachPointTest implements RenderUpdater {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -246,7 +246,7 @@ public class AttachPointTest implements RenderUpdater {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -499,14 +499,14 @@ public class AttachPointTest implements RenderUpdater {
     private Node createTeapotModel(float x, float y, float z, ColorRGBA color) {
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
+        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.StateType.GLSLShaderObjects);
         shader.setUniform("color", color);
         // Defer loading until we are in the renderer
         wm.addRenderUpdater(this, shader);

@@ -299,7 +299,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         // Setup filtering and wrap
         RenderContext<?> context = display.getCurrentContext();
         TextureStateRecord record = (TextureStateRecord) context
-                .getStateRecord(RenderState.RS_TEXTURE);
+                .getStateRecord(RenderState.StateType.Texture);
         TextureRecord texRecord = record.getTextureRecord(t.getTextureId(), t.getType());
 
         JOGLTextureState.applyFilter(t, texRecord, 0, record);

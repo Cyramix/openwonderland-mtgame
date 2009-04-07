@@ -229,7 +229,7 @@ public class ShaderTest implements RenderUpdater {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -244,7 +244,7 @@ public class ShaderTest implements RenderUpdater {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -476,14 +476,14 @@ public class ShaderTest implements RenderUpdater {
     private Node createTeapotModel(float x, float y, float z, ColorRGBA color) {
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
+        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.StateType.GLSLShaderObjects);
         shader.setUniform("color", color);
         // shader.load(vert, frag);
         // Defer loading until we are in the renderer - this is actually a jme bug we are working around.

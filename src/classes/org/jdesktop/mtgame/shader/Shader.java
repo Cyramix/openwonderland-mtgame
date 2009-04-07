@@ -32,7 +32,7 @@ public abstract class Shader implements RenderUpdater {
         vertexShader = vShader;
         fragmentShader = fShader;
         shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
-                createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
+                createRendererState(RenderState.StateType.GLSLShaderObjects);
         worldManager.addRenderUpdater(this, this);        
     }
     

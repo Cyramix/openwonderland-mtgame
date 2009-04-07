@@ -167,7 +167,7 @@ public class JBSelectionProcessor extends AWTEventProcessorComponent {
         camera = ocp;
         
         lineSG = new Node("Selection Line");
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
@@ -297,19 +297,19 @@ public class JBSelectionProcessor extends AWTEventProcessorComponent {
             e.addComponent(RenderComponent.class, rc);
         }
         
-        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         node.setRenderState(buf);
 
-        BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+        BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
         as.setEnabled(true);
         as.setBlendEnabled(true);
         as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
         as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
         node.setRenderState(as);
 
-        CullState cs = (CullState) worldManager.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cs = (CullState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cs.setEnabled(true);
         cs.setCullFace(CullState.Face.Back);
         node.setRenderState(cs);

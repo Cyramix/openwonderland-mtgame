@@ -745,7 +745,14 @@ class Renderer extends Thread {
      */
     RenderState createRendererState(int type) {
         return (jmeRenderer.createState(type));
-    } 
+    }
+
+    /**
+     * Get an object from the jME Renderer
+     */
+    RenderState createRendererState(RenderState.StateType type) {
+        return (jmeRenderer.createState(type));
+    }
                
     /**
      * Create the jmeCamera
@@ -923,16 +930,20 @@ class Renderer extends Thread {
      * Add a RenderUpdater to the list of objects to update in the render thread.
      */
     void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
-        RenderUpdaterOp ruop = new RenderUpdaterOp(ru, obj, wait);
-        synchronized (renderUpdateList) {
-            renderUpdateList.add(ruop);
-        }
-        if (wait) {
-            while (!ruop.done) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
+        if (wait && Thread.currentThread() == this) {
+            ru.update(obj);
+        } else {
+            RenderUpdaterOp ruop = new RenderUpdaterOp(ru, obj, wait);
+            synchronized (renderUpdateList) {
+                renderUpdateList.add(ruop);
+            }
+            if (wait) {
+                while (!ruop.done) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        System.out.println(e);
+                    }
                 }
             }
         }
@@ -1812,6 +1823,13 @@ class Renderer extends Thread {
     }
     
     /**
+     * The jme lock used during graph updates
+     */
+    Object getJMESGLock() {
+        return (jmeSGLock);
+    }
+    
+    /**
      * Do any pre-processing on the scene graph
      */
     void processSceneGraph(RenderComponent sc, boolean add) {
@@ -1862,7 +1880,7 @@ class Renderer extends Thread {
      * This mehod checks for transpaency attributes
      */
     void setRenderQueue(Spatial s, boolean ortho) {
-        BlendState blendState = (BlendState) s.getRenderState(RenderState.RS_BLEND);
+        BlendState blendState = (BlendState) s.getRenderState(RenderState.StateType.Blend);
         if (ortho) {
             s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_ORTHO);
         } else {

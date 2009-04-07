@@ -238,12 +238,12 @@ public class WorldShader {
                     Texture.MagnificationFilter.NearestNeighbor);
             normMap.setWrap(Texture.WrapMode.Clamp);
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             g.setRenderState(buf);
 
-            TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+            TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
             ts.setEnabled(true);
             ts.setTexture(tex2d, 0);
             ts.setTexture(normMap, 1);
@@ -403,7 +403,7 @@ public class WorldShader {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -418,7 +418,7 @@ public class WorldShader {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -588,7 +588,7 @@ public class WorldShader {
             Node modelRoot = new Node("Model");
             
             
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);
@@ -606,7 +606,7 @@ public class WorldShader {
         private void createTeapot() {
             Node node = new Node();
             Teapot teapot = new Teapot();
-            teapot.resetData();
+            teapot.updateGeometryData();
             node.attachChild(teapot);
             
             Triangle[] tris = new Triangle[teapot.getTriangleCount()];
@@ -617,21 +617,21 @@ public class WorldShader {
         
             ColorRGBA color = new ColorRGBA();
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
-            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
             matState.setDiffuse(color);
             
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
 
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -668,19 +668,19 @@ public class WorldShader {
                 e.addComponent(RenderComponent.class, sc);
             }
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             node.setRenderState(buf);
 
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
 
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -828,11 +828,11 @@ public class WorldShader {
         node.setLocalScale(new Vector3f(5.0f, 5.0f, 5.0f));
         
         TangentBinormalGenerator.generate(box);
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
-        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         if (dMap != null) {
            ts.setTexture(dMap, 0); 
         }
@@ -937,14 +937,14 @@ public class WorldShader {
 
         ColorRGBA color = new ColorRGBA();
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
         
-        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setTexture(t, 0);
         if (transparent) {
             ts.setTexture(nMap, 1);
@@ -1002,39 +1002,17 @@ public class WorldShader {
         q.fromAngleAxis((float)(Math.PI/2.0), new Vector3f(1.0f, 0.0f, 0.0f));
         orthoQuad.setLocalRotation(q);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         orthoQuad.setRenderState(buf);
                 
-        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setEnabled(true);
         ts.setTexture(tex2d, 0);
         ts.setTexture(normMap, 1);
-        //ts.setTexture(shadowMapBuffer.getTexture(), 2);
         quadGeo.setRenderState(ts);
-    
-        /*
-        BlendState discardShadowFragments = (BlendState)wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
-        discardShadowFragments.setEnabled(true);
-        discardShadowFragments.setBlendEnabled(true);
-        discardShadowFragments
-                .setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-        discardShadowFragments
-                .setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-        quadGeo.setRenderState(discardShadowFragments);
-        
-        MaterialState darkMaterial = (MaterialState)wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
-        darkMaterial.setEnabled(true);
-        darkMaterial.setDiffuse(new ColorRGBA(0, 0, 0, 0.3f));
-        darkMaterial.setAmbient(new ColorRGBA(0, 0, 0, 0f));
-        darkMaterial.setShininess(0);
-        darkMaterial.setSpecular(new ColorRGBA(0, 0, 0, 0));
-        darkMaterial.setEmissive(new ColorRGBA(0, 0, 0, 0));
-        darkMaterial.setMaterialFace(MaterialState.MaterialFace.Front);
-        quadGeo.setRenderState(darkMaterial);
-         * */
-        
+ 
         orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
         e.addComponent(RenderComponent.class, orthoRC);
         wm.addEntity(e);

@@ -298,7 +298,7 @@ public class PassTest implements RenderUpdater {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -313,7 +313,7 @@ public class PassTest implements RenderUpdater {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -401,15 +401,15 @@ public class PassTest implements RenderUpdater {
         skybox.setTexture(Skybox.Face.Down, down);
         //skybox.preloadTextures();
 
-        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cullState.setEnabled(true);
         skybox.setRenderState(cullState);
 
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         //zState.setEnabled(false);
         skybox.setRenderState(zState);
 
-        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fs.setEnabled(false);
         skybox.setRenderState(fs);
 
@@ -473,7 +473,7 @@ public class PassTest implements RenderUpdater {
         TextureState ts6 = createLightmapTextureState(urlpath + "jmetest/data/texture/terrain/lightmap.jpg");
 
         // alpha used for blending the passnodestates together
-        BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+        BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
         as.setBlendEnabled(true);
         as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
         as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
@@ -482,7 +482,7 @@ public class PassTest implements RenderUpdater {
         as.setEnabled(true);
 
         // alpha used for blending the lightmap
-        BlendState as2 = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+        BlendState as2 = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
         as2.setBlendEnabled(true);
         as2.setSourceFunction(BlendState.SourceFunction.DestinationColor);
         as2.setDestinationFunction(BlendState.DestinationFunction.SourceColor);
@@ -532,7 +532,7 @@ public class PassTest implements RenderUpdater {
         splattingPassNode.lockShadows();
 
         splattingPassNode.setCullHint(Spatial.CullHint.Dynamic);
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         zState.setEnabled(true);
         zState.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         splattingPassNode.setRenderState(zState);
@@ -592,7 +592,7 @@ public class PassTest implements RenderUpdater {
     }
     
     private TextureState createSplatTextureState(String texture, String alpha) {
-        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         URL url = null;
         try {
             url = new URL(texture);
@@ -616,7 +616,7 @@ public class PassTest implements RenderUpdater {
     }
 
     private TextureState createLightmapTextureState(String texture) {
-        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         URL url = null;
         try {
             url = new URL(texture);
@@ -659,7 +659,7 @@ public class PassTest implements RenderUpdater {
         waterEffectRenderPass.addReflectedScene(reflectionTerrain);
         waterEffectRenderPass.setSkybox(skybox);
         
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         zState.setEnabled(true);
         zState.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         waterQuad.setRenderState(zState);
@@ -675,12 +675,12 @@ public class PassTest implements RenderUpdater {
     
     private void setupEnvironment(Node rootNode) {
 
-        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cs.setCullFace(CullState.Face.Back);
         rootNode.setRenderState(cs);
         rootNode.setLightCombineMode(Spatial.LightCombineMode.Off);
 
-        FogState fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        FogState fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fogState.setDensity(1.0f);
         fogState.setEnabled(true);
         fogState.setColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
@@ -724,7 +724,7 @@ public class PassTest implements RenderUpdater {
             System.out.println(e);
         }
         // create some interesting texturestates for splatting
-        TextureState ts1 = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts1 = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         Texture t0 = TextureManager.loadTexture(url,
                 Texture.MinificationFilter.Trilinear,
                 Texture.MagnificationFilter.Bilinear);
@@ -755,12 +755,12 @@ public class PassTest implements RenderUpdater {
      
     
     private void initSpatial(Spatial spatial) {
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         spatial.setRenderState(buf);
 
-        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cs.setCullFace(CullState.Face.Back);
         spatial.setRenderState(cs);
 
@@ -1079,7 +1079,7 @@ public class PassTest implements RenderUpdater {
     private Node createTeapotModel(int number, float x, float y, float z, boolean transparent) {
         Node node = new Node("Teapot " + number);
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
         Triangle[] tris = new Triangle[teapot.getTriangleCount()];
@@ -1089,19 +1089,19 @@ public class PassTest implements RenderUpdater {
 
         ColorRGBA color = new ColorRGBA();
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
         if (transparent) {
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
             
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -1109,7 +1109,7 @@ public class PassTest implements RenderUpdater {
             color.set(0.0f, 1.0f, 1.0f, 0.75f);
         }
 
-        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
         
         node.setRenderState(matState);
@@ -1123,14 +1123,14 @@ public class PassTest implements RenderUpdater {
     private Node createTeapotModel(float x, float y, float z, ColorRGBA color) {
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
+        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.StateType.GLSLShaderObjects);
         shader.setUniform("color", color);
         // shader.load(vert, frag);
         // Defer loading until we are in the renderer - this is actually a jme bug we are working around.

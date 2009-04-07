@@ -310,18 +310,20 @@ public class ConfigManager implements ResourceLocator {
         // Now load the model
         ColladaImporter.load(fileStream, "Model");
         Node model = ColladaImporter.getModel();
-        worldManager.applyConfig(model);
+        if (model != null) {
+            worldManager.applyConfig(model);
 
-        model.setLocalTranslation(trans);
-        model.setLocalRotation(rot);
-        model.setLocalScale(scale);
-        addModel(model);
+            model.setLocalTranslation(trans);
+            model.setLocalRotation(rot);
+            model.setLocalScale(scale);
+            addModel(model);
+        }
     }
 
     void addModel(Node model) {
         Node modelRoot = new Node("Model");
 
-        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         modelRoot.setRenderState(buf);
@@ -419,7 +421,7 @@ public class ConfigManager implements ResourceLocator {
             shader = new DiffuseNormalSpecAOMap(worldManager);
         } else if (name.equals("DiffuseNormalSpecAOMapAlpha")) {
             shader = new DiffuseNormalSpecAOMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setReference(0.5f);
             as.setTestFunction(BlendState.TestFunction.GreaterThan);
@@ -427,7 +429,7 @@ public class ConfigManager implements ResourceLocator {
             s.setRenderState(as);
         } else if (name.equals("DiffuseNormalSpecMapAlpha")) {
             shader = new DiffuseNormalSpecMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setReference(0.5f);
             as.setTestFunction(BlendState.TestFunction.GreaterThan);
@@ -437,7 +439,7 @@ public class ConfigManager implements ResourceLocator {
             shader = new DiffuseMap(worldManager);
         } else if (name.equals("DiffuseMapAlpha")) {
             shader = new DiffuseMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setReference(0.5f);
             as.setTestFunction(BlendState.TestFunction.GreaterThan);
@@ -445,7 +447,7 @@ public class ConfigManager implements ResourceLocator {
             s.setRenderState(as);
         } else if (name.equals("DiffuseMapAlphaMap")) {
             shader = new DiffuseMapAlphaMap(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setReference(0.5f);
             as.setTestFunction(BlendState.TestFunction.GreaterThan);
@@ -458,7 +460,7 @@ public class ConfigManager implements ResourceLocator {
 
 
     private TextureState createTextureState(String[] params, Spatial s) {
-        TextureState ts = ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.RS_TEXTURE);;
+        TextureState ts = ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Texture);;
          // Loop through the shader params
         for (int i=0; i<params.length; i++) {
             String param = params[i];

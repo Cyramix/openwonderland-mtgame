@@ -137,7 +137,7 @@ public class WorldTest {
     private void createTestEntities(WorldManager wm) {
         ColorRGBA color = new ColorRGBA();
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
@@ -165,10 +165,10 @@ public class WorldTest {
         // The center teapot
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
-        matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
         node.setRenderState(matState);
         node.setRenderState(buf);
@@ -189,7 +189,7 @@ public class WorldTest {
         ColorRGBA color = new ColorRGBA();
         Vector3f center = new Vector3f();
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
@@ -239,7 +239,7 @@ public class WorldTest {
         BoundingBox bbox = new BoundingBox(center, 50.0f, 50.0f, 50.0f);
         node.setModelBound(bbox);
         node.setRenderState(buf);
-        matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
         node.setRenderState(matState);
         
