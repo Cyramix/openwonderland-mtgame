@@ -191,7 +191,7 @@ public class ProjectedWater implements RenderUpdater {
         movingObjects = createObjects();
         reflectedNode.attachChild(movingObjects);
         rootNode.attachChild(reflectedNode);
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         //zState.setEnabled(false);
         rootNode.setRenderState(zState);
         
@@ -240,7 +240,7 @@ public class ProjectedWater implements RenderUpdater {
     
     
     private void setupFog() {
-        fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fogState.setDensity(1.0f);
         fogState.setEnabled(true);
         fogState.setColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
@@ -298,15 +298,15 @@ public class ProjectedWater implements RenderUpdater {
         skybox.setTexture(Skybox.Face.Up, up);
         skybox.setTexture(Skybox.Face.Down, down);
 
-        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cullState.setEnabled(true);
         skybox.setRenderState(cullState);
 
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         //zState.setEnabled(false);
         skybox.setRenderState(zState);
 
-        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fs.setEnabled(false);
         skybox.setRenderState(fs);
 
@@ -614,7 +614,7 @@ public class ProjectedWater implements RenderUpdater {
         try {
             Torus torus = new Torus("Torus", 50, 50, 10, 20);
             torus.setLocalTranslation(new Vector3f(50, -5, 20));
-            TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+            TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
             url = new URL(urlpath + "jmetest/data/images/Monkey.jpg");
             Texture t0 = TextureManager.loadTexture(url,
                     Texture.MinificationFilter.Trilinear,
@@ -630,7 +630,7 @@ public class ProjectedWater implements RenderUpdater {
             torus.setRenderState(ts);
             objects.attachChild(torus);
 
-            ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+            ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
             url = new URL(urlpath + "jmetest/data/texture/wall.jpg");
             t0 = TextureManager.loadTexture(url,
                     Texture.MinificationFilter.Trilinear,
@@ -660,7 +660,7 @@ public class ProjectedWater implements RenderUpdater {
             box.setRenderState(ts);
             objects.attachChild(box);
 
-            ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+            ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
             url = new URL(urlpath + "jmetest/data/images/Monkey.jpg");
             t0 = TextureManager.loadTexture(url,
                     Texture.MinificationFilter.Trilinear,
@@ -686,12 +686,12 @@ public class ProjectedWater implements RenderUpdater {
 
     private void setupEnvironment(Node rootNode) {
 
-        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cs.setCullFace(CullState.Face.Back);
         rootNode.setRenderState(cs);
         rootNode.setLightCombineMode(Spatial.LightCombineMode.Off);
 
-        FogState fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        FogState fogState = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fogState.setDensity(1.0f);
         fogState.setEnabled(true);
         fogState.setColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));

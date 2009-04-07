@@ -156,7 +156,7 @@ public class ColladaLoader {
     
     private SwingFrame frame = null;
     //private String loadfile = "/Users/runner/Desktop/CGFXTest.dae";
-    private String loadfile = "/Users/runner/Desktop/Orientation/terrain.dae";
+    private String loadfile = "/Users/runner/Desktop/OrientationWorld/terrain.dae";
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -266,7 +266,7 @@ public class ColladaLoader {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -281,7 +281,7 @@ public class ColladaLoader {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -442,7 +442,7 @@ public class ColladaLoader {
         private void addModel(Node model) {
             Node modelRoot = new Node("Model");
                     
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);

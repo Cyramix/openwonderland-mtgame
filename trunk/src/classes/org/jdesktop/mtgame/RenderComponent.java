@@ -109,23 +109,25 @@ public class RenderComponent extends EntityComponent {
        
        // Nothing to do if we don't have an entity
        if (e != null && e.getWorldManager() != null) {
-           // First, see if we need to detach from our current location
-           if (attachPoint != null) {
-               // Detach and put the highest parent on the update list
-               Node current = attachPoint;
-               Node parent = current.getParent();
-               while (parent != null) {
-                   current = parent;
-                   parent = parent.getParent();
+           synchronized (e.getWorldManager().getRenderManager().getJMESGLock()) {
+               // First, see if we need to detach from our current location
+               if (attachPoint != null) {
+                   // Detach and put the highest parent on the update list
+                   Node current = attachPoint;
+                   Node parent = current.getParent();
+                   while (parent != null) {
+                       current = parent;
+                       parent = parent.getParent();
+                   }
+                   attachPoint.detachChild(sceneRoot);
+                   e.getWorldManager().addToUpdateList(current);
                }
-               attachPoint.detachChild(sceneRoot);
-               e.getWorldManager().addToUpdateList(current);
-           }
 
-           // Now, see if we need to notify new attachment
-           if (ap != null) {
-               ap.attachChild(sceneRoot);
-               e.getWorldManager().addToUpdateList(ap);
+               // Now, see if we need to notify new attachment
+               if (ap != null) {
+                   ap.attachChild(sceneRoot);
+                   e.getWorldManager().addToUpdateList(ap);
+               }
            }
        }
        attachPoint = ap;
@@ -215,7 +217,7 @@ public class RenderComponent extends EntityComponent {
         Entity e = getEntity();
 
         lightState = (LightState) e.getWorldManager().
-                getRenderManager().createRendererState(RenderState.RS_LIGHT);
+                getRenderManager().createRendererState(RenderState.StateType.Light);
         for (int i = 0; i < globalLights.size(); i++) {
             LightNode ln = (LightNode) globalLights.get(i);
             e.getWorldManager().addToUpdateList(ln);

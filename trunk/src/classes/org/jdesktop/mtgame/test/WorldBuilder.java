@@ -242,7 +242,7 @@ public class WorldBuilder {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -257,7 +257,7 @@ public class WorldBuilder {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -427,7 +427,7 @@ public class WorldBuilder {
             Node modelRoot = new Node("Model");
             
             
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);
@@ -445,7 +445,7 @@ public class WorldBuilder {
         private void createTeapot() {
             Node node = new Node();
             Teapot teapot = new Teapot();
-            teapot.resetData();
+            teapot.updateGeometryData();
             node.attachChild(teapot);
             
             Triangle[] tris = new Triangle[teapot.getTriangleCount()];
@@ -456,21 +456,21 @@ public class WorldBuilder {
         
             ColorRGBA color = new ColorRGBA();
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
-            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+            MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
             matState.setDiffuse(color);
             
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
 
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -507,19 +507,19 @@ public class WorldBuilder {
                 e.addComponent(RenderComponent.class, sc);
             }
 
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             node.setRenderState(buf);
 
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
 
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -628,7 +628,7 @@ public class WorldBuilder {
     private Node createTeapotModel(float x, float y, float z, boolean transparent) {
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
         Triangle[] tris = new Triangle[teapot.getTriangleCount()];
@@ -638,19 +638,19 @@ public class WorldBuilder {
 
         ColorRGBA color = new ColorRGBA();
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         
         if (transparent) {
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.RS_BLEND);
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setBlendEnabled(true);
             as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
             as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
             node.setRenderState(as);
             
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             cs.setEnabled(true);
             cs.setCullFace(CullState.Face.Back);
             node.setRenderState(cs);
@@ -658,7 +658,7 @@ public class WorldBuilder {
             color.set(0.0f, 1.0f, 1.0f, 0.75f);
         }
 
-        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.RS_MATERIAL);
+        MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
         
         node.setRenderState(matState);

@@ -58,7 +58,7 @@ class ProcessorThread extends Thread {
     /**
      * The Queue of Processor Components to be run.
      */
-    private LinkedList queue = new LinkedList();
+    private LinkedList<ProcessorComponent> queue = new LinkedList<ProcessorComponent>();
     
     /**
      * A flag indicating that we are available
@@ -139,15 +139,12 @@ class ProcessorThread extends Thread {
      * This method places a task on the processesor queue - if the processor
      * is waiting
      */
-    synchronized boolean runTask(ProcessorComponent pc) {
+    synchronized void runTask(ProcessorComponent pc) {
         if (waiting) {
             //System.out.println("Processor " + processorNumber + " grabbing task: " + pc);
             queue.add(pc);
             waiting = false;
             notify();
-            return (true);
-        } else {
-            return (false);
         }
     }
     
@@ -168,19 +165,21 @@ class ProcessorThread extends Thread {
      * 
      * @return
      */
-    private synchronized ProcessorComponent getNextProcessorComponent() {
+    synchronized ProcessorComponent getNextProcessorComponent() {
         ProcessorComponent pc = null;
            
         if (queue.isEmpty()) {
             waiting = true;
             processorManager.notifyDone(this);
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println(e);
+            while (queue.isEmpty()) {
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    System.out.println(e);
+                }
             }
         }         
-        pc = (ProcessorComponent) queue.removeFirst();
+        pc = queue.removeFirst();
         return (pc);
     } 
 

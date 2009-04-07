@@ -319,11 +319,11 @@ public class OrientationWorld {
         skybox.setTexture(Skybox.Face.Up, up);
         skybox.setTexture(Skybox.Face.Down, down);
 
-        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cullState.setEnabled(true);
         skybox.setRenderState(cullState);
 
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         //zState.setEnabled(false);
         skybox.setRenderState(zState);
 
@@ -345,7 +345,7 @@ public class OrientationWorld {
         Entity e = new Entity("Axis");
         Node axis = new Node("Axis");
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         axis.setRenderState(buf);
@@ -562,7 +562,7 @@ public class OrientationWorld {
         private void addModel(Node model, boolean enableLighting, boolean manipulate) {
             Node modelRoot = new Node("Model");
                     
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);

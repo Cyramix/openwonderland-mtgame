@@ -121,12 +121,12 @@ public class Mirror {
         quat.fromAxes(side, up, dir);
         mirror.setLocalRotation(quat);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         quad.setRenderState(buf);
 
-        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.RS_TEXTURE);
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setEnabled(true);
         ts.setTexture(rb.getTexture(), 0);
         quad.setRenderState(ts);

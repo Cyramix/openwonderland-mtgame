@@ -239,7 +239,7 @@ public class SkyboxTest implements RenderUpdater {
             startz += 5.0f;
             endz += 5.0f;
         }
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
          
@@ -254,7 +254,7 @@ public class SkyboxTest implements RenderUpdater {
     }
     
     private void createAxis() { 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             
@@ -305,15 +305,15 @@ public class SkyboxTest implements RenderUpdater {
         skybox.setTexture(Skybox.Face.Down, down);
         //skybox.preloadTextures();
 
-        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.RS_CULL);
+        CullState cullState = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
         cullState.setEnabled(true);
         skybox.setRenderState(cullState);
 
-        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState zState = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         //zState.setEnabled(false);
         skybox.setRenderState(zState);
 
-        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.RS_FOG);
+        FogState fs = (FogState) wm.getRenderManager().createRendererState(RenderState.StateType.Fog);
         fs.setEnabled(false);
         skybox.setRenderState(fs);
 
@@ -549,14 +549,14 @@ public class SkyboxTest implements RenderUpdater {
     private Node createTeapotModel(float x, float y, float z, ColorRGBA color) {
         Node node = new Node();
         Teapot teapot = new Teapot();
-        teapot.resetData();
+        teapot.updateGeometryData();
         node.attachChild(teapot);
 
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.RS_ZBUFFER);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
 
-        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.RS_GLSL_SHADER_OBJECTS);
+        GLSLShaderObjectsState shader = (GLSLShaderObjectsState) wm.getRenderManager().createRendererState(RenderState.StateType.GLSLShaderObjects);
         shader.setUniform("color", color);
         // shader.load(vert, frag);
         // Defer loading until we are in the renderer - this is actually a jme bug we are working around.
