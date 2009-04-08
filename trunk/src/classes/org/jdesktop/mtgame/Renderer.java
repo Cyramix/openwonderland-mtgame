@@ -395,6 +395,7 @@ class Renderer extends Thread {
         renderManager = rm;
         screenNumber = screenNum;
         desiredFrameTime = 1000000000/desiredFrameRate;
+        setName("MTGame Renderer");
     }
     
     /**

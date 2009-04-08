@@ -29,50 +29,83 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.jdesktop.mtgame;
+package org.jdesktop.mtgame.processor;
+
+import org.jdesktop.mtgame.*;
+import com.jme.scene.Node;
+import com.jme.math.Quaternion;
 
 /**
- * This condition triggers a timer condition
+ * This is a simple test processor that rotates a node around the Y axis
+ * a little bit every frame
  * 
  * @author Doug Twilleager
  */
-public class TimerExpiredCondition extends ProcessorArmingCondition {
+public class TimedRotationProcessor extends ProcessorComponent {     
     /**
-     * The time between triggers
+     * The WorldManager - used for adding to update list
      */
-    private long time = -1;
+    private WorldManager worldManager = null;
+    /**
+     * The current degrees of rotation
+     */
+    private float degrees = 0.0f;
 
     /**
-     * The time that we started this coundown
+     * The increment to rotate each frame
      */
-    private long startTime = -1;
+    private float increment = 0.0f;
     
     /**
-     * The default constructor
+     * The rotation matrix to apply to the target
      */
-    public TimerExpiredCondition(ProcessorComponent pc, long time) {
-        super(pc);
-        this.time = time;
+    private Quaternion quaternion = new Quaternion();
+    
+    /**
+     * The rotation target
+     */
+    private Node target = null;
+    
+    /**
+     * A name
+     */
+    private String name = null;
+    
+    /**
+     * The constructor
+     */
+    public TimedRotationProcessor(String name, WorldManager worldManager, Node target, float increment, long waitTime) {
+        this.worldManager = worldManager;
+        this.target = target;
+        this.increment = increment;
+        this.name = name;
+        setArmingCondition(new TimerExpiredCondition(this, waitTime));
+    }
+    
+    public String toString() {
+        return (name);
     }
     
     /**
-     * Get the time between triggers
+     * The initialize method
      */
-    public long getTime() {
-        return (time);
+    public void initialize() {
+        //setArmingCondition(new NewFrameCondition(this));
+    }
+    
+    /**
+     * The Calculate method
+     */
+    public void compute(ProcessorArmingCollection collection) {
+        degrees += increment;
+        quaternion.fromAngles(0.0f, degrees, 0.0f);
     }
 
     /**
-     * Set the time that started the countdown
+     * The commit method
      */
-    void setStartTime(long time) {
-       startTime = time;
-    }
-
-    /**
-     * Get the time that started the countdown
-     */
-    long getStartTime() {
-        return (startTime);
+    public void commit(ProcessorArmingCollection collection) {
+        target.setLocalRotation(quaternion);
+        worldManager.addToUpdateList(target);
     }
 }

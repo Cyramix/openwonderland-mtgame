@@ -124,6 +124,7 @@ class ProcessorManager extends Thread {
      * The default constructor
      */
     ProcessorManager(WorldManager wm) {
+        setName("Processor Manager Thread");
         worldManager  = wm;
         numProcessors = Runtime.getRuntime().availableProcessors();
         
@@ -191,13 +192,6 @@ class ProcessorManager extends Thread {
             // This includes any chained processors
             runList = waitForProcessorsTriggered();
             dispatchTasks(runList);
-
-//            // Hand off work until we are done with the compute phase
-//            for (int i=0; i<runList.length; i++) {
-//                // Assign the task.  This will wait for an available processor
-//                dispatchTask(runList[i]);
-//
-//            }
             
             // Now, let the renderer complete the commit phase
             worldManager.runCommitList(runList);
@@ -324,12 +318,15 @@ class ProcessorManager extends Thread {
     /**
      * Arm a timer expired condition
      */
-    void armTimerExpired(TimerExpiredCondition condition) {
+    synchronized void armTimerExpired(TimerExpiredCondition condition) {
         ProcessorComponent pc = condition.getProcessorComponent();
-        
+
         synchronized (timeElapseArmed) {
             if (!timeElapseArmed.contains(pc)) {
+                condition.setStartTime(System.currentTimeMillis());
                 timeElapseArmed.add(pc);
+                // Kick the scheduler
+                notify();
             }
         }      
     }
@@ -526,14 +523,16 @@ class ProcessorManager extends Thread {
     synchronized ProcessorComponent[] waitForProcessorsTriggered() {
         ProcessorComponent[] runList = new ProcessorComponent[0];
 
-        if (processorsTriggered.size() == 0) {
+        long waitTime = checkTimerConditions();
+        while (processorsTriggered.size() == 0) {
             waiting = true;
             try {
-                wait();
+                wait(waitTime);
             } catch (InterruptedException e) {
                 System.out.println(e);
             }
             waiting = false;
+            waitTime = checkTimerConditions();
         }
 
         runList = (ProcessorComponent[]) processorsTriggered.toArray(runList);
@@ -541,7 +540,58 @@ class ProcessorManager extends Thread {
         
         return(runList);
     }
-    
+
+    /**
+     * Checks to see if any timer conditions have expired.
+     * If yes, then it triggers them.  If not, it returns
+     * the number of miliseconds before the closest one will
+     * trigger
+     */
+    long checkTimerConditions() {
+        long waitTime = Long.MAX_VALUE;
+        long elapsedTime = Long.MAX_VALUE;
+        int index = 0;
+
+        synchronized (timeElapseArmed) {
+            if (timeElapseArmed.size() == 0) {
+                return (0);
+            }
+
+            long currentTime = System.currentTimeMillis();
+            int length = timeElapseArmed.size();
+            for (int i=0; i<length; i++) {
+                ProcessorComponent pc = (ProcessorComponent)timeElapseArmed.get(index);
+                TimerExpiredCondition tec = (TimerExpiredCondition)findCondition(TimerExpiredCondition.class, pc.getArmingCondition());
+
+                if (pc.isEnabled()) {
+                    elapsedTime = currentTime - tec.getStartTime();
+
+                    long timeLeft = tec.getTime() - elapsedTime;
+                    //System.out.println("Checking Time" + i + ": " + timeLeft);
+                    if (timeLeft < 0) {
+                        pc.addTriggerCondition(tec);
+                        addToTriggered(pc);
+                        timeElapseArmed.remove(index);
+                    } else {
+                        if (timeLeft < waitTime) {
+                            waitTime = timeLeft;
+                        }
+                        index++;
+                    }
+                } else {
+                    index++;
+                }
+            }
+            // Can't have a wait time <=0
+            if (waitTime <= 0) {
+                waitTime = 1;
+            }
+
+        }
+
+        return (waitTime);
+    }
+
     /**
      * This re-arms processors once they are done commiting
      */
