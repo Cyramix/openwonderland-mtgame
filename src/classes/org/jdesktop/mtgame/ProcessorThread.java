@@ -82,6 +82,7 @@ class ProcessorThread extends Thread {
         processorManager = pm;
         processorNumber = procNumber;
         name = "Processor " + procNumber;
+        setName(name);
     }
     
     /**

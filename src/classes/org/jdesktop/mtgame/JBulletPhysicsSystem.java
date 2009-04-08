@@ -72,6 +72,7 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
         JBulletDynamicCollisionSystem cs = (JBulletDynamicCollisionSystem)collisionSystem;
         world = cs.getDynamicsWorld();
         thread = new Thread(this);
+        thread.setName("JBullet Physics Thread");
         
         thread.start();
         try {

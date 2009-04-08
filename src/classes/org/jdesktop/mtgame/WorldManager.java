@@ -41,7 +41,7 @@ import java.util.Iterator;
 import java.awt.Canvas;
 import java.io.InputStream;
 import java.net.URL;
-
+import javolution.util.FastMap;
 
 /**
  * This is the class which manages everything in the system.
@@ -50,6 +50,11 @@ import java.net.URL;
  * @author Doug Twilleager
  */
 public class WorldManager {
+    /**
+     * The collection of all known world managers
+     */
+    private static final FastMap worldManagers = new FastMap();
+
     /**
      * The name of this world
      */
@@ -106,6 +111,7 @@ public class WorldManager {
      */
     public WorldManager(String name) {
         this.name = name;
+        worldManagers.put(name, this);
         renderManager = new RenderManager(this);
         processorManager = new ProcessorManager(this);
         processorManager.initialize();
@@ -115,6 +121,13 @@ public class WorldManager {
         physicsManager = new PhysicsManager(this);
         configManager = new ConfigManager(this);
         //System.out.println("Done Initializing!");
+    }
+
+    /**
+     * Get the world manager named by the given name
+     */
+    public static WorldManager getWorldManager(String name) {
+        return ((WorldManager)worldManagers.get(name));
     }
     
     /**
