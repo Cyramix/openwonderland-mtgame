@@ -73,6 +73,9 @@ final public class TextureKey implements Savable {
 
     private void digestPath(URL location)
     {
+        if (location==null)
+            return;
+
         String urlString = location.toString();
         int assetIndex = urlString.indexOf("assets/");
         if (assetIndex != -1) // Of interest to us

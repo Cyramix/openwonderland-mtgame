@@ -53,6 +53,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.media.opengl.DebugGL;
+import javax.media.opengl.TraceGL;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCanvas;
@@ -537,7 +538,14 @@ public class JOGLDisplaySystem extends DisplaySystem {
         // Enable automatic checking for OpenGL errors.
         // TODO Make this configurable, possibly from a system property.
         // TODO Can this be centralized in createGLCanvas?
-        autoDrawable.setGL(new DebugGL(autoDrawable.getGL()));
+        GL glImpl;
+        if (logger.isLoggable(Level.FINEST))
+            glImpl = new TraceGL(autoDrawable.getGL(), System.err);
+        else if (logger.isLoggable(Level.FINE))
+            glImpl = new DebugGL(autoDrawable.getGL());
+        else
+            glImpl = autoDrawable.getGL();
+        autoDrawable.setGL(glImpl);
 
         // TODO Move this into the canvas, instead of grabbing the current
         // current GLAutoDrawable, since this precludes multiple canvases.
