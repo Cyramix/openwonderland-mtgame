@@ -148,7 +148,7 @@ public class RenderComponent extends EntityComponent {
 
        if (ortho != flag) {
            ortho = flag;
-           if (e != null) {
+           if (e != null && e.getWorldManager() != null) {
                e.getWorldManager().getRenderManager().changeOrthoFlag(this);
            }
        }
@@ -169,7 +169,7 @@ public class RenderComponent extends EntityComponent {
        
        if (lightingEnabled != flag) {
            lightingEnabled = flag;
-           if (e != null) {
+           if (e != null && e.getWorldManager() != null) {
                e.getWorldManager().getRenderManager().changeLighting(this);
            }
        }
@@ -190,7 +190,7 @@ public class RenderComponent extends EntityComponent {
 
         synchronized (lights) {
             lights.add(light);
-            if (e != null) {
+            if (e != null && e.getWorldManager() != null) {
                 e.getWorldManager().getRenderManager().changeLighting(this);
             }
         }
@@ -204,7 +204,7 @@ public class RenderComponent extends EntityComponent {
 
         synchronized (lights) {
             lights.remove(light);
-            if (e != null) {
+            if (e != null && e.getWorldManager() != null) {
                 e.getWorldManager().getRenderManager().changeLighting(this);
             }
         }

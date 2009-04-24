@@ -1606,6 +1606,7 @@ class Renderer extends Thread {
         SkyboxComponent sbox = null;
 
         synchronized (skyboxes) {
+            currentSkybox = null;
             for (int i=0; i<skyboxes.size(); i++) {
                 sbox = (SkyboxComponent) skyboxes.get(i);
                 if (sbox.getCurrent()) {
