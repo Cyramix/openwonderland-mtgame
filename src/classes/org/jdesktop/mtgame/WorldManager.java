@@ -353,7 +353,14 @@ public class WorldManager {
     public void addUserData(Class key, Object data) {
         userData.put(key, data);
     }
-   
+
+    /**
+     * Remove user data
+     */
+    public void removeUserData(Class key) {
+        userData.remove(key);
+    }
+
     /**
      * Get user data
      */

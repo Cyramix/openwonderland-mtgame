@@ -700,7 +700,7 @@ class ProcessorManager extends Thread {
                 pc = (ProcessorComponent) postEventArmed.get(index);               
                 condition = (PostEventCondition)findCondition(PostEventCondition.class, pc.getArmingCondition());
                 
-                if (pc.isEnabled() && condition.eventsPending()) {
+                if (pc.isEnabled() && condition != null && condition.eventsPending()) {
                     condition.freezeEvents();
                     pc.addTriggerCondition(condition);
 
