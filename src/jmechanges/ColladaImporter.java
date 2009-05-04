@@ -2899,15 +2899,25 @@ public class ColladaImporter {
                             vecs[k] = new Vector3f(floats[(k * stride)],
                                     floats[(k * stride) + 1], 0.0f);
                         }
-                    } else {
-                        assert (3 == stride);
+                    } else if (3==stride) {
                         for (int k = 0; k < vecs.length; k++) {
                             vecs[k] = new Vector3f(floats[(k * stride)],
                                     floats[(k * stride) + 1],
                                     floats[(k * stride) + 2]);
                         }
-                    }
-                    put(source.getid().toString(), vecs);
+                    } else if (4 == stride) {
+                         for (int k = 0; k < vecs.length; k++) {
+                             vecs[k] = new Vector3f(floats[(k * stride)],
+                                     floats[(k * stride) + 1],
+                                     floats[(k * stride) + 2]);
+                         }
+                         logger.severe("4 Stride Mesh, Alpha is being ignored :-(");
+                         // TODO This should be color not Vector3f
+                     } else {
+                         logger.severe("Unsupported stride size for mesh "+stride);
+                         continue;
+                     }
+                     put(source.getid().toString(), vecs);
                 }
             }
         }
