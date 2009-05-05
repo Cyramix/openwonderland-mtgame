@@ -116,9 +116,9 @@ public abstract class Geometry extends Spatial implements Serializable, Savable 
      * The compiled list of renderstates for this geometry, taking into account
      * ancestors' states - updated with updateRenderStates()
      */
-    public RenderState[] states = new RenderState[RenderState.StateType.values().length];
+    public transient RenderState[] states = new RenderState[RenderState.StateType.values().length];
 
-    private LightState lightState;
+    private transient LightState lightState;
     
     protected ColorRGBA defaultColor = new ColorRGBA(ColorRGBA.white);
 
@@ -980,6 +980,8 @@ public abstract class Geometry extends Spatial implements Serializable, Savable 
         binormalBuf = BufferUtils.deserializeFloatBuffer(input);
         fogBuf = BufferUtils.deserializeFloatBuffer(input);
         // texture coords
+        // Render states
+        states = new RenderState[RenderState.StateType.values().length];
     }
 }
 

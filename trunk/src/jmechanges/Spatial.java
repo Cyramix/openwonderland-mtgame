@@ -205,7 +205,7 @@ public abstract class Spatial implements Serializable, Savable {
     protected BoundingVolume worldBound;
 
     /** The render states of this spatial. */
-    protected RenderState[] renderStateList;
+    protected transient RenderState[] renderStateList;
 
     protected int renderQueueMode = Renderer.QUEUE_INHERIT;
 
