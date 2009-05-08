@@ -31,6 +31,7 @@
 
 package org.jdesktop.mtgame;
 
+import com.jme.bounding.CollisionTreeManager;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.nio.IntBuffer;
@@ -62,7 +63,7 @@ public class JMECollisionSystem extends CollisionSystem {
      * The list of collision components to be used for collision queries
      */
     private ArrayList collisionComponents = new ArrayList();
-    private HashMap spatialMap = new HashMap();
+    private HashMap<Node, CollisionComponent> spatialMap = new HashMap();
     
     /**
      * Cached camera information
@@ -94,6 +95,7 @@ public class JMECollisionSystem extends CollisionSystem {
         synchronized (collisionComponents) {
             collisionComponents.remove(cc);
             spatialMap.remove(cc.getNode());
+            CollisionTreeManager.getInstance().removeCollisionTree(cc.getNode());
         }
     }
 
