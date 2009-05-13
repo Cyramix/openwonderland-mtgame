@@ -129,20 +129,37 @@ public class RenderManager {
         cc.createJMECamera(this);
         return (cc);
     }  
-    
+
     /**
      * Create a RenderBuffer of the given type, width, and height
      */
     public RenderBuffer createRenderBuffer(RenderBuffer.Target target, int width, int height) {
         RenderBuffer rb = null;
         if (target == RenderBuffer.Target.ONSCREEN) {
-            rb = new OnscreenRenderBuffer(target, width, height);
+            rb = new OnscreenRenderBuffer(target, width, height, 0);
         } else if (target == RenderBuffer.Target.TEXTURE_2D) {
-            rb = new TextureRenderBuffer(target, width, height);
+            rb = new TextureRenderBuffer(target, width, height, 0);
         } else if (target == RenderBuffer.Target.TEXTURE_CUBEMAP) {
-            rb = new CubeMapRenderBuffer(target, width, height);
+            rb = new CubeMapRenderBuffer(target, width, height, 0);
         } else if (target == RenderBuffer.Target.SHADOWMAP) {
-            rb = new ShadowMapRenderBuffer(target, width, height);
+            rb = new ShadowMapRenderBuffer(target, width, height, 0);
+        }
+        return (rb);
+    }
+
+    /**
+     * Create a RenderBuffer of the given type, width, and height
+     */
+    public RenderBuffer createRenderBuffer(RenderBuffer.Target target, int width, int height, int order) {
+        RenderBuffer rb = null;
+        if (target == RenderBuffer.Target.ONSCREEN) {
+            rb = new OnscreenRenderBuffer(target, width, height, order);
+        } else if (target == RenderBuffer.Target.TEXTURE_2D) {
+            rb = new TextureRenderBuffer(target, width, height, order);
+        } else if (target == RenderBuffer.Target.TEXTURE_CUBEMAP) {
+            rb = new CubeMapRenderBuffer(target, width, height, order);
+        } else if (target == RenderBuffer.Target.SHADOWMAP) {
+            rb = new ShadowMapRenderBuffer(target, width, height, order);
         }
         return (rb);
     }

@@ -59,6 +59,7 @@ import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jme.system.lwjgl.LWJGLDisplaySystem;
 import java.lang.reflect.Method;
 import javolution.util.FastMap;
+import javolution.util.FastList;
 import java.lang.Exception;
 
 /**
@@ -174,11 +175,6 @@ class Renderer extends Thread {
     private ArrayList globalLights = new ArrayList();
     
     /**
-     * The current list of renderable passes
-     */
-    private ArrayList renderPasses = new ArrayList();
-    
-    /**
      * The array list of passes
      */
     private ArrayList passes = new ArrayList();
@@ -207,7 +203,7 @@ class Renderer extends Thread {
      * The array list of orthographic projection render components waiting
      * to have their status changed
      */
-    private ArrayList orthos = new ArrayList();
+    private ArrayList<OrthoOp> orthos = new ArrayList();
     
     /**
      * A boolean indicating that the orthos list has changed
@@ -306,26 +302,36 @@ class Renderer extends Thread {
      * The jME Renderer object
      */
     private com.jme.renderer.Renderer jmeRenderer = null;
-    
-    /**
-     * The list of Canvases to render into
-     */
-    private ArrayList canvasList = new ArrayList();
-    private boolean canvasChanged = false;
-    private Canvas[] renderCanvases = new Canvas[0];
-        
+
     /**
      * The list of Buffers to render into
      */
     private ArrayList bufferList = new ArrayList();
     private boolean buffersChanged = false;
-    private RenderBuffer[] offscreenRenderList = new RenderBuffer[0];
-    
+  
+    /**
+     * The list of all render buffers (off and on screen) in order
+     */
+    private FastList<RenderBuffer> renderBufferList = new FastList();
+    private RenderBuffer currentScreenBuffer = null;
+
+    /**
+     * The lists of opaque, transparent, and ortho spatials to draw
+     */
+    private FastList<Spatial> renderList = new FastList<Spatial>();
+    private FastList<PassComponent> passList = new FastList<PassComponent>();
+    private FastList<Spatial> transparentList = new FastList<Spatial>();
+    private FastList<Spatial> orthoList = new FastList<Spatial>();
+
+    /**
+     * The list of RenderTechniques
+     */
+    private FastList<RenderTechnique> renderTechniques = new FastList<RenderTechnique>();
+
     /**
      * The current rendering canvas
      */
     private GLCanvas currentCanvas = null;
-    private Canvas currentAWTCanvas = null;
     private GLContext glContext = null;
     
     /**
@@ -386,7 +392,26 @@ class Renderer extends Thread {
             this.add = add;
         }
     }
-                
+
+    public enum ListType {
+        Opaque,
+        Transparent,
+        Ortho
+    }
+
+    /**
+     * A class to hold ortho actions
+     */
+    class OrthoOp {
+        RenderComponent rc = null;
+        boolean on = false;
+
+        OrthoOp(RenderComponent rc, boolean on) {
+            this.rc = rc;
+            this.on = on;
+        }
+    }
+
     /**
      * The constructor
      */
@@ -416,7 +441,7 @@ class Renderer extends Thread {
     /**
      * Create a canvas using the info in the RenderBuffer object
      */
-    Canvas createCanvas(RenderBuffer rb) {
+    GLCanvas createCanvas(RenderBuffer rb) {
         int width = rb.getWidth();
         int height = rb.getHeight();
        
@@ -430,7 +455,7 @@ class Renderer extends Thread {
         MyImplementor impl = new MyImplementor(this, rb, (Canvas)canvas, width, height);
         canvas.setImplementor(impl);
          
-        return ((Canvas)canvas);
+        return ((GLCanvas)canvas);
     }
 
     
@@ -438,85 +463,18 @@ class Renderer extends Thread {
         if (!initialized) {
             initialize();     
         }
-        
-        switch (rb.getTarget()) {
-            case ONSCREEN:
-                rb.setCanvas(createCanvas(rb));
-                break;
-            case TEXTURE_1D:
-            case TEXTURE_2D:
-            case TEXTURE_CUBEMAP:
-            case SHADOWMAP:
-                //createTextureRenderer(rb);
-                break; 
-        }
+
+        // For onscreen canvases, create the canvas, but don't add
+        // it to the buffer list until it has been mapped.  For all
+        // others, add them to the buffer list.
         synchronized (bufferList) {
-            bufferList.add(rb);
-            buffersChanged = true;
-        }
-    }
-    
-    RenderBuffer findRenderBuffer(Canvas c) {
-        RenderBuffer rb = null;
-        
-        synchronized (bufferList) {
-            for (int i=0; i<bufferList.size(); i++) {
-                rb = (RenderBuffer) bufferList.get(i);
-                if (rb.getCanvas() == c) {
-                    break;
-                }
-            }
-        }
-        return (rb);
-    }
-    
-    boolean setCurrentCanvas(Canvas canvas) {
-        boolean doRender = true;
-        GL gl = null;
-        
-        currentAWTCanvas = canvas;
-        if (useJOGL) {
-            currentCanvas = (GLCanvas) canvas;
-            glContext = currentCanvas.getContext();
-            try {
-                glContext.makeCurrent();
-            } catch (javax.media.opengl.GLException e) {
-                System.out.println(e);
-            }
-            gl = glContext.getGL();
-            if (displaySystem.getMinSamples() == 0) {
-                gl.glDisable(GL.GL_MULTISAMPLE);
+            if (rb.getTarget() == RenderBuffer.Target.ONSCREEN) {
+                ((OnscreenRenderBuffer)rb).setCanvas(createCanvas(rb));
             } else {
-                gl.glEnable(GL.GL_MULTISAMPLE);
+                bufferList.add(rb);
+                buffersChanged = true;
             }
-        } else {
-            //((LWJGLDisplaySystem)displaySystem).setCurrentCanvas((JMECanvas) currentCanvas);
-            ((LWJGLDisplaySystem) displaySystem).switchContext(currentCanvas);
         }
-        
-        RenderBuffer rb = findRenderBuffer(canvas); 
-        CameraComponent cc = rb.getCameraComponent();
-        if (cc != null) {
-            Camera camera = cc.getCamera();
-            if (rb.getWidth() != canvas.getWidth() ||
-                rb.getHeight() != canvas.getHeight()) {
-                rb.setWidth(canvas.getWidth());
-                rb.setHeight(canvas.getHeight());
-                camera.resize(canvas.getWidth(), canvas.getHeight());
-            }
-            camera.update();
-            jmeRenderer.setCamera(camera);
-            rb.getBackgroundColor(bgColor);
-            jmeRenderer.setBackgroundColor(bgColor);
-        } else {
-            doRender = false;
-        }
-        return (doRender);
-    }
-    
-    void releaseCurrentCanvas() {
-        // Release the AWT lock
-        glContext.release();    
     }
     
     /**
@@ -543,16 +501,14 @@ class Renderer extends Thread {
         initialized = true;
     }
     
-    void addCanvas(Canvas c) {
+    void addOnscreenBuffer(RenderBuffer rb) {
         synchronized (bufferList) {
-            synchronized (canvasList) {
-                if (jmeRenderer == null) {
-                    jmeRenderer = displaySystem.getRenderer();
-                }
-                canvasList.add(c);
-                canvasChanged = true;
-                buffersChanged = true;
+            if (jmeRenderer == null) {
+                jmeRenderer = displaySystem.getRenderer();
+                jmeRenderer.getQueue().setTwoPassTransparency(false);
             }
+            bufferList.add(rb);
+            buffersChanged = true;
         }
     }
     
@@ -565,79 +521,66 @@ class Renderer extends Thread {
             }
         }
     }
-    
-    /**
-     * Update the list of canvases for rendering
-     */
-    void updateCanvasList() {
-        renderCanvases = new Canvas[canvasList.size()];
-        for (int i=0; i<canvasList.size(); i++) {
-            renderCanvases[i] = (Canvas) canvasList.get(i);
-        }
-    }
-    
-    /**
-     * Update the list of offscreen buffers to render into
-     */
-    void updateOffscreenList() {
-        int numOffscreenBuffers = 0;
-        int index = 0;
-        RenderBuffer rb = null;
 
-        for (int i = 0; i < bufferList.size(); i++) {
-            rb = (RenderBuffer) bufferList.get(i);
-            if (rb.getTexture() != null) {
-                numOffscreenBuffers++;
-            }
-        }
-                
-        offscreenRenderList = new RenderBuffer[numOffscreenBuffers];
-        for (int i = 0; i < bufferList.size(); i++) {
-            rb = (RenderBuffer) bufferList.get(i);
-            if (rb.getTexture() != null) {
-                offscreenRenderList[index++] = rb;
-            }
-        }
-    }
-    
     /**
-     * Check for canvas and buffer changes
+     * Check for new buffers and update lists accordingly
      */
-    void checkForRenderBuffers() {
+    private void updateBuffers() {
+        int startIndex = 0;
+
         synchronized (bufferList) {
-            synchronized (canvasList) {
-                if (canvasChanged) {
-                    updateCanvasList();
-                    canvasChanged = false;
-                }
-            }
             if (buffersChanged) {
-                updateOffscreenList();
+                renderBufferList.clear();
+
+                // Start with offscreen buffers
+                for (int i = 0; i < bufferList.size(); i++) {
+                    RenderBuffer rb = (RenderBuffer) bufferList.get(i);
+                    if (rb.getTarget() != RenderBuffer.Target.ONSCREEN) {
+                        insertRenderBuffer(startIndex, rb);
+                    }
+                }
+
+                // Now the onscreen buffers, starting where we left off
+                startIndex = renderBufferList.size();
+                for (int i = 0; i < bufferList.size(); i++) {
+                    RenderBuffer rb = (RenderBuffer) bufferList.get(i);
+                    if (rb.getTarget() == RenderBuffer.Target.ONSCREEN) {
+                        insertRenderBuffer(startIndex, rb);
+                        currentScreenBuffer = rb;
+                    }
+                }
                 buffersChanged = false;
             }
         }
     }
-    
+
+    /**
+     * Insert the given render buffer into the list, start checking
+     * at the given index
+     */
+    private void insertRenderBuffer(int startIndex, RenderBuffer rb) {
+        if (renderBufferList.size() == startIndex) {
+            renderBufferList.add(rb);
+        } else {
+            RenderBuffer currentRb = renderBufferList.get(startIndex);
+            int index = 0;
+            while (currentRb != null && rb.getOrder() < currentRb.getOrder()) {
+                index++;
+                currentRb = renderBufferList.get(index);
+            }
+            renderBufferList.add(index - 1, rb);
+        }
+    }
+
     /**
      * Process all buffer and entity updates
      */
-    void processEntityUpdates() {
-        checkForRenderBuffers();
+    private void processInternalUpdates() {
+        //checkForRenderBuffers();
+        updateBuffers();
         synchronized (pickLock) {
             checkForEntityChanges();
         }     
-    }
-    
-    /**
-     * Give the offscreen buffers a chance to initialize/reset
-     */
-    void processBufferUpdates() {
-        RenderBuffer rb = null;
-        
-        for (int i = 0; i < offscreenRenderList.length; i++) {
-            rb = (RenderBuffer) offscreenRenderList[i];
-            rb.update(displaySystem, currentSkybox, renderScenes);
-        }
     }
     
     /**
@@ -649,7 +592,6 @@ class Renderer extends Thread {
          * thread be called
          */
         processRenderUpdates();
-        processBufferUpdates();
 
         /* 
          * This block handles any state updates needed to any of the graphs
@@ -666,64 +608,6 @@ class Renderer extends Thread {
             GeometryLOD lod = (GeometryLOD) geometryLODs.get(i);
             lod.applyShader(position);
         }
-    }
-    
-    /**
-     * Render to all the offscreen buffers
-     */
-    boolean renderBuffers() {
-        RenderBuffer rb = null;
-        
-        if (offscreenRenderList.length == 0) {
-            return (false);
-        }
-        
-        for (int i = 0; i < offscreenRenderList.length; i++) {
-            rb = (RenderBuffer) offscreenRenderList[i];
-            rb.render(this);
-            if (rb.getRenderUpdater() != null) {
-                rb.getRenderUpdater().update(rb);
-            }
-        }    
-        
-        return (true);
-    }
-    
-    /**
-     * This renders the scene to the current canvas
-     */
-    void renderScene(ArrayList excludeList) {
-        // First, clear the buffers
-        //jmeRenderer.setBackgroundColor(new ColorRGBA(1.0f, 0.0f, 0.0f, 0.0f));
-        jmeRenderer.clearQueue();
-        jmeRenderer.getQueue().setTwoPassTransparency(true);
-        jmeRenderer.clearBuffers();
-
-        // Render the skybox
-        if (currentSkybox != null) {
-            jmeRenderer.draw(currentSkybox);
-        }
-
-        /*
-         * This block does the actual rendering of the frame
-         */
-        for (int i = 0; i < renderScenes.size(); i++) {
-            RenderComponent scene = (RenderComponent) renderScenes.get(i);
-            if (scene.getAttachPoint() == null) {
-                Node sceneRoot = scene.getSceneRoot();
-                if (excludeList == null || !excludeList.contains(sceneRoot)) {
-                    jmeRenderer.draw(sceneRoot);
-                }
-            }
-        }
-
-        for (int i = 0; i < renderPasses.size(); i++) {
-            PassComponent pc = (PassComponent) renderPasses.get(i);
-            pc.getPass().renderPass(jmeRenderer);
-        }
-
-        // This actually does the rendering
-        jmeRenderer.renderQueue();     
     }
     
     void printGraph(Spatial s) {
@@ -760,18 +644,6 @@ class Renderer extends Thread {
      */
     Camera createJMECamera(int width, int height) {  
         return (jmeRenderer.createCamera(width, height));   
-    }
-    
-    void swapAndWait(long time) {
-        currentCanvas.swapBuffers();
-
-        if (time != 0) {
-            try {
-                Thread.sleep(time);
-            } catch (InterruptedException e) {
-                System.out.println(e);
-            }
-        }
     }
     
     void setRunning(boolean flag) {
@@ -831,6 +703,7 @@ class Renderer extends Thread {
         long frameStartTime = -1;
         long renderTime = -1;
         long totalTime = -1;
+        FastList<Spatial> spatialList = null;
                     
         initRenderer();   
         while (!done) {
@@ -846,7 +719,7 @@ class Renderer extends Thread {
             // Snapshot the current time
             frameStartTime = System.nanoTime();
 
-            processEntityUpdates();
+            processInternalUpdates();
 
             /* 
              * This block of code handles calling entity processes which are
@@ -854,22 +727,82 @@ class Renderer extends Thread {
              */
             runProcessorsTriggered();
                 
-            for (int i=0; i<renderCanvases.length; i++) {
-                Canvas canvas = renderCanvases[i];
-                if (setCurrentCanvas(canvas)) {
-                    synchronized (jmeSGLock) {
+            // Ready to update and render.  Don't let anyone in.
+            synchronized (jmeSGLock) {
+                // Process any jME updates.  We need to make an onscreen
+                // canvas current for this, so we pick the last one on the
+                // list.
+                if (renderBufferList.size() != 0) {
+                    if (currentScreenBuffer != null &&
+                            currentScreenBuffer.makeCurrent(displaySystem, jmeRenderer)) {
                         processJMEUpdates(totalTime / 1000000000.0f);
-                        if (renderBuffers()) {
-                            // If we rendered a buffer, need to reset the camera
-                            setCurrentCanvas(canvas);
+
+                        for (int i = 0; i < renderBufferList.size(); i++) {
+                            RenderBuffer rb = renderBufferList.get(i);
+                            if (rb != currentScreenBuffer) {
+                                rb.makeCurrent(displaySystem, jmeRenderer);
+                            }
+
+                            rb.clear(jmeRenderer);
+
+//                            opaqueList.clear();
+//                            transparentList.clear();
+//                            orthoList.clear();
+                            renderList.clear();
+                            for (int j = 0; j < renderTechniques.size(); j++) {
+                                RenderTechnique rt = renderTechniques.get(j);
+                                rt.startFrame(rb);
+
+                                spatialList = rt.getSpatials(rb);
+                                if (spatialList != null) {
+                                    renderList.addAll(renderList.size(), spatialList);
+                                }
+//
+//                                spatialList = rt.getTransparent(rb);
+//                                if (spatialList != null) {
+//                                    mergeSpatialList(spatialList, transparentList, ListType.Transparent);
+//                                }
+//
+//                                spatialList = rt.getOrtho(rb);
+//                                if (spatialList != null) {
+//                                    mergeSpatialList(spatialList, orthoList, ListType.Ortho);
+//                                }
+                            }
+
+                            //printList(opaqueList, ListType.Opaque);
+                            //printList(transparentList, ListType.Transparent);
+                            //printList(orthoList, ListType.Ortho);
+
+                            if (currentSkybox != null) {
+                                renderList.add(currentSkybox);
+                            }
+
+                            for (int pass = 0; pass < rb.numRenderPasses(); pass++) {
+                                rb.preparePass(jmeRenderer, renderList, passList, pass);
+                                rb.renderOpaque(jmeRenderer);
+                                rb.renderPass(jmeRenderer);
+                                rb.renderTransparent(jmeRenderer);
+                                rb.renderOrtho(jmeRenderer);
+                                rb.completePass(jmeRenderer, pass);
+                            }
+
+                            for (int j = 0; j < renderTechniques.size(); j++) {
+                                renderTechniques.get(j).endFrame(rb);
+                            }
+
+                            if (rb.getRenderUpdater() != null) {
+                                rb.getRenderUpdater().update(rb);
+                            }
+
+                            rb.swap();
+                            if (rb != currentScreenBuffer) {
+                                rb.release();
+                            }
                         }
-                        renderScene(null);
+                        currentScreenBuffer.release();
                     }
-                    swapAndWait(0);
                 }
-                releaseCurrentCanvas();
             }
-            
             /*
              * Now we track some times, and process the commit lists
              */
@@ -880,21 +813,27 @@ class Renderer extends Thread {
             processTime = desiredFrameTime - renderTime;
             
             // Process the commit list
-                            
-            for (int i = 0; i < renderCanvases.length; i++) {
-                Canvas canvas = renderCanvases[i];
-                setCurrentCanvas(canvas);
-                synchronized (pickLock) {
-                    processCommitList(processTime);
-                    if (processTime < 0) {
-                        //System.out.println("NEED TO ADAPT TO NEGATIVE PROCESS TIME");
+
+            if (renderBufferList.size() != 0) {
+                if (renderBufferList.getLast().getTarget() == RenderBuffer.Target.ONSCREEN) {
+                    renderBufferList.getLast().makeCurrent(displaySystem, jmeRenderer);
+
+                    synchronized (pickLock) {
+                        processCommitList(processTime);
+                        if (processTime < 0) {
+                            //System.out.println("NEED TO ADAPT TO NEGATIVE PROCESS TIME");
+                        }
                     }
+                    renderBufferList.getLast().release();
                 }
-                releaseCurrentCanvas();
             }
                        
             // Let the processes know that we want to do a frame tick
             renderManager.triggerNewFrame();
+
+            //System.out.println("Max Memory: " + Runtime.getRuntime().maxMemory());
+            //System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
+            //System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
           
             // Decide if we need to sleep
             totalTime = System.nanoTime() - frameStartTime;
@@ -926,7 +865,75 @@ class Renderer extends Thread {
             }
         }
     }
-    
+
+    /**
+     * Populate the render queue by taking the list of spatials
+     * and drawing them.
+     */
+    private void populateRenderQueue(FastList<Spatial> list) {
+        for (int i=0; i<list.size(); i++) {
+            jmeRenderer.draw(list.get(i));
+        }
+    }
+
+    /**
+     * Merge two sorted lists.  The first is the source, the second is
+     * the destination.  The type dictates how to compare.
+     */
+    private void mergeSpatialList(FastList<Spatial> source, FastList<Spatial> dest, ListType type) {
+        int j=0;
+
+        for (int i=0; i<source.size(); i++) {
+            Spatial src = source.get(i);
+            for (j=0; j<dest.size(); j++) {
+                Spatial dst = dest.get(j);
+                if (type == ListType.Opaque) {
+                    if (src.queueDistance < dst.queueDistance) {
+                        continue;
+                    }
+                } else if (type == ListType.Transparent) {
+                    if (src.queueDistance > dst.queueDistance) {
+                        continue;
+                    }
+                } else {
+                    if (src.getZOrder() > src.getZOrder()) {
+                        continue;
+                    }
+                }
+            }
+            if (dest.size() == 0) {
+                dest.add(src);
+            } else {
+                dest.add(j-1, src);
+            }
+        }
+    }
+
+    private void printList(FastList<Spatial> list, ListType type) {
+        float value = 0.0f;
+
+        switch (type) {
+            case Opaque:
+                System.out.println("====================== OPAQUE LIST ==================");
+                break;
+            case Transparent:
+                System.out.println("====================== TRANSPARENT LIST ==================");
+                break;
+            case Ortho:
+                System.out.println("====================== ORTHO LIST ==================");
+                break;
+        }
+
+        for (int i=0; i<list.size(); i++) {
+            if (type == ListType.Ortho) {
+                value = list.get(i).getZOrder();
+            } else {
+                value = list.get(i).queueDistance;
+            }
+            System.out.println("Spatial: " + list.get(i) + ", " + value);
+        }
+    }
+
     /**
      * Add a RenderUpdater to the list of objects to update in the render thread.
      */
@@ -956,7 +963,8 @@ class Renderer extends Thread {
     void changeOrthoFlag(RenderComponent rc) {
         synchronized (entityLock) {
             synchronized (orthos) {
-                orthos.add(rc);
+                OrthoOp oop = new OrthoOp(rc, rc.getOrtho());
+                orthos.add(oop);
                 orthosChanged = true;
                 entityChanged = true;
             }
@@ -1218,7 +1226,9 @@ class Renderer extends Thread {
                 }
             }
             pc.clearTriggerCollection();
-            worldManager.armProcessorComponent(pc.getArmingCondition());
+            if (pc.getEntityProcessController() != null) {
+                worldManager.armProcessorComponent(pc.getArmingCondition());
+            }
             
             // Process the chain
             pc = pc.getNextInChain();
@@ -1619,7 +1629,7 @@ class Renderer extends Thread {
                
     }
 
-        /**
+    /**
      * Check for scene changes
      */
     void processScenesChanged() {
@@ -1629,13 +1639,72 @@ class Renderer extends Thread {
         for (int i = 0; i < scenes.size(); i++) {
             RenderComponentOp rcop = (RenderComponentOp) scenes.get(i);
             if (rcop.add) {
+                addToRenderTechnique(rcop.rc);
                 renderScenes.add(rcop.rc);
                 addToUpdateList(rcop.rc.getSceneRoot());
             } else {
                 renderScenes.remove(rcop.rc);
+                removeFromRenderTechnique(rcop.rc);
             }
         }
         scenes.clear();
+    }
+
+    /**
+     * Add the given render component to the appropriate RenderTechnique
+     */
+    private void addToRenderTechnique(RenderComponent rc) {
+        RenderTechnique rt = null;
+        int i=0;
+
+        // First find the technique
+        for (i=0; i<renderTechniques.size(); i++) {
+            rt = renderTechniques.get(i);
+            if (rc.getRenderTechniqueName().equals(rt.getName())) {
+                rt.addRenderComponent(rc);
+                break;
+            }
+        }
+
+        if (i == renderTechniques.size()) {
+            // Load the technique
+            try {
+                rt = (RenderTechnique)Class.forName(rc.getRenderTechniqueName()).newInstance();
+            } catch (InstantiationException e) {
+                System.out.println(e);
+            } catch (ClassNotFoundException e) {
+                System.out.println(e);
+            } catch (IllegalAccessException e) {
+                System.out.println(e);
+            }
+
+            if (rt != null) {
+                renderTechniques.add(rt);
+                rt.initialize();
+                rt.addRenderComponent(rc);
+            }
+        }
+    }
+
+    /**
+     * Add the given render component to the appropriate RenderTechnique
+     */
+    private void removeFromRenderTechnique(RenderComponent rc) {
+        RenderTechnique rt = null;
+        int i=0;
+
+        // First find the technique
+        for (i=0; i<renderTechniques.size(); i++) {
+            rt = renderTechniques.get(i);
+            if (rc.getRenderTechniqueName().equals(rt.getName())) {
+                rt.removeRenderComponent(rc);
+                break;
+            }
+        }
+
+        if (i == renderTechniques.size()) {
+            System.out.println("ERROR: RenderTechnique Not Found");
+        }
     }
 
     private void processGraphAddition(Node node) {
@@ -1681,15 +1750,15 @@ class Renderer extends Thread {
         
         // Minimize the numner of additions to the updateList
         // First, let's look for removals
-        len = renderPasses.size();
+        len = passList.size();
         for (int i=0; i<len;) {
-            pass = (PassComponent) renderPasses.get(i);
+            pass = (PassComponent) passList.get(i);
             if (passes.contains(pass)) {
                 // move on to the next
                 i++;
             } else {
                 // remove the scene, this will shift things down
-                renderPasses.remove(pass);
+                passList.remove(pass);
                 len--;
             }
         }
@@ -1697,15 +1766,15 @@ class Renderer extends Thread {
         // Now let's look for additions
         for (int i=0; i<passes.size(); i++) {
             pass = (PassComponent) passes.get(i);
-            if (!renderPasses.contains(pass)) {
-                renderPasses.add(pass);
+            if (!passList.contains(pass)) {
+                passList.add(pass);
                 addToPassUpdateList(pass.getPass());
             }
         }
         
         // Just a sanity check
-        if (passes.size() != renderPasses.size()) {
-            System.out.println("Error, Pass sizes differ: " + passes.size() + ", " + renderPasses.size()); 
+        if (passes.size() != passList.size()) {
+            System.out.println("Error, Pass sizes differ: " + passes.size() + ", " + passList.size());
         }
        
     }
@@ -1776,10 +1845,10 @@ class Renderer extends Thread {
     void processOrthosChanged() {
         synchronized (orthos) {
             for (int i=0; i<orthos.size(); i++) {
-                RenderComponent rc = (RenderComponent) orthos.get(i);
-                Node sg = rc.getSceneRoot();
-                traverseGraph(sg, rc.getOrtho());
-                addToUpdateList(sg);
+                OrthoOp oop = orthos.get(i);
+                BlendState bs = (BlendState)oop.rc.getSceneRoot().getRenderState(RenderState.StateType.Blend);
+                traverseGraph(oop.rc.getSceneRoot(), oop.on, bs);
+                addToUpdateList(oop.rc.getSceneRoot());
             }
             orthos.clear();
         }
@@ -1803,7 +1872,7 @@ class Renderer extends Thread {
 
         public void simpleSetup() {
             //System.out.println("In simple setup: ");
-            mtrenderer.addCanvas(canvas);
+            mtrenderer.addOnscreenBuffer(renderBuffer);
             BufferUpdater bu = renderBuffer.getBufferUpdater();
             if (bu != null) {
                 bu.init(renderBuffer);
@@ -1852,21 +1921,27 @@ class Renderer extends Thread {
                 }
             }
 
-            traverseGraph(sg, sc.getOrtho());
+            BlendState bs = (BlendState)sg.getRenderState(RenderState.StateType.Blend);
+            traverseGraph(sg, sc.getOrtho(), bs);
         }
     }
     
     /**
      * Examine this node and travese it's children
      */
-    void traverseGraph(Spatial sg, boolean ortho) {
+    void traverseGraph(Spatial sg, boolean ortho, BlendState bs) {
    
-        examineSpatial(sg, ortho);
+        examineSpatial(sg, ortho, bs);
         if (sg instanceof Node) {
             Node node = (Node)sg;
             for (int i=0; i<node.getQuantity(); i++) {
                 Spatial child = node.getChild(i);
-                traverseGraph(child, ortho);
+                BlendState cbs = (BlendState)child.getRenderState(RenderState.StateType.Blend);
+                if (cbs == null) {
+                    traverseGraph(child, ortho, bs);
+                } else {
+                    traverseGraph(child, ortho, cbs);
+                }
             }
         }
     }
@@ -1874,26 +1949,25 @@ class Renderer extends Thread {
     /**
      * Examine the given node
      */
-    void examineSpatial(Spatial s, boolean ortho) {
-        setRenderQueue(s, ortho);
+    void examineSpatial(Spatial s, boolean ortho, BlendState bs) {
+        setRenderQueue(s, ortho, bs);
     }
     
     /**
      * This mehod checks for transpaency attributes
      */
-    void setRenderQueue(Spatial s, boolean ortho) {
-        BlendState blendState = (BlendState) s.getRenderState(RenderState.StateType.Blend);
+    void setRenderQueue(Spatial s, boolean ortho, BlendState bs) {
         if (ortho) {
             s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_ORTHO);
         } else {
-            if (blendState != null) {
-                if (blendState.isBlendEnabled()) {
+            if (bs != null) {
+                if (bs.isBlendEnabled()) {
                     s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_TRANSPARENT);
                 } else {
                     s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_OPAQUE);
                 }
             } else {
-                s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_INHERIT);
+                s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_OPAQUE);
             }
         }
     }

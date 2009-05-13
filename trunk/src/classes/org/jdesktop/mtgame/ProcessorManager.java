@@ -597,7 +597,9 @@ class ProcessorManager extends Thread {
      */
     void armProcessors(ProcessorComponent[] runList) {
         for (int i=0; i<runList.length; i++) {
-            armProcessorComponent(runList[i].getArmingCondition());
+            if (runList[i].getEntityProcessController() != null) {
+                armProcessorComponent(runList[i].getArmingCondition());
+            }
         }
     }
     

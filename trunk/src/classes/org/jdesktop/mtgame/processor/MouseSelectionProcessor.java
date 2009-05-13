@@ -73,6 +73,7 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
      * An array list of entities for the currently visible bounds
      */
     private ArrayList visibleBounds = new ArrayList();
+    private ArrayList glowList = new ArrayList();
        
     /**
      * The current camera entity
@@ -150,7 +151,8 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                     //System.out.println("Thru at: " + thru.x + ", " + thru.y + ", " + thru.z);
                     //System.out.println("Ray starts at: " + eyeRay.origin.x + ", " + eyeRay.origin.y + ", " + eyeRay.origin.z);
                     //System.out.println("And has direction: " + eyeRay.direction.x + ", " + eyeRay.direction.y + ", " + eyeRay.direction.z);
-                    clearVisibleBounds();
+                    //clearVisibleBounds();
+                    clearGlowList();
                     JMEPickInfo pickInfo = (JMEPickInfo) collisionSystem.pickAllWorldRay(eyeRay, true, false, true, cc);
                     //System.out.println(pickInfo.size() + " Geometries were picked");
                     for (int j = 0; j < pickInfo.size(); j++) {
@@ -165,13 +167,27 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                             //System.out.println("\tPoint: " + pd.getPosition());
                         if (pd.getPickData().getTargetMesh().getRenderQueueMode() !=
                                 com.jme.renderer.Renderer.QUEUE_ORTHO) {
-                            addToVisibleBounds(pd.getPickData().getTargetMesh());
+                            //addToVisibleBounds(pd.getPickData().getTargetMesh());
+                            addToGlow(pd.getPickData().getTargetMesh());
                         }
                     }
                 }
             }
         }
 
+    }
+
+    private void addToGlow(Geometry g) {
+        g.setGlowEnabled(true);
+        glowList.add(g);
+    }
+
+    private void clearGlowList() {
+        for (int i=0; i<glowList.size(); i++) {
+            Geometry g = (Geometry) glowList.get(i);
+            g.setGlowEnabled(false);
+        }
+        glowList.clear();
     }
     
     private void addToVisibleBounds(Geometry g) {

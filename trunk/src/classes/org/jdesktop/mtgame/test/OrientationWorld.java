@@ -177,7 +177,7 @@ public class OrientationWorld {
         wm = new WorldManager("TestWorld");
         
         try {
-            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/OrientationWorld/worldConfig.mtg");
+            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/models/OrientationWorld/worldConfig.mtg");
             wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException e) {
             System.out.println(e);
@@ -199,7 +199,7 @@ public class OrientationWorld {
         setGlobalLights();
         createSkybox(wm);
         try {
-            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/OrientationWorld/worldData.mtg");
+            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/models/OrientationWorld/worldData.mtg");
             wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException ex) {
             System.out.println(ex);
@@ -369,10 +369,17 @@ public class OrientationWorld {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
+        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
+        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
+
+
+
+        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
+        MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -433,8 +440,8 @@ public class OrientationWorld {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:/Users/runner/Desktop/OrientationWorld/textures/";
-        String textureSubdirName = "/Users/runner/Desktop/OrientationWorld/textures/";
+        String textureSubdir = "file:/Users/runner/Desktop/models/OrientationWorld/textures/";
+        String textureSubdirName = "/Users/runner/Desktop/models/OrientationWorld/textures/";
         int normalIndex = 0;
 
         // Construct the frame
@@ -471,7 +478,7 @@ public class OrientationWorld {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);

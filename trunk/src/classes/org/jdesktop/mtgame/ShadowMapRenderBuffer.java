@@ -30,21 +30,12 @@
  */
 package org.jdesktop.mtgame;
 
-import java.util.ArrayList;
 
 import com.jme.image.Texture;
 import com.jme.image.Texture2D;
 import com.jme.renderer.TextureRenderer;
 
-import java.nio.IntBuffer;
-import com.jme.util.geom.BufferUtils;
-import com.jme.util.TextureManager;
-import com.jme.scene.state.jogl.JOGLTextureState;
-import com.jme.scene.state.RenderState;
 import com.jme.scene.Spatial;
-import com.jme.renderer.RenderContext;
-import com.jme.scene.state.jogl.records.TextureRecord;
-import com.jme.scene.state.jogl.records.TextureStateRecord;
 import com.jme.system.DisplaySystem;
 import com.jme.math.Matrix4f;
 import com.jme.math.Vector3f;
@@ -54,10 +45,13 @@ import com.jme.image.Texture.DepthTextureCompareMode;
 import com.jme.image.Texture.DepthTextureMode;
 import com.jme.renderer.Camera;
 import com.jme.renderer.AbstractCamera;
-import com.jme.renderer.ColorRGBA;
+import com.jme.renderer.Renderer;
+import javolution.util.FastList;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
+
+import java.util.ArrayList;
 
 /**
  * This class encapsultes a rendering surface in mtgame.  It can be used
@@ -66,7 +60,28 @@ import javax.media.opengl.glu.GLU;
  * 
  * @author Doug Twilleager
  */
-public class ShadowMapRenderBuffer extends RenderBuffer { 
+public class ShadowMapRenderBuffer extends RenderBuffer {
+    /**
+     * The texture data for offscreen rendering
+     */
+    private Texture2D shadowMapTexture = null;
+    private TextureRenderer renderer = null;
+
+    /**
+     * The list of textures to render into
+     */
+    private ArrayList<Texture> textureList = new ArrayList();
+
+    /**
+     * The ArrayList used for rendering into the texture
+     */
+    private ArrayList renderList = new ArrayList();
+
+    /**
+     * A lock for camera updates
+     */
+    private Object cameraLock = new Object();
+
     /**
      * The direction for the camera
      */
@@ -105,16 +120,19 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
     private static Matrix4f biasMatrix = new Matrix4f(0.5f, 0.0f, 0.0f, 0.0f,
             0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f,
             1.0f);
-    
-    ColorRGBA bgColor = new ColorRGBA();
+
+    /**
+     * A boolean indicating that this RenderBuffer has been initialized
+     */
+    private boolean initialized = false;
+
 
     /**
      * The constructor
      */
-    public ShadowMapRenderBuffer(Target target, int width, int height) {
-        super(target, width, height);
-        Texture2D shadowMapTexture = new Texture2D();
-        setTexture(shadowMapTexture);
+    public ShadowMapRenderBuffer(Target target, int width, int height, int order) {
+        super(target, width, height, order);
+        shadowMapTexture = new Texture2D();
         shadowMapTexture.setApply(Texture.ApplyMode.Modulate);
         shadowMapTexture.setMinificationFilter(Texture.MinificationFilter.NearestNeighborNoMipMaps);
         shadowMapTexture.setWrap(Texture.WrapMode.Clamp);
@@ -125,14 +143,23 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         shadowMapTexture.setEnvironmentalMapMode(Texture.EnvironmentalMapMode.EyeLinear);
         shadowMapTexture.setDepthCompareMode(DepthTextureCompareMode.RtoTexture);
         shadowMapTexture.setDepthCompareFunc(DepthTextureCompareFunc.GreaterThanEqual);
-        shadowMapTexture.setDepthMode(DepthTextureMode.Intensity);   
+        shadowMapTexture.setDepthMode(DepthTextureMode.Intensity);
+
+        textureList.add(shadowMapTexture);
     }
-    
+
+    /**
+     * Get the shadow map texture
+     */
+    public Texture getTexture() {
+        return (shadowMapTexture);
+    }
+
     /**
      * Set the camera direction
      */
     public void setCameraDirection(Vector3f dir) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             cameraDirection.x = dir.x;
             cameraDirection.y = dir.y;
             cameraDirection.z = dir.z;
@@ -144,7 +171,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Get the camera direction
      */
     public void getCameraDirection(Vector3f dir) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             dir.x = cameraDirection.x;
             dir.y = cameraDirection.y;
             dir.z = cameraDirection.z;
@@ -155,7 +182,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Set the camera direction
      */
     public void setCameraLookAt(Vector3f pos) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             cameraLookAt.x = pos.x;
             cameraLookAt.y = pos.y;
             cameraLookAt.z = pos.z;
@@ -167,7 +194,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Get the camera direction
      */
     public void getCameraLookAt(Vector3f pos) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             pos.x = cameraLookAt.x;
             pos.y = cameraLookAt.y;
             pos.z = cameraLookAt.z;
@@ -178,7 +205,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Set the camera direction
      */
     public void setCameraUp(Vector3f up) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             cameraUp.x = up.x;
             cameraUp.y = up.y;
             cameraUp.z = up.z;
@@ -190,7 +217,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Get the camera direction
      */
     public void getCameraUp(Vector3f up) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             up.x = cameraUp.x;
             up.y = cameraUp.y;
             up.z = cameraUp.z;
@@ -201,7 +228,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Set the camera direction
      */
     public void setCameraPosition(Vector3f pos) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             cameraPosition.x = pos.x;
             cameraPosition.y = pos.y;
             cameraPosition.z = pos.z;
@@ -213,97 +240,44 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
      * Get the camera direction
      */
     public void getCameraPosition(Vector3f pos) {
-        synchronized (getRBLock()) {
+        synchronized (cameraLock) {
             pos.x = cameraPosition.x;
             pos.y = cameraPosition.y;
             pos.z = cameraPosition.z;
         }
     }
-    
-    /**
-     * Initialize this RenderBuffer.  This is called from the renderer
-     * before the buffer is rendered into.
-     */
-    void update(DisplaySystem display, Spatial skybox, ArrayList renderComponents) {
-        GL gl = GLU.getCurrentGL();
 
-        synchronized (getRBLock()) {
-            if (!isInitialized()) {
-                createTextureRenderer(display);
-                getTextureRenderer().setupTexture((Texture2D)getTexture());
-                //createTextureObjects(gl, display);
-                setInitialized(true);
-            }
-            updateRenderList(skybox, renderComponents);
-        }
-    }
-    
     /**
-     * Create the jME texture objects, and prep them for rendering
+     * This gets called to make this render buffer current for rendering
      */
-    private void createTextureObjects(GL gl, DisplaySystem display) {
-        // First do the common render target
-        assignTextureId(gl, getTexture(), Texture.Type.TwoDimensional);
-        allocateTextureData(gl, getTexture(), Texture.Type.TwoDimensional);
-        setupState(display, getTexture());
+    public boolean makeCurrent(DisplaySystem display, Renderer jMERenderer) {
+        if (!initialized) {
+            createTextureRenderer(display);
+            renderer.setupTexture(shadowMapTexture);
+            BufferUpdater bu = getBufferUpdater();
+            if (bu != null) {
+                bu.init(this);
+            }
+            initialized = true;
+        }
+
+        synchronized (cameraLock) {
+            if (cameraChanged) {
+                camera = renderer.getCamera();
+                updateCamera();
+                cameraChanged = false;
+            } else {
+                camera.update();
+            }
+        }
+
+        renderer.setBackgroundColor(backgroundColor);
+        return (true);
     }
         
     private void createTextureRenderer(DisplaySystem display) {
         TextureRenderer.Target tRtarget = TextureRenderer.Target.Texture2D;
-        setTextureRenderer(display.createTextureRenderer(getWidth(), getHeight(), tRtarget));
-    }
-    
-    /**
-     * Manage the texture id.
-     */
-    void assignTextureId(GL gl, Texture t, Texture.Type type) {
-        IntBuffer ibuf = BufferUtils.createIntBuffer(1);
-
-        if (t.getTextureId() != 0) {
-            ibuf.put(t.getTextureId());
-            gl.glDeleteTextures(ibuf.limit(), ibuf); // TODO Check <size>
-            ibuf.clear();
-        }
-
-        // Create the texture
-        gl.glGenTextures(ibuf.limit(), ibuf); // TODO Check <size>
-        t.setTextureId(ibuf.get(0));
-        TextureManager.registerForCleanup(t.getTextureKey(), t.getTextureId());
-        JOGLTextureState.doTextureBind(t.getTextureId(), 0, type);
-    }
-    
-        
-    /**
-     * Allocate the texture data, based upon what we are doing.
-     */
-    void allocateTextureData(GL gl, Texture t, Texture.Type type) {
-        int components = GL.GL_DEPTH_COMPONENT;
-	int format = GL.GL_DEPTH_COMPONENT;
-	int dataType = GL.GL_UNSIGNED_BYTE;
-        
-        Texture.RenderToTextureType rttType = Texture.RenderToTextureType.Depth;
-
-        t.setRenderToTextureType(rttType);
-
-        gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, components, getWidth(), getHeight(), 0,
-                format, dataType, null);
-        if (t.getMinificationFilter().usesMipMapLevels()) {
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
-        }
-    }
-    
-    /**
-     * Setup some state on the texture
-     */
-    void setupState(DisplaySystem display, Texture t) {   
-        // Setup filtering and wrap
-        RenderContext<?> context = display.getCurrentContext();
-        TextureStateRecord record = (TextureStateRecord) context
-                .getStateRecord(RenderState.StateType.Texture);
-        TextureRecord texRecord = record.getTextureRecord(t.getTextureId(), t.getType());
-
-        JOGLTextureState.applyFilter(t, texRecord, 0, record);
-        JOGLTextureState.applyWrap(t, texRecord, 0, record);
+        renderer = display.createTextureRenderer(getWidth(), getHeight(), tRtarget);
     }
     
     /**
@@ -326,7 +300,6 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
             camera.setParallelProjection(false);
             camera.setFrustumPerspective(60.0f, getWidth()/getHeight(), 1.0f, 1000.0f);
         }
-        camera.update();
         
         
         Matrix4f proj = new Matrix4f();
@@ -337,44 +310,68 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         //System.out.println("VIEW MATRIX: " + view);
         view.multLocal(proj).multLocal(biasMatrix).transposeLocal();
         //System.out.println("MATRIX: " + view);
-        getTexture().getMatrix().set(view);
+        shadowMapTexture.getMatrix().set(view);
     }
-    
-    /**
-     * Render the current RenderList into this buffer
-     */
-    void render(Renderer r) {
-        GL gl = GLU.getCurrentGL();
-        com.jme.renderer.Renderer jmeRenderer = r.getJMERenderer();
-        int width = getWidth();
-        int height = getHeight();
-        
-        synchronized (getRBLock()) {
-            if (cameraChanged) {
-                camera = getTextureRenderer().getCamera();
-                updateCamera();
-                cameraChanged = false;
-            }
-        }
-        camera.update();
-        getBackgroundColor(bgColor);
-        getTextureRenderer().setBackgroundColor(bgColor);
-        //System.out.println("Camera loc: " + camera.getLocation());
-        //System.out.println("Camera dir: " + camera.getDirection()); 
-        //System.out.println("RL: " + getRenderList().size());
-        //System.out.println("TL: " + getTextureList().size());
-        getTextureRenderer().render(getRenderList(), getTextureList(), true);
-        
-        /*
-        Camera saveCamera = jmeRenderer.getCamera();
-        jmeRenderer.setCamera(camera);
-        JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
 
-        //r.renderScene(getSpatialList());
-        r.renderScene(null);
-        r.swapAndWait(5000); 
-        //gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
-        jmeRenderer.setCamera(saveCamera);
-        */
+    /**
+     * This gets called to clear the buffer
+     */
+    public void clear(Renderer renderer) {
+        // Nothing to do
+    }
+    /**
+     * These are used to render the given opaque, transparent, and ortho objects
+     */
+    public void preparePass(Renderer renderer, FastList<Spatial> rl, FastList<PassComponent> passList, int pass) {
+        renderList.clear();
+        if (getManageRenderScenes()) {
+            synchronized (renderComponentList) {
+                setRenderList(renderer, managedRenderList);
+                setPassList(renderer, managedPassList);
+            }
+        } else {
+            setRenderList(renderer, rl);
+            setPassList(renderer, passList);
+        }
+    }
+
+    public void completePass(Renderer renderer, int pass) {
+        this.renderer.render(renderList, textureList, true);
+    }
+
+    public void renderOpaque(Renderer renderer) {
+    }
+
+    public void renderPass(Renderer renderer) {
+    }
+
+    public void renderTransparent(Renderer renderer) {
+    }
+
+    public void renderOrtho(Renderer renderer) {
+    }
+
+    private void setPassList(Renderer renderer, FastList<PassComponent> list) {
+        // TODO
+    }
+
+    private void setRenderList(Renderer renderer, FastList<Spatial> list) {
+        for (int i=0; i<list.size(); i++) {
+            renderList.add(list.get(i));
+        }
+    }
+
+    /**
+     * This is called when a frame has completed
+     */
+    public void release() {
+        // Nothing to do
+    }
+
+    /**
+     * This is called when the buffer needs to be swaped
+     */
+    public void swap() {
+        // Nothing to do
     }
 }
