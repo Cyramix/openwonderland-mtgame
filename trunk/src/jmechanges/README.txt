@@ -7,6 +7,10 @@ BufferUtils.java:
 ColladaImporter.java:
     Fixed assignment of texture coordinates
     Add accessor for upAxis field
+    Add simple transparency support in Phong and Lambert
+
+GoogleEarthPlugin
+    More support for double sided
 
 CollisionTree.java:
 CollisionTreeManager.java:
@@ -37,6 +41,7 @@ TrianglePickData.java:
 GeometricUpdateListener.java:
 Spatial.java:
     Added new API to track geometric state updates
+    Added a new glow API
 
 JOGLRenderer.java:
     Added support for tangents and normals in VBO's
@@ -46,6 +51,9 @@ VBOInfo.java:
 
 ProjectedTextureUtil.java:
     Port to JOGL
+
+RenderQueue.java
+    Added glow effect
 
 Obsolete Changes:
     JOGLDisplaySystem.java: Start of multisample support

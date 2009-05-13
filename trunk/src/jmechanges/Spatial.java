@@ -55,6 +55,7 @@ import com.jme.util.export.JMEExporter;
 import com.jme.util.export.JMEImporter;
 import com.jme.util.export.OutputCapsule;
 import com.jme.util.export.Savable;
+import com.jme.renderer.ColorRGBA;
 
 /**
  * <code>Spatial</code> defines the base class for scene graph nodes. It
@@ -276,6 +277,10 @@ public abstract class Spatial implements Serializable, Savable {
     private static final Vector3f compVecA = new Vector3f();
     private static final Quaternion compQuat = new Quaternion();
 
+    private boolean glow = false;
+    private ColorRGBA glowColor = new ColorRGBA(1.0f, 1.0f, 0.0f, 0.5f);
+    private Vector3f glowScale = new Vector3f(1.2f, 1.2f, 1.2f);
+
     /**
      * Default Constructor.
      */
@@ -425,6 +430,48 @@ public abstract class Spatial implements Serializable, Savable {
         return geometricUpdateListeners.remove(l);
     }
     
+    /**
+     * Set whether glow is enabled or disabled for this object
+     */
+    public void setGlowEnabled(boolean enable) {
+        glow = enable;
+    }
+
+    /**
+     * Get whether or not glow is enabled
+     */
+    public boolean isGlowEnabled() {
+        return (glow);
+    }
+
+    /**
+     * Set the glow scale
+     */
+    public void setGlowScale(Vector3f scale) {
+        glowScale.set(scale);
+    }
+
+    /**
+     * Set the glow color
+     */
+    public void setGlowColor(ColorRGBA color) {
+        glowColor.set(color);
+    }
+
+    /**
+     * Get the glow color
+     */
+    public ColorRGBA getGlowColor() {
+        return(glowColor);
+    }
+
+    /**
+     * Get the glow scale
+     */
+    public Vector3f getGlowScale() {
+        return (glowScale);
+    }
+
     /**
      * <code>onDraw</code> checks the spatial with the camera to see if it
      * should be culled, if not, the node's draw method is called.

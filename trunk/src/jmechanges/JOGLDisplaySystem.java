@@ -360,7 +360,7 @@ public class JOGLDisplaySystem extends DisplaySystem {
         final GLCapabilities caps = new GLCapabilities();
         caps.setHardwareAccelerated(true);
         caps.setDoubleBuffered(true);
-        caps.setNumSamples(4);
+        caps.setStencilBits(8);
 
         // Create the OpenGL canvas,
         final JOGLAWTCanvas glCanvas = new JOGLAWTCanvas(caps);
