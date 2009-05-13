@@ -5,14 +5,15 @@
 
 package org.jdesktop.mtgame;
 
-import java.awt.Canvas;
-import java.util.ArrayList;
-
-import com.jme.image.Texture;
-import com.jme.renderer.TextureRenderer;
 import com.jme.scene.Spatial;
-import com.jme.system.DisplaySystem;
+import com.jme.scene.Node;
+import com.jme.scene.Geometry;
+import com.jme.scene.state.BlendState;
+import com.jme.scene.state.RenderState;
 import com.jme.renderer.ColorRGBA;
+import javolution.util.FastList;
+import com.jme.system.DisplaySystem;
+import com.jme.renderer.Renderer;
 
 /**
  * This class encapsultes a rendering surface in mtgame.  It can be used
@@ -48,23 +49,7 @@ public abstract class RenderBuffer {
      * The Camera Component used to render into this buffer
      */
     private CameraComponent cameraComponent = null;
-    
-    /**
-     * The Canvas used for ONSCREEN rendering
-     */
-    private Canvas canvas = null;
-    
-    /**
-     * The texture data for offscreen rendering
-     */
-    private Texture texture = null;
-    private TextureRenderer renderer = null;
-
-    /**
-     * A boolean indicating that this RenderBuffer has been initialized
-     */
-    private boolean initialized = false;
-    
+   
     /**
      * A flag that indicates whether we are rendering all scenes or
      * managing manually.
@@ -84,65 +69,84 @@ public abstract class RenderBuffer {
     private BufferUpdater bufferUpdater = null;
 
     /**
-     * The list of Spatials to render into this buffer
-     * This list is only accessed if manage render scenes is true.
+     * The lists of Spatials to render into this buffer
+     * These lists are only accessed if manage render scenes is true.
      */
-    private ArrayList<Spatial> spatialList = new ArrayList();
-    
-    /**
-     * The list of Spatials to render into this buffer
-     */
-    private ArrayList<Spatial> renderList = new ArrayList();
-    
-    /**
-     * The list of textures to render into
-     */
-    private ArrayList<Texture> textureList = new ArrayList();
-    
+    protected FastList<RenderComponent> renderComponentList = new FastList();
+    protected FastList<Spatial> managedRenderList = new FastList();
+    protected FastList<PassComponent> managedPassList = new FastList();
+
     /**
      * The background color
      */
-    private ColorRGBA backgroundColor = new ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
+    protected ColorRGBA backgroundColor = new ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
+
+    /**
+     * The order number for this buffer.
+     */
+    private int order = 0;
+
+    /**
+     * The number of render passes for this buffer
+     */
+    private int numPasses = 1;
     
     /**
      * The constructor
      */
     public RenderBuffer(Target target, int width, int height) {
-        this.target = target;
-        this.height = height;
-        this.width = width;
-    }
-    
-    /**
-     * Return an object for locking.
-     */
-    Object getRBLock() {
-        return (spatialList);
-    }
-    
-    /**
-     * Check if we are initialized
-     */
-    boolean isInitialized() {
-        return (initialized);
-    }
-    
-    /**
-     * Set the initialized flag
-     */
-    void setInitialized(boolean flag) {
-        initialized = flag;
+        this(target, width, height, 0);
     }
 
     /**
-     * Set the Render Updater
+     * The constructor
+     */
+    public RenderBuffer(Target target, int width, int height, int order) {
+        this.target = target;
+        this.height = height;
+        this.width = width;
+        this.order = order;
+    }
+
+    /**
+     * This gets called to clear the buffer
+     */
+    public abstract void clear(Renderer renderer);
+
+    /**
+     * This gets called to make this render buffer current for rendering
+     */
+    public abstract boolean makeCurrent(DisplaySystem diaplay, Renderer jMERenderer);
+
+    /**
+     * These are used to render the given opaque, transparent, and ortho objects
+     */
+    public abstract void preparePass(Renderer renderer, FastList<Spatial> renderList, FastList<PassComponent> passList, int pass);
+    public abstract void completePass(Renderer renderer, int pass);
+    public abstract void renderOpaque(Renderer renderer);
+    public abstract void renderPass(Renderer renderer);
+    public abstract void renderTransparent(Renderer renderer);
+    public abstract void renderOrtho(Renderer renderer);
+
+    /**
+     * This is called when a frame has completed
+     */
+    public abstract void release();
+
+    /**
+     * This is called when the buffer needs to be swaped
+     */
+    public abstract void swap();
+
+    /**
+     * Set the Buffer Updater
      */
     public void setBufferUpdater(BufferUpdater updater) {
         bufferUpdater = updater;
     }
 
     /**
-     * Set the Render Updater
+     * Get the Buffer Updater
      */
     public BufferUpdater getBufferUpdater() {
         return (bufferUpdater);
@@ -169,66 +173,120 @@ public abstract class RenderBuffer {
      * default is false.
      */
     public void setManageRenderScenes(boolean manage) {
-        synchronized (getRBLock()) {
+        synchronized (renderComponentList) {
             if (manageRenderScenes != manage) {
                 manageRenderScenes = manage;
-                // TODO: Optimize this - right now it is brute force.
-                //setInitialized(false);
             }
         }
     }
-    
+
     /**
-     * This adds a spatial to the list to be rendered.  This is only
+     * Gets the manage render scenes flag
+     * @param manage
+     */
+    public boolean getManageRenderScenes() {
+        return (manageRenderScenes);
+    }
+
+    /**
+     * This adds a PassComponent to the list to be rendered.  This is only
      * used when manage render scenes is true.
      */
-    public void addRenderScene(Spatial s) {
-        synchronized (getRBLock()) {
-            spatialList.add(s);
-            if (manageRenderScenes) {
-                //setInitialized(false);
-            }
+    public void addPassComponent(PassComponent rc) {
+        synchronized (renderComponentList) {
+            managedPassList.add(rc);
         }
     }
-      
+
     /**
-     * This removes a spatial from the list to be rendered.  This is only
+     * This removes a PassComponent from the list to be rendered.  This is only
      * used when manage render scenes is true.
      */
-    public void removeRenderScene(Spatial s) {
-        synchronized (getRBLock()) {
-            spatialList.remove(s);
-            if (manageRenderScenes) {
-                //setInitialized(false);
-            }
+    public void removePassComponent(PassComponent rc) {
+        synchronized (renderComponentList) {
+            managedPassList.remove(rc);
         }
     }
-           
+
     /**
-     * This removes a spatial from the list to be rendered.  This is only
+     * This removes a PassComponent from the list to be rendered.  This is only
      * used when manage render scenes is true.
      */
-    public void removeRenderScene(int index) {
-        synchronized (getRBLock()) {
-            spatialList.remove(index);
-            if (manageRenderScenes) {
-                //setInitialized(false);
-            }
+    public void removePassComponent(int index) {
+        synchronized (renderComponentList) {
+            managedPassList.remove(index);
         }
-    }    
-        
+    }
+
     /**
-     * This adds a spatial to the list to be rendered.  This is only
-     * used when manage render scenes is true.
+     * This returns the current number of passes
      */
-    public int numRenderScenes() {
+    public int numPassComponents() {
         int size = 0;
-        synchronized (getRBLock()) {
-            size = spatialList.size();
+        synchronized (renderComponentList) {
+            size = managedPassList.size();
         }
         return (size);
     }
     
+    /**
+     * This adds a RenderComponent to the list to be rendered.  This is only
+     * used when manage render scenes is true.
+     */
+    public void addRenderScene(RenderComponent rc) {
+        synchronized (renderComponentList) {
+            renderComponentList.add(rc);
+            managedRenderList.add(rc.getSceneRoot());
+        }
+    }
+      
+    /**
+     * This removes a RenderComponent from the list to be rendered.  This is only
+     * used when manage render scenes is true.
+     */
+    public void removeRenderScene(RenderComponent rc) {
+        synchronized (renderComponentList) {
+            renderComponentList.remove(rc);
+            managedRenderList.remove(rc.getSceneRoot());
+        }
+    }
+           
+    /**
+     * This removes a RenderComponent from the list to be rendered.  This is only
+     * used when manage render scenes is true.
+     */
+    public void removeRenderScene(int index) {
+        synchronized (renderComponentList) {
+            renderComponentList.remove(index);
+            managedRenderList.remove(index);
+        }
+    }    
+        
+    /**
+     * This returns the current number of scenes
+     */
+    public int numRenderScenes() {
+        int size = 0;
+        synchronized (renderComponentList) {
+            size = renderComponentList.size();
+        }
+        return (size);
+    }
+
+    /**
+     * Set the number of render passes
+     */
+    public void setNumRenderPasses(int passes) {
+        numPasses = passes;
+    }
+
+    /**
+     * Get the number of render passes
+     */
+    public int numRenderPasses() {
+        return (numPasses);
+    }
+
     /**
      * Dynamically set the width of this render target
      */
@@ -250,17 +308,13 @@ public abstract class RenderBuffer {
     public int getHeight() {
         return (height);
     }
-    
-    ArrayList getSpatialList() {
-        return (spatialList);
-    }
-    
-    ArrayList getTextureList() {
-        return (textureList);
-    }
-    
-    ArrayList getRenderList() {
-        return (renderList);
+
+    /**
+     * Get the order number for this buffer
+     * @return
+     */
+    public int getOrder() {
+        return (order);
     }
     
     /**
@@ -269,20 +323,6 @@ public abstract class RenderBuffer {
     public void setHeight(int height) {
         this.height = height;
         // TODO: actually change the surface
-    }
-    
-    /**
-     * Set the canvas in onscreen mode
-     */
-    void setCanvas(Canvas c) {
-        canvas = c;
-    }
-    
-    /**
-     * Get the onscreen canvas.
-     */
-    public Canvas getCanvas() {
-        return (canvas);
     }
     
     /**
@@ -325,68 +365,4 @@ public abstract class RenderBuffer {
     public CameraComponent getCameraComponent() {
         return (cameraComponent);
     }
-    
-    /**
-     * Set the texture renderer
-     */
-    void setTextureRenderer(TextureRenderer r) {
-        renderer = r;
-    }
-    
-    /**
-     * Get the texture renderer
-     */
-    TextureRenderer getTextureRenderer() {
-        return (renderer);
-    }
-    
-    /**
-     * Set the target texture
-     */
-    void setTexture(Texture t) {
-        texture = t;
-        if (textureList.size() == 0) {
-            textureList.add(t);
-        } else {
-            textureList.set(0, t);
-        }
-    }
-    
-    /**
-     * Get the texture used for offscreen rendering
-     */
-    public Texture getTexture() {
-        return (texture);
-    }
-    
-    /**
-     * Initialize this RenderBuffer.  This is called from the renderer
-     * before the buffer is rendered into.
-     */
-    abstract void update(DisplaySystem display, Spatial skybox, ArrayList renderComponents);
-    
-    /**
-     * Update the renderlist
-     */
-    void updateRenderList(Spatial skybox, ArrayList renderComponents) {
-        renderList.clear();
-        if (manageRenderScenes) {
-            for (int i = 0; i < spatialList.size(); i++) {
-                renderList.add(spatialList.get(i));
-            }
-        } else {
-            if (skybox != null) {
-                renderList.add(skybox);
-            }
-            for (int i = 0; i < renderComponents.size(); i++) {
-                RenderComponent rc = (RenderComponent) renderComponents.get(i);
-                renderList.add(rc.getSceneRoot());
-            }
-        }
-    }
-    
-    /**
-     * Render the current RenderList into this buffer
-     */
-    abstract void render(Renderer r);
 }

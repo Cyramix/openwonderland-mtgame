@@ -367,7 +367,7 @@ public class CubeMapTest {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
@@ -705,15 +705,15 @@ public class CubeMapTest {
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setEnabled(true);
         //rb.getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
-        rb.getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
-        ts.setTexture(rb.getTexture(), 0);
+        ((CubeMapRenderBuffer)rb).getTexture().setEnvironmentalMapMode(EnvironmentalMapMode.ReflectionMap);
+        ts.setTexture(((CubeMapRenderBuffer)rb).getTexture(), 0);
         shape.setRenderState(ts);
         
         orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
         orthoRC.setOrtho(false);
         orthoRC.setLightingEnabled(false);
         e.addComponent(RenderComponent.class, orthoRC);
-        rb.addRenderScene(orthoQuad);
+        rb.addRenderScene(orthoRC);
 
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
                 orthoQuad, (float) (6.0f * Math.PI / 180.0f));

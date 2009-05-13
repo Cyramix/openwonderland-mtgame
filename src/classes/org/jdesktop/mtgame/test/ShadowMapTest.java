@@ -450,7 +450,7 @@ public class ShadowMapTest implements RenderUpdater {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
@@ -632,13 +632,14 @@ public class ShadowMapTest implements RenderUpdater {
         node.setRenderState(buf);
         node.setLocalTranslation(0.0f, 0.0f, 0.0f);
         teapot.setModelBound(bbox);
-        teapot.setCullHint(CullHint.Never);
-        shadowMapBuffer.addRenderScene(teapot);
-        shadowMapBuffer.setRenderUpdater(this);
+        teapot.setCullHint(CullHint.Never);     
         
         Entity e = new Entity("Teapot");
         RenderComponent sc = wm.getRenderManager().createRenderComponent(node);
         e.addComponent(RenderComponent.class, sc);
+
+        shadowMapBuffer.addRenderScene(sc);
+        shadowMapBuffer.setRenderUpdater(this);
 
         RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
                 node, (float) (6.0f * Math.PI / 180.0f));
@@ -674,17 +675,16 @@ public class ShadowMapTest implements RenderUpdater {
             transparent = r.nextBoolean();
             Node teapot = createTeapotModel(x, y, z, transparent);
             //teapot.setRenderState(ts);
-            
-            // TODO: Shouldn't have to do this....
-            teapot.setCullHint(CullHint.Never);
-            shadowMapBuffer.addRenderScene(teapot);
-            
+                     
             e = new Entity("Teapot " + i);
             sc = wm.getRenderManager().createRenderComponent(teapot);
             cc = collisionSystem.createCollisionComponent(teapot);
             e.addComponent(RenderComponent.class, sc);
             e.addComponent(CollisionComponent.class, cc);
 
+            // TODO: Shouldn't have to do this....
+            teapot.setCullHint(CullHint.Never);
+            shadowMapBuffer.addRenderScene(sc);
             
             RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
                 teapot, (float) (6.0f * Math.PI / 180.0f));

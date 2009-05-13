@@ -32,7 +32,7 @@
 package org.jdesktop.mtgame.test;
 
 import org.jdesktop.mtgame.processor.RotationProcessor;
-import org.jdesktop.mtgame.processor.FPSCameraProcessor;
+import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.CameraNode;
@@ -127,7 +127,7 @@ public class WorldTest {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent eventListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera, false, false, null);
+        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(eventListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         camera.addComponent(ProcessorComponent.class, eventProcessor);   
         wm.addEntity(camera);         
@@ -338,7 +338,7 @@ public class WorldTest {
             // make the canvas:
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             wm.getRenderManager().setFrameRateListener(this, 100);
 

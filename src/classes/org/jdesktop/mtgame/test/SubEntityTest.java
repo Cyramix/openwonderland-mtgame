@@ -356,7 +356,7 @@ public class SubEntityTest {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);

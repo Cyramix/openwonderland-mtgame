@@ -145,8 +145,8 @@ public class SkyboxTest implements RenderUpdater {
         wm = new WorldManager("TestWorld");
         
         try {
-            vert = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleVertShader");
-            frag = new URL("file:/Users/runner/Desktop/runner/Work/mtgame/src/org/jdesktop/mtgame/SampleFragShader");
+            vert = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleVertShader");
+            frag = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleFragShader");
             //vert = new URL("file:/Documents and Settings/runner/Desktop/Work/mtgame/src/org/jdesktop/mtgame/SampleVertShader");
             //frag = new URL("file:/Documents and Settings/runner/Desktop/Work/mtgame/src/org/jdesktop/mtgame/SampleFragShader");
         } catch (MalformedURLException e) {
@@ -417,7 +417,7 @@ public class SkyboxTest implements RenderUpdater {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);

@@ -22,7 +22,8 @@ import com.jme.renderer.RenderContext;
 import com.jme.scene.state.jogl.records.TextureRecord;
 import com.jme.scene.state.jogl.records.TextureStateRecord;
 import com.jme.system.DisplaySystem;
-import com.jme.renderer.ColorRGBA;
+import javolution.util.FastList;
+import com.jme.renderer.Renderer;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
@@ -34,38 +35,81 @@ import javax.media.opengl.glu.GLU;
  * 
  * @author Doug Twilleager
  */
-public class TextureRenderBuffer extends RenderBuffer { 
-    ColorRGBA bgColor = new ColorRGBA();
-
+public class TextureRenderBuffer extends RenderBuffer {
+    /**
+     * A buffer used to read back the contents of the texture buffer
+     */
     ByteBuffer textureReadBuffer = null;
-        
+
+    /**
+     * The texture data for offscreen rendering
+     */
+    private Texture texture = null;
+    private TextureRenderer renderer = null;
+
+    /**
+     * The list of textures to render into
+     */
+    private ArrayList<Texture> textureList = new ArrayList();
+
+    /**
+     * A boolean indicating that this RenderBuffer has been initialized
+     */
+    private boolean initialized = false;
+
+    /**
+     * The ArrayList used for rendering into the texture
+     */
+    private ArrayList renderList = new ArrayList();
+
     /**
      * The constructor
      */
-    public TextureRenderBuffer(Target target, int width, int height) {
-        super(target, width, height);
+    public TextureRenderBuffer(Target target, int width, int height, int order) {
+        super(target, width, height, order);
         setTexture(new Texture2D());
     }
 
     /**
-     * Initialize this RenderBuffer.  This is called from the renderer
-     * before the buffer is rendered into.
+     * Set the target texture
      */
-    void update(DisplaySystem display, Spatial skybox, ArrayList renderComponents) {
+    void setTexture(Texture t) {
+        texture = t;
+        if (textureList.size() == 0) {
+            textureList.add(t);
+        } else {
+            textureList.set(0, t);
+        }
+    }
+
+    /**
+     * Get the texture used for offscreen rendering
+     */
+    public Texture getTexture() {
+        return (texture);
+    }
+
+
+    /**
+     * This gets called to make this render buffer current for rendering
+     */
+    public boolean makeCurrent(DisplaySystem display, Renderer jMERenderer) {
         GL gl = GLU.getCurrentGL();
 
-        synchronized (getRBLock()) {
-            if (!isInitialized()) {
-                createTextureRenderer(display);
-                createTextureObjects(gl, display);
-                BufferUpdater bu = getBufferUpdater();
-                if (bu != null) {
-                    bu.init(this);
-                }
-                setInitialized(true);
+        if (!initialized) {
+            createTextureRenderer(display);
+            createTextureObjects(gl, display);
+            BufferUpdater bu = getBufferUpdater();
+            if (bu != null) {
+                bu.init(this);
             }
-            updateRenderList(skybox, renderComponents);
+            initialized = true;
         }
+
+        renderer.setCamera(getCameraComponent().getCamera());
+        getCameraComponent().getCamera().update();
+        renderer.setBackgroundColor(backgroundColor);
+        return (true);
     }
     
     /**
@@ -81,7 +125,7 @@ public class TextureRenderBuffer extends RenderBuffer {
     private void createTextureRenderer(DisplaySystem display) {
         TextureRenderer.Target tRtarget = TextureRenderer.Target.Texture2D;
 
-        setTextureRenderer(display.createTextureRenderer(getWidth(), getHeight(), tRtarget));
+        renderer = display.createTextureRenderer(getWidth(), getHeight(), tRtarget);
     }
     
     /**
@@ -110,8 +154,9 @@ public class TextureRenderBuffer extends RenderBuffer {
      */
     void allocateTextureData(GL gl, Texture t, Texture.Type type) {
         int components = GL.GL_RGBA8;
-	int format = GL.GL_RGBA;
-	int dataType = GL.GL_UNSIGNED_BYTE;
+        int format = GL.GL_RGBA;
+        int dataType = GL.GL_UNSIGNED_BYTE;
+        
         Texture.RenderToTextureType rttType = Texture.RenderToTextureType.RGBA;
 
         t.setRenderToTextureType(rttType);
@@ -138,21 +183,66 @@ public class TextureRenderBuffer extends RenderBuffer {
         JOGLTextureState.applyFilter(t, texRecord, 0, record);
         JOGLTextureState.applyWrap(t, texRecord, 0, record);
     }
-    
+
     /**
-     * Render the current RenderList into this buffer
+     * This gets called to clear the buffer
      */
-    void render(Renderer r) {
-        GL gl = GLU.getCurrentGL();
-        com.jme.renderer.Renderer jmeRenderer = r.getJMERenderer();
-        
-        getTextureRenderer().setCamera(getCameraComponent().getCamera());
-        getCameraComponent().getCamera().update();
-        getBackgroundColor(bgColor);
-        getTextureRenderer().setBackgroundColor(bgColor);
-        getTextureRenderer().render(getRenderList(), getTextureList(), true);
-        //JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
-        //gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
+    public void clear(Renderer renderer) {
+        // Nothing to do
+    }
+
+    /**
+     * These are used to render the given opaque, transparent, and ortho objects
+     */
+    public void preparePass(Renderer renderer, FastList<Spatial> rl, FastList<PassComponent> passList, int pass) {
+        renderList.clear();
+        if (getManageRenderScenes()) {
+            synchronized (renderComponentList) {
+                renderList(renderer, managedRenderList);
+                renderPassList(renderer, managedPassList);
+            }
+        } else {
+            renderList(renderer, rl);
+            renderPassList(renderer, passList);
+        }
+    }
+
+    public void completePass(Renderer renderer, int pass) {
+        this.renderer.render(renderList, textureList, true);
+    }
+
+    public void renderOpaque(Renderer renderer) {
+    }
+
+    public void renderPass(Renderer renderer) {
+    }
+
+    public void renderTransparent(Renderer renderer) {
+    }
+
+    public void renderOrtho(Renderer renderer) {
+    }
+
+    private void renderPassList(Renderer renderer, FastList<PassComponent> list) {
+        // TODO
+    }
+
+    private void renderList(Renderer renderer, FastList<Spatial> list) {
+        renderList.addAll(list);
+    }
+
+    /**
+     * This is called when a frame has completed
+     */
+    public void release() {
+        // Nothing to do
+    }
+
+    /**
+     * This is called when the buffer needs to be swaped
+     */
+    public void swap() {
+        // Nothing to do
     }
 
     /**

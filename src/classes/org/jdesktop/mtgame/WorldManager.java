@@ -42,6 +42,8 @@ import java.awt.Canvas;
 import java.io.InputStream;
 import java.net.URL;
 import javolution.util.FastMap;
+import com.jmex.model.collada.ExtraPluginManager;
+import com.jmex.model.collada.GoogleEarthPlugin;
 
 /**
  * This is the class which manages everything in the system.
@@ -121,6 +123,8 @@ public class WorldManager {
         physicsManager = new PhysicsManager(this);
         configManager = new ConfigManager(this);
         //System.out.println("Done Initializing!");
+        ExtraPluginManager.registerExtraPlugin("GOOGLEEARTH", new GoogleEarthPlugin());
+
     }
 
     /**

@@ -78,6 +78,21 @@ public class RenderComponent extends EntityComponent {
    private LightState lightState = null;
 
    /**
+    * An object used for render techniques
+    */
+   private Object renderTechniqueObject = null;
+
+   /**
+    * The render technique for this render component
+    */
+   private RenderTechnique renderTechnique = null;
+
+   /**
+    * An object used for render techniques
+    */
+   private String renderTechniqueName = "org.jdesktop.mtgame.DefaultRenderTechnique";
+
+   /**
     * The default constructor
     */
    RenderComponent(Node node) {
@@ -90,6 +105,36 @@ public class RenderComponent extends EntityComponent {
    RenderComponent(Node node, Node attachPoint) {
        sceneRoot = node;
        this.attachPoint = attachPoint;
+   }
+
+   /**
+    * The constructor with RenderTechnique
+    */
+   RenderComponent(String rt, Node node, Object rtObject) {
+       renderTechniqueName = rt;
+       sceneRoot = node;
+       renderTechniqueObject = rtObject;
+   }
+
+   /**
+    * Set the render technique
+    */
+   void setRenderTechnique(RenderTechnique rt) {
+       renderTechnique = rt;
+   }
+
+   /**
+    * Get the render technique
+    */
+   RenderTechnique getRenderTechnique() {
+       return (renderTechnique);
+   }
+
+   /**
+    * Get the name of the render technique
+    */
+   public String getRenderTechniqueName() {
+       return (renderTechniqueName);
    }
    
    /**

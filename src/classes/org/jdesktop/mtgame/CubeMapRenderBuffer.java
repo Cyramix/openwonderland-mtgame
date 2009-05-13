@@ -9,9 +9,7 @@ import java.awt.Canvas;
 import java.util.ArrayList;
 
 import com.jme.image.Texture;
-import com.jme.image.Texture2D;
 import com.jme.image.TextureCubeMap;
-import com.jme.renderer.TextureRenderer;
 
 import java.nio.IntBuffer;
 import com.jme.util.geom.BufferUtils;
@@ -21,11 +19,12 @@ import com.jme.scene.state.RenderState;
 import com.jme.scene.Spatial;
 import com.jme.renderer.RenderContext;
 import com.jme.renderer.Camera;
+import com.jme.renderer.Renderer;
 import com.jme.scene.state.jogl.records.TextureRecord;
 import com.jme.scene.state.jogl.records.TextureStateRecord;
 import com.jme.system.DisplaySystem;
-import com.jme.renderer.ColorRGBA;
 import com.jme.math.Vector3f;
+import javolution.util.FastList;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
@@ -39,6 +38,11 @@ import javax.media.opengl.glu.GLU;
  */
 public class CubeMapRenderBuffer extends RenderBuffer {
     /**
+     * The cube map texture
+     */
+    private TextureCubeMap texture = null;
+
+    /**
      * A camera for the cubemap render
      */
     private Camera cubeMapCamera = null;
@@ -48,30 +52,48 @@ public class CubeMapRenderBuffer extends RenderBuffer {
     private Vector3f positiveY = new Vector3f(0.0f, 1.0f, 0.0f);
     private Vector3f negativeZ = new Vector3f(0.0f, 0.0f, -1.0f);
     private Vector3f positiveZ = new Vector3f(0.0f, 0.0f, 1.0f);
-    ColorRGBA bgColor = new ColorRGBA();
+
+    /**
+     * A boolean indicating that this RenderBuffer has been initialized
+     */
+    private boolean initialized = false;
+
+    /**
+     * The camera to be restored after rendering
+     */
+    private Camera saveCamera = null;
 
     /**
      * The constructor
      */
-    public CubeMapRenderBuffer(Target target, int width, int height) {
-        super(target, width, height);
-        setTexture(new TextureCubeMap());
+    public CubeMapRenderBuffer(Target target, int width, int height, int order) {
+        super(target, width, height, order);
+        setNumRenderPasses(6);
+        texture = new TextureCubeMap();
     }
 
     /**
-     * Initialize this RenderBuffer.  This is called from the renderer
-     * before the buffer is rendered into.
+     * Get the texture used for offscreen rendering
      */
-    void update(DisplaySystem display, Spatial skybox, ArrayList renderComponents) {
+    public Texture getTexture() {
+        return (texture);
+    }
+
+    /**
+     * This gets called to make this render buffer current for rendering
+     */
+    public boolean makeCurrent(DisplaySystem display, Renderer jMERenderer) {
         GL gl = GLU.getCurrentGL();
 
-        synchronized (getRBLock()) {
-            if (!isInitialized()) {
-                createTextureObjects(gl, display);
-                updateRenderList(skybox, renderComponents);
-                setInitialized(true);
+        if (!initialized) {
+            createTextureObjects(gl, display);
+            BufferUpdater bu = getBufferUpdater();
+            if (bu != null) {
+                bu.init(this);
             }
+            initialized = true;
         }
+        return (true);
     }
     
     /**
@@ -79,9 +101,9 @@ public class CubeMapRenderBuffer extends RenderBuffer {
      */
     private void createTextureObjects(GL gl, DisplaySystem display) {
         // First do the common render target
-        assignTextureId(gl, getTexture(), Texture.Type.CubeMap);
-        allocateTextureData(gl, getTexture(), Texture.Type.CubeMap);
-        setupState(display, getTexture());
+        assignTextureId(gl, texture, Texture.Type.CubeMap);
+        allocateTextureData(gl, texture, Texture.Type.CubeMap);
+        setupState(display, texture);
     }
     
     /**
@@ -151,13 +173,11 @@ public class CubeMapRenderBuffer extends RenderBuffer {
         JOGLTextureState.applyFilter(t, texRecord, 0, record);
         JOGLTextureState.applyWrap(t, texRecord, 0, record);
     }
-    
+
     /**
-     * Render the current RenderList into this buffer
+     * This gets called to clear the buffer
      */
-    void render(Renderer r) {
-        GL gl = GLU.getCurrentGL();
-        com.jme.renderer.Renderer jmeRenderer = r.getJMERenderer();
+    public void clear(Renderer renderer) {
         int width = getWidth();
         int height = getHeight();
 
@@ -166,74 +186,144 @@ public class CubeMapRenderBuffer extends RenderBuffer {
         ccCamera.update();
 
         if (cubeMapCamera == null) {
-            cubeMapCamera = r.createJMECamera(getWidth(), getHeight());
+            cubeMapCamera = renderer.createCamera(width, height);
             cubeMapCamera.setFrustumPerspective(cc.getFieldOfView(), cc.getAspectRatio(),
                     cc.getNearClipDistance(), cc.getFarClipDistance());
         }
-        Camera saveCamera = jmeRenderer.getCamera();
-        jmeRenderer.setCamera(cubeMapCamera);
-        getBackgroundColor(bgColor);
-        jmeRenderer.setBackgroundColor(bgColor);
+        saveCamera = renderer.getCamera();
+        renderer.setCamera(cubeMapCamera);
+        renderer.setBackgroundColor(backgroundColor);
         cubeMapCamera.setLocation(ccCamera.getLocation());
-        JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.CubeMap);
+        JOGLTextureState.doTextureBind(texture.getTextureId(), 0, Texture.Type.CubeMap);
+    }
 
-        // Render Negative X
-        cubeMapCamera.setDirection(negativeX);
-        cubeMapCamera.setUp(new Vector3f(0.0f, 1.0f, 0.0f));
-        cubeMapCamera.setLeft(new Vector3f(0.0f, 0.0f, 1.0f));
+    /**
+     * These are used to render the given opaque, transparent, and ortho objects
+     */
+    public void preparePass(Renderer renderer, FastList<Spatial> renderList, FastList<PassComponent> passList, int pass) {
+        switch (pass) {
+            case 0:
+                // Render Negative X
+                cubeMapCamera.setDirection(negativeX);
+                cubeMapCamera.setUp(new Vector3f(0.0f, 1.0f, 0.0f));
+                cubeMapCamera.setLeft(new Vector3f(0.0f, 0.0f, 1.0f));
+                break;
+            case 1:
+                // Render Positive X
+                cubeMapCamera.setDirection(positiveX);
+                cubeMapCamera.setLeft(new Vector3f(0.0f, 0.0f, -1.0f));
+                break;
+            case 2:
+                // Render Negative Y
+                cubeMapCamera.setDirection(negativeY);
+                cubeMapCamera.setUp(new Vector3f(0.0f, 0.0f, -1.0f));
+                cubeMapCamera.setLeft(new Vector3f(1.0f, 0.0f, 0.0f));
+                break;
+            case 3:
+                // Render Positive Y
+                cubeMapCamera.setDirection(positiveY);
+                cubeMapCamera.setUp(new Vector3f(0.0f, 0.0f, 1.0f));
+                break;
+            case 4:
+                // Render Negative Z
+                cubeMapCamera.setDirection(negativeZ);
+                cubeMapCamera.setUp(new Vector3f(0.0f, 1.0f, 0.0f));
+                cubeMapCamera.setLeft(new Vector3f(-1.0f, 0.0f, 0.0f));
+                break;
+            case 5:
+                // Render Positive Z
+                cubeMapCamera.setDirection(positiveZ);
+                cubeMapCamera.setLeft(new Vector3f(1.0f, 0.0f, 0.0f));
+                break;
+        }
         cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000); 
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+        renderer.setCamera(cubeMapCamera);
+        renderer.clearBuffers();
 
-        // Render Positive X
-        cubeMapCamera.setDirection(positiveX);
-        cubeMapCamera.setLeft(new Vector3f(0.0f, 0.0f, -1.0f));
-        cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000);   
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+        renderer.clearQueue();
+        if (getManageRenderScenes()) {
+            synchronized (renderComponentList) {
+                renderList(renderer, managedRenderList);
+                renderPassList(renderer, managedPassList);
+            }
+        } else {
+            renderList(renderer, renderList);
+            renderPassList(renderer, passList);
+        }
+    }
 
-        // Render Negative Y
-        cubeMapCamera.setDirection(negativeY);
-        cubeMapCamera.setUp(new Vector3f(0.0f, 0.0f, -1.0f));
-        cubeMapCamera.setLeft(new Vector3f(1.0f, 0.0f, 0.0f));
-        cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000); 
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+    public void renderOpaque(Renderer renderer) {
+    }
 
-        // Render Positive Y
-        cubeMapCamera.setDirection(positiveY);
-        cubeMapCamera.setUp(new Vector3f(0.0f, 0.0f, 1.0f));
-        cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000); 
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+    public void renderPass(Renderer renderer) {
+    }
 
-        // Render Negative Z
-        cubeMapCamera.setDirection(negativeZ);
-        cubeMapCamera.setUp(new Vector3f(0.0f, 1.0f, 0.0f));
-        cubeMapCamera.setLeft(new Vector3f(-1.0f, 0.0f, 0.0f));
-        cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000); 
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+    public void renderTransparent(Renderer renderer) {
+    }
 
-        // Render Positive Z
-        cubeMapCamera.setDirection(positiveZ);
-        cubeMapCamera.setLeft(new Vector3f(1.0f, 0.0f, 0.0f));
-        cubeMapCamera.update();
-        jmeRenderer.setCamera(cubeMapCamera);
-        r.renderScene(getSpatialList());
-        //r.swapAndWait(3000); 
-        gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+    public void renderOrtho(Renderer renderer) {
+    }
 
-        jmeRenderer.setCamera(saveCamera);
+    private void renderPassList(Renderer renderer, FastList<PassComponent> list) {
+        for (int i=0; i<list.size(); i++) {
+            PassComponent pc = (PassComponent) list.get(i);
+            pc.getPass().renderPass(renderer);
+        }
+    }
+
+    private void renderList(Renderer renderer, FastList<Spatial> list) {
+        for (int i=0; i<list.size(); i++) {
+            renderer.draw(list.get(i));
+        }
+    }
+
+    public void completePass(Renderer renderer, int pass) {
+        int width = getWidth();
+        int height = getHeight();
+        GL gl = GLU.getCurrentGL();
+
+        renderer.renderQueue();
+        
+        switch (pass) {
+            case 0:
+                // Copy Negative X
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                break;
+            case 1:
+                // Copy Positive X
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                break;
+            case 2:
+                // Copy Negative Y
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                break;
+            case 3:
+                // Copy Positive Y
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                break;
+            case 4:
+                // Copy Negative Z
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                break;
+            case 5:
+                // Copy Positive Z
+                gl.glCopyTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL.GL_RGBA, 0, 0, width, height, 0);
+                renderer.setCamera(saveCamera);
+                break;
+        }
+    }
+
+    /**
+     * This is called when a frame has completed
+     */
+    public void release() {
+
+    }
+
+    /**
+     * This is called when the buffer needs to be swaped
+     */
+    public void swap() {
+
     }
 }

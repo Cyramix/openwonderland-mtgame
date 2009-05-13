@@ -169,6 +169,13 @@ public abstract class ProcessorComponent extends EntityComponent {
    void setEntityProcessController(ProcessorManager epc) {
        entityProcessController = epc;
    }
+
+   /**
+    * Get the entity process controller
+    */
+   ProcessorManager getEntityProcessController() {
+       return(entityProcessController);
+   }
   
    /**
     * Set the trigger conditions for this Process

@@ -364,7 +364,7 @@ public class MirrorTest {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            canvas = rb.getCanvas();
+            canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
@@ -626,7 +626,7 @@ public class MirrorTest {
                 
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setEnabled(true);
-        ts.setTexture(rb.getTexture(), 0);
+        ts.setTexture(((TextureRenderBuffer)rb).getTexture(), 0);
         quadGeo.setRenderState(ts);
         
         orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);

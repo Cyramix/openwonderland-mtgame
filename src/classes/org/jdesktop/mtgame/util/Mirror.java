@@ -128,7 +128,7 @@ public class Mirror {
 
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         ts.setEnabled(true);
-        ts.setTexture(rb.getTexture(), 0);
+        ts.setTexture(((TextureRenderBuffer)rb).getTexture(), 0);
         quad.setRenderState(ts);
 
         RenderComponent mirrorRC = wm.getRenderManager().createRenderComponent(mirror);
