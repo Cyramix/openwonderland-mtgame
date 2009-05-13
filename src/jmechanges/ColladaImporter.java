@@ -2369,22 +2369,31 @@ public class ColladaImporter {
           ms.setShininess(pt.getshininess().getfloat2().getValue().floatValue());
         }
         
-        /*
-         * if (pt.hastransparent()) { if (pt.gettransparent().hascolor() &&
-         * !pt.gettransparency().getfloat2().getValue() .toString().equals("0")) {
-         * BlendState as = DisplaySystem.getDisplaySystem()
-         * .getRenderer().createBlendState();
-         * as.setSrcFunction(BlendState.SourceFunction.One_MINUS_DST_COLOR);
-         * as.setDstFunction(BlendState.DestinationFunction.One); as.setBlendEnabled(true);
-         * mat.setState(as); } else if (pt.gettransparent().hastexture()) {
-         * BlendState as = DisplaySystem.getDisplaySystem()
-         * .getRenderer().createBlendState();
-         * as.setSrcFunction(BlendState.SourceFunction.SourceAlpha);
-         * as.setDstFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-         * as.setBlendEnabled(true); as.setReference(0.14f);
-         * as.setTestEnabled(true); as.setTestFunction(BlendState.TF_GEQUAL);
-         * mat.setState(as); } }
-         */
+        if (pt.hastransparent()) {
+            if (pt.gettransparent().hascolor() &&
+                    !pt.gettransparency().getfloat2().getValue().toString().equals("0")) {
+                ColorRGBA constantColor = getColor(pt.gettransparent().getcolor());
+                ColorRGBA diffuse = ms.getDiffuse();
+                diffuse.a = 1.0f - constantColor.r;
+                ms.setDiffuse(diffuse);
+                BlendState as = DisplaySystem.getDisplaySystem().getRenderer().createBlendState();
+                as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+                as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+                as.setBlendEnabled(true);
+                as.setEnabled(true);
+                mat.setState(as);
+//            } else if (pt.gettransparent().hastexture()) {
+//                BlendState as = DisplaySystem.getDisplaySystem().getRenderer().createBlendState();
+//                as.setSrcFunction(BlendState.SourceFunction.SourceAlpha);
+//                as.setDstFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+//                as.setBlendEnabled(true);
+//                as.setReference(0.14f);
+//                as.setTestEnabled(true);
+//                as.setTestFunction(BlendState.TF_GEQUAL);
+//                mat.setState(as);
+            }
+        }
+
         mat.setState(ms);
     }
 
@@ -2422,23 +2431,33 @@ public class ColladaImporter {
         if (lt.hasemission()) {
             ms.setEmissive(getColor(lt.getemission().getcolor()));
         }
+
+        if (lt.hastransparent()) {
+            if (lt.gettransparent().hascolor() &&
+                    !lt.gettransparency().getfloat2().getValue().toString().equals("0")) {
+                float alpha = lt.gettransparency().getfloat2().getValue().floatValue();
+                ColorRGBA diffuse = ms.getDiffuse();
+                diffuse.a = 1.0f - alpha;
+                ms.setDiffuse(diffuse);
+
+                BlendState as = DisplaySystem.getDisplaySystem().getRenderer().createBlendState();
+                as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+                as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+                as.setBlendEnabled(true);
+                mat.setState(as);
+//            } else if (lt.gettransparent().hastexture()) {
+//                BlendState as = DisplaySystem.getDisplaySystem().getRenderer().createBlendState();
+//                as.setSrcFunction(BlendState.SourceFunction.SourceAlpha);
+//                as.setDstFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+//                as.setBlendEnabled(true);
+//                as.setReference(0.14f);
+//                as.setTestEnabled(true);
+//                as.setTestFunction(BlendState.TF_GEQUAL);
+//                mat.setState(as);
+            }
+        }
+
         mat.setState(ms);
-        /*
-         * if (lt.hastransparent()) { if (lt.gettransparent().hascolor() &&
-         * !lt.gettransparency().getfloat2().getValue() .toString().equals("0")) {
-         * BlendState as = DisplaySystem.getDisplaySystem()
-         * .getRenderer().createBlendState();
-         * as.setSrcFunction(BlendState.SourceFunction.One_MINUS_DST_COLOR);
-         * as.setDstFunction(BlendState.DestinationFunction.One); as.setBlendEnabled(true);
-         * mat.setState(as); } else if (lt.gettransparent().hastexture()) {
-         * BlendState as = DisplaySystem.getDisplaySystem()
-         * .getRenderer().createBlendState();
-         * as.setSrcFunction(BlendState.SourceFunction.SourceAlpha);
-         * as.setDstFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-         * as.setBlendEnabled(true); as.setReference(0.14f);
-         * as.setTestEnabled(true); as.setTestFunction(BlendState.TF_GEQUAL);
-         * mat.setState(as); } }
-         */
         // Ignored: reflective attributes, transparent attributes
     }
 
