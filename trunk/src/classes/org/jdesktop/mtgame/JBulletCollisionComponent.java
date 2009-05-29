@@ -50,6 +50,7 @@ import com.jme.bounding.BoundingVolume;
 import com.jme.scene.TriMesh;
 
 import javax.vecmath.Vector3f;
+import javax.vecmath.Quat4f;
 
 /**
 * This is a collision component that implements the jme collision interface

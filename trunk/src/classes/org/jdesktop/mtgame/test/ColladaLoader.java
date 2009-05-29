@@ -155,8 +155,8 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    //private String loadfile = "/Users/runner/Desktop/CGFXTest.dae";
-    private String loadfile = "/Users/runner/Desktop/models/nicole/models/CapeHouse3-exp.dae";
+    private String assetDir = "/Users/runner/Desktop/models/nicole/";
+    private String loadfile = assetDir + "models/CapeHouse3-exp.dae";
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -183,11 +183,11 @@ public class ColladaLoader {
         createUI(wm);  
         createCameraEntity(wm);   
         createGrid(wm);
-        wm.addEntity(grid);
+        //wm.addEntity(grid);
         createAxis();
-        wm.addEntity(axis);
-        frame.loadFile(loadfile, true);
-        //frame.loadFile(loadfile, false);
+        //wm.addEntity(axis);
+        //frame.loadFile(loadfile, true);
+        frame.loadFile(loadfile, false);
         //createRandomTeapots(wm);
         
     }
@@ -341,8 +341,8 @@ public class ColladaLoader {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:/Users/runner/Desktop/models/nicole/images/";
-        String textureSubdirName = "/Users/runner/Desktop/models/nicole/images/";
+        String textureSubdir = "file:" + assetDir + "images/";
+        String textureSubdirName = assetDir + "images/";
         //String textureSubdir = "file:/Users/runner/Desktop/";
         //String textureSubdirName = "/Users/runner/Desktop/";
 
@@ -380,7 +380,7 @@ public class ColladaLoader {
             
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
-            rb.setBackgroundColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+            //rb.setBackgroundColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
             wm.getRenderManager().addRenderBuffer(rb);
             canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
@@ -541,14 +541,14 @@ public class ColladaLoader {
             }
             model.setLocalScale(5.0f);
             transpList.clear();
-            parseModel(0, model, normalMap, transpList);
-            for (int i=0; i<transpList.size(); i++) {
-                TriMesh tm = (TriMesh) transpList.get(i);
-                Node n = org.jdesktop.mtgame.util.Geometry.explodeIntoSpatials(wm, tm);
-                Node p = tm.getParent();
-                tm.removeFromParent();;
-                p.attachChild(n);
-            }
+            //parseModel(0, model, normalMap, transpList);
+            //for (int i=0; i<transpList.size(); i++) {
+            //    TriMesh tm = (TriMesh) transpList.get(i);
+            //    Node n = org.jdesktop.mtgame.util.Geometry.explodeIntoSpatials(wm, tm);
+            //    Node p = tm.getParent();
+            //    tm.removeFromParent();;
+            //    p.attachChild(n);
+            //}
             addModel(model);
         }
         
@@ -562,9 +562,9 @@ public class ColladaLoader {
                 Geometry geo = (Geometry)model;
                 
                 String str = "";
-                if (geo instanceof TriMesh && str != null) {
+                //if (geo instanceof TriMesh && str != null) {
                     //System.out.println("Generating Tangents: " + geo);
-                    TangentBinormalGenerator.generate((TriMesh)geo);
+                    //TangentBinormalGenerator.generate((TriMesh)geo);
                     //System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
                     //System.out.println("Normal Buffer: " + geo.getNormalBuffer());
                     //System.out.println("Color Buffer: " + geo.getColorBuffer());
@@ -572,8 +572,8 @@ public class ColladaLoader {
                     //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
                     //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
                     //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
-                    assignShader(geo, str, normalMap);
-                }
+                    //assignShader(geo, str, normalMap);
+                //}
 
                 BlendState bs = (BlendState)geo.getRenderState(RenderState.StateType.Blend);
                 if (geo instanceof TriMesh && bs != null && bs.isEnabled() && bs.isBlendEnabled()) {

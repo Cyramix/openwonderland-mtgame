@@ -14,6 +14,8 @@ import com.jme.renderer.ColorRGBA;
 import javolution.util.FastList;
 import com.jme.system.DisplaySystem;
 import com.jme.renderer.Renderer;
+import com.jme.renderer.Camera;
+import com.jme.math.Vector3f;
 
 /**
  * This class encapsultes a rendering surface in mtgame.  It can be used
@@ -90,6 +92,16 @@ public abstract class RenderBuffer {
      * The number of render passes for this buffer
      */
     private int numPasses = 1;
+
+    /**
+     * The currently active portal
+     */
+    private Portal portal = null;
+    private Camera portalCamera = null;
+    protected Vector3f lastLoc = null;
+    protected Vector3f lastDir = null;
+    protected Vector3f lastUp = null;
+    protected Vector3f lastLeft = null;
     
     /**
      * The constructor
@@ -165,7 +177,32 @@ public abstract class RenderBuffer {
     public RenderUpdater getRenderUpdater() {
         return (renderUpdater);
     }
-    
+
+    /**
+     * Set the Portal
+     */
+    public void setPortal(Portal p, Vector3f lLoc, Vector3f lDir, Vector3f lUp, Vector3f lLeft) {
+        portal = p;
+        lastLoc = lLoc;
+        lastDir = lDir;
+        lastUp = lUp;
+        lastLeft = lLeft;
+    }
+
+    /**
+     * Get the Portal
+     */
+    public Portal getPortal() {
+        return (portal);
+    }
+
+    /**
+     * Get the Portal Camera
+     */
+    public Camera getPortalCamera() {
+        return (portalCamera);
+    }
+
     /**
      * Sets the manage render scenes flag.  If true, the application
      * will set which spatials need to be rendered.  If it is false

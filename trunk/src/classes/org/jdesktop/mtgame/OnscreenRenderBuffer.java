@@ -71,6 +71,35 @@ public class OnscreenRenderBuffer extends RenderBuffer {
     }
 
     /**
+     * Set the swap flag
+     */
+    public void setSwapEnable(boolean flag) {
+        doSwap = flag;
+    }
+
+    /**
+     * Get the swap flag
+     */
+    public boolean getSwapEnable() {
+        return (doSwap);
+    }
+
+
+    /**
+     * Set the clear flag
+     */
+    public void setClearEnable(boolean flag) {
+        doClear = flag;
+    }
+
+    /**
+     * Get the clear flag
+     */
+    public boolean getClearEnable() {
+        return (doClear);
+    }
+
+    /**
      * This gets called to clear the buffer
      */
     public void clear(Renderer renderer) {
@@ -120,6 +149,12 @@ public class OnscreenRenderBuffer extends RenderBuffer {
      */
     public void preparePass(Renderer renderer, FastList<Spatial> renderList, FastList<PassComponent> passList, int pass) {
         renderer.clearQueue();
+
+        Portal p = getPortal();
+        if (p != null) {
+            renderer.getQueue().setPortalGeometry(p.getGeometry(), lastLoc, lastDir, lastUp, lastLeft);
+        }
+
         if (getManageRenderScenes()) {
             synchronized (renderComponentList) {
                 renderList(renderer, managedRenderList);
@@ -134,6 +169,7 @@ public class OnscreenRenderBuffer extends RenderBuffer {
     public void completePass(Renderer renderer, int pass) {
         // Nothing to do
         renderer.renderQueue();
+        renderer.getQueue().setPortalGeometry(null, null, null, null, null);
     }
 
     public void renderOpaque(Renderer renderer) {

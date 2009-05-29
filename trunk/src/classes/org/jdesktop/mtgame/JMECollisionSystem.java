@@ -439,6 +439,8 @@ public class JMECollisionSystem extends CollisionSystem {
                     Vector3f intersectionPoint = new Vector3f();
                     tpd.getIntersectionPoint(intersectionPoint);
                     pickDetails.setPosition(intersectionPoint);
+                    pickDetails.setTriMesh(tpd.getIntersectionMesh());
+                    pickDetails.setTriIndex(tpd.getIntersectionTri());
 
                     if (interpolataData) {
                         // TODO calculate this

@@ -33,6 +33,7 @@ package org.jdesktop.mtgame;
 
 import com.jme.math.Vector3f;
 import com.jme.renderer.ColorRGBA;
+import com.jme.scene.TriMesh;
 
 /**
  * This is the base class for detailed information returned by collision
@@ -74,6 +75,8 @@ public class PickDetails {
     private Vector3f normal = null;
     private Vector3f texCoord = null;
     private ColorRGBA color = null;
+    private TriMesh triMesh = null;
+    private int triIndex = -1;
     
     /**
      * The default constructor
@@ -176,6 +179,34 @@ public class PickDetails {
      */
     void setColor(ColorRGBA c) {
         color = c;
+    }
+
+    /**
+     * Set the mesh
+     */
+    void setTriMesh(TriMesh mesh) {
+        triMesh = mesh;
+    }
+
+    /**
+     * Get the tri mesh
+     */
+    public TriMesh getTriMesh() {
+        return (triMesh);
+    }
+
+    /**
+     * Set the tri index
+     */
+    void setTriIndex(int index) {
+        triIndex = index;
+    }
+
+    /**
+     * Get the tri index
+     */
+    public int getTriIndex() {
+        return (triIndex);
     }
 
 }
