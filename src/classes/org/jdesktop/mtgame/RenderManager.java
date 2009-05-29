@@ -334,6 +334,13 @@ public class RenderManager {
     public void setFrameRateListener(FrameRateListener l, int frequency) {
         renderer.setFrameRateListener(l, frequency);
     }
+
+    /**
+     * Set the desired BufferController
+     */
+    public void setBufferController(BufferController bc) {
+        renderer.setBufferController(bc);
+    }
     
     /**
      * Add a listener to the list of listening for scene changes

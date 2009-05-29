@@ -97,7 +97,7 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
     /**
      * Our current position
      */
-    private Vector3f position = new Vector3f(0.0f, 100.0f, -30.0f);
+    private Vector3f position = new Vector3f(0.0f, 10.0f, -30.0f);
     
     /**
      * A sphere for initial avatar collisions

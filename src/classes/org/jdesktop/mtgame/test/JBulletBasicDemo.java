@@ -593,7 +593,7 @@ public class JBulletBasicDemo {
             e.addComponent(CollisionComponent.class, cc);
             e.addComponent(PhysicsComponent.class, pc);
             e.addComponent(RenderComponent.class, sc);
-            e.addComponent(CollisionComponent.class, cc);
+            //e.addComponent(CollisionComponent.class, cc);
             
             wm.addEntity(e);                        
         }

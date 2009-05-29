@@ -168,7 +168,7 @@ public class OrientationWorld {
     private JMECollisionSystem collisionSystem = null;
     
     private SwingFrame frame = null;
-    private String textureDir = "/Users/runner/Desktop/Orientation/textures";
+    private String assetDir = "/Users/runner/Desktop/models/OrientationWorld/";
     private Skybox skybox = null;
     private RenderCapture renderCapture = null;
     private boolean doCapture = false;
@@ -177,7 +177,7 @@ public class OrientationWorld {
         wm = new WorldManager("TestWorld");
         
         try {
-            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/models/OrientationWorld/worldConfig.mtg");
+            FileInputStream fs = new FileInputStream(assetDir + "worldConfig.mtg");
             wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException e) {
             System.out.println(e);
@@ -199,7 +199,7 @@ public class OrientationWorld {
         setGlobalLights();
         createSkybox(wm);
         try {
-            FileInputStream fs = new FileInputStream("/Users/runner/Desktop/models/OrientationWorld/worldData.mtg");
+            FileInputStream fs = new FileInputStream(assetDir + "worldData.mtg");
             wm.loadConfiguration(fs);
         } catch (java.io.FileNotFoundException ex) {
             System.out.println(ex);
@@ -280,8 +280,7 @@ public class OrientationWorld {
         Texture up = null;
         Texture down = null;
         skybox = new Skybox("skybox", 500, 500, 500);
-        String urlpath = "file:/Users/runner/NetBeansProjects/jme-20/trunk/src/";
-        String dir = urlpath + "jmetest/data/skybox1/";
+        String dir = "file:" + assetDir + "../jME/";
         
         try {
         URL url = new URL(dir + "1.jpg");
@@ -369,17 +368,17 @@ public class OrientationWorld {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
-        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
+        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
+        //OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
 
 
 
-        AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
-        pcc.addProcessor(selector);
+        //AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
+        //MouseSelectionProcessor selector = new MouseSelectionProcessor(selectionListener, wm, camera, camera, width, height, eventProcessor);
+        //pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -440,8 +439,8 @@ public class OrientationWorld {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:/Users/runner/Desktop/models/OrientationWorld/textures/";
-        String textureSubdirName = "/Users/runner/Desktop/models/OrientationWorld/textures/";
+        String textureSubdir = "file:" + assetDir + "textures/";
+        String textureSubdirName = assetDir + "textures/";
         int normalIndex = 0;
 
         // Construct the frame
