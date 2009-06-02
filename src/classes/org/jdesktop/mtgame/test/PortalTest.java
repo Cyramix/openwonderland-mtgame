@@ -1,31 +1,29 @@
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2009, Sun Microsystems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *    Redistribution and use in source and binary forms, with or without
+ *    modification, are permitted provided that the following conditions
+ *    are met:
  *
- *   - Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *  . Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  . Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  . Neither the name of Sun Microsystems, Inc., nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
- *   - Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *   - Neither the name of Sun Microsystems nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -109,6 +107,11 @@ import com.jme.util.geom.TangentBinormalGenerator;
 import com.bulletphysics.collision.shapes.CollisionShape;
 import com.bulletphysics.collision.shapes.StaticPlaneShape;
 
+import java.awt.Toolkit;
+import java.awt.Cursor;
+import java.awt.Point;
+import java.awt.Image;
+
 import java.util.Random;
 
 
@@ -172,7 +175,7 @@ public class PortalTest {
     private Skybox skybox = null;
     private SwingFrame frame = null;
     private String loadfile = "/Users/runner/Desktop/OFFTWG/a_great_epyptian_temple/models/Palace.dae";
-    private String urlpath = "file:/Users/runner/Desktop/images/";
+    private String urlpath = "file:/Users/runner/Desktop/models/images/";
     Portal p1 = null;
     Portal p2 = null;
     boolean warping = false;
@@ -246,10 +249,10 @@ public class PortalTest {
         light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f));
         light.setSpecular(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
         light.setAmbient(new ColorRGBA(0.2f, 0.2f, 0.2f, 1.0f));
-        light.setLocation(new Vector3f(0.0f, 200.0f, 0.0f));
+        light.setLocation(new Vector3f(0.0f, 400.0f, 0.0f));
         light.setEnabled(true);
         globalLight1.setLight(light);
-        //globalLight1.setLocalTranslation(0.0f, 0.0f, 0.0f);
+        globalLight1.setLocalTranslation(0.0f, 0.0f, 0.0f);
 
         LightNode globalLight2 = new LightNode();
         light = new PointLight();
@@ -548,7 +551,9 @@ public class PortalTest {
         geo.setModelBound(bbox);
 
         //System.out.println("BBOX for " + name + ": " + bbox);
-        //createCollisionPlane(geo);
+        if (name.equals("Roof")) {
+            createCollisionPlane(geo);
+        }
         
         TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
         try {
@@ -813,7 +818,7 @@ public class PortalTest {
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
             wm.getRenderManager().setFrameRateListener(this, 100);
-            canvasPanel.setLayout(new GridBagLayout());           
+            canvasPanel.setLayout(new BorderLayout());
             canvasPanel.add(canvas);
             contentPane.add(canvasPanel, BorderLayout.CENTER);
             
@@ -1066,7 +1071,7 @@ public class PortalTest {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 200;
+        int numTeapots = 100;
         Random r = new Random();
         RenderComponent sc = null;
         JBulletCollisionComponent cc = null;
@@ -1085,6 +1090,11 @@ public class PortalTest {
             x = (r.nextFloat()*50.0f) - 25.0f;
             y = (r.nextFloat()*50.0f) + 500.0f;
             z = (r.nextFloat()*50.0f) - 25.0f;
+
+//            x = (r.nextFloat()*200.0f) - 100.0f;
+//            y = (r.nextFloat()*200.0f) ;//+ 200.0f;
+//            z = (r.nextFloat()*200.0f) - 100.0f;
+//            transparent = r.nextBoolean();
             transparent = r.nextBoolean();
             Node teapot = createTeapotModel(x, y, z, false);
             
@@ -1094,7 +1104,7 @@ public class PortalTest {
 
             cc = jBcollisionSystem.createCollisionComponent(teapot);
             pc = jBphysicsSystem.createPhysicsComponent(cc);
-            pc.setMass(0.01f);
+            pc.setMass(0.1f);
             //pc.setLinearVelocity(0.0f, 1.0f, 0.0f);
 
             e.addComponent(JBulletCollisionComponent.class, cc);
@@ -1514,11 +1524,11 @@ public class PortalTest {
             if (p1 != null && p1.getGeometry().getWorldBound() != null &&
                 p1.getGeometry().getWorldBound().contains(position)) {
                 warpToPortal(p1);
-                System.out.println("Intersecting Portal 1");
+                //System.out.println("Intersecting Portal 1");
             } else if (p2 != null && p2.getGeometry().getWorldBound() != null &&
                 p2.getGeometry().getWorldBound().contains(position)) {
                 warpToPortal(p2);
-                System.out.println("Intersecting Portal 2");
+                //System.out.println("Intersecting Portal 2");
             } else {
                 // I'm done
                 warping = false;
@@ -1625,7 +1635,7 @@ public class PortalTest {
 
             worldManager.addToUpdateList(target);
             if (removeRoof) {
-                roof.removeFromParent();
+                //roof.removeFromParent();
             }
             //worldManager.addToUpdateList(avatar);
         }
@@ -1901,7 +1911,7 @@ public class PortalTest {
                 "" +
                 "        vec3 v;" +
                 "        vec4 lloc = vec4(0.0, 75.0, 0.0, 1.0);" +
-                "        vec3 mlloc = vec3(gl_ModelViewMatrix * lloc); " +
+                "        vec3 mlloc = vec3(lloc); " +
                 //"        vec3 tmpVec = normalize(mlloc - vVertex);" +
                 "        vec3 tmpVec = normalize(mlloc - gl_Vertex.xyz);" +
                 //"        vec3 tmpVec = normalize(lloc);" +
