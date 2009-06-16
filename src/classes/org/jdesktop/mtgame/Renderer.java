@@ -487,6 +487,7 @@ class Renderer extends Thread {
                 displaySystem.registerCanvasConstructor("AWT", JOGLAWTCanvasConstructor.class);
             }
             displaySystem.setMinSamples(minSamples);
+            markAsRenderThread(true);
         //lwjglDisplay = (LWJGLDisplaySystem) displaySystem;
         //joglDisplay = (JOGLDisplaySystem) displaySystem;
         } catch (JmeException e) {
@@ -511,6 +512,14 @@ class Renderer extends Thread {
                 System.out.println(e);
             }
         }
+    }
+
+    /**
+     * Mark the current thread as one that can update the scene graph
+     * @param isRenderThread
+     */
+    void markAsRenderThread(boolean isRenderThread) {
+        displaySystem.setRenderThread(isRenderThread);
     }
 
     /**

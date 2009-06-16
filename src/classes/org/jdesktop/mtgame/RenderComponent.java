@@ -146,10 +146,12 @@ public class RenderComponent extends EntityComponent {
     * Set the attach point for this RenderComponent
     * This can only be called from a commit method if it is attaching/detaching
     * from a live entity.
+    *
+    * @parameter ap - the parent node to which the sceneRoot of this component will be attached
     */
    public void setAttachPoint(Node ap) {
        Entity e = getEntity();
-       
+
        // Nothing to do if we don't have an entity
        if (e != null && e.getWorldManager() != null) {
            synchronized (e.getWorldManager().getRenderManager().getJMESGLock()) {
