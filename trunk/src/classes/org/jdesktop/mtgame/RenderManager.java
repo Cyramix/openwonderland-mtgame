@@ -441,4 +441,8 @@ public class RenderManager {
         return (renderer.getJMESGLock());
     }
 
+    void markAsRenderThread(boolean isRenderThread) {
+        renderer.markAsRenderThread(isRenderThread);
+    }
+
 }
