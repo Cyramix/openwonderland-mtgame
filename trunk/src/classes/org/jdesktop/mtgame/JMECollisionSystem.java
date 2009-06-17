@@ -119,6 +119,7 @@ public class JMECollisionSystem extends CollisionSystem {
     public void pickAll(Ray ray, PickResults result, boolean includeOrtho, CameraComponent camera) {
         //System.out.println("==================== pickAll =====================");
         synchronized (worldManager.getRenderManager().getCollisionLock()) {
+            worldManager.getRenderManager().markAsRenderThread(true);
             synchronized (collisionComponents) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
                     JMECollisionComponent cc = (JMECollisionComponent) collisionComponents.get(i);
@@ -132,6 +133,7 @@ public class JMECollisionSystem extends CollisionSystem {
                     }
                 }
             }
+            worldManager.getRenderManager().markAsRenderThread(false);
         }
     }
 

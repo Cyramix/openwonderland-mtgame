@@ -128,6 +128,15 @@ public class RenderComponent extends EntityComponent {
        return (renderTechnique);
    }
 
+    @Override
+   public void setEntity(Entity entity) {
+       super.setEntity(entity);
+       if (entity!=null)
+           sceneRoot.setLive(true);
+       else
+           sceneRoot.setLive(false);
+   }
+
    /**
     * Get the name of the render technique
     */
