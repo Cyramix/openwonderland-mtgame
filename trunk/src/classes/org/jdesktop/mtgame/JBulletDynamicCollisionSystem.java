@@ -129,10 +129,10 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
         synchronized (dynamicsWorld) {
             collisionComponents.remove(cc);         
             if (jcc.getPhysicsComponent() != null) {
-                dynamicsWorld.addRigidBody((RigidBody) jcc.getCollisionObject());
+                dynamicsWorld.removeRigidBody((RigidBody) jcc.getCollisionObject());
             } else {
                 cc.getNode().removeGeometricUpdateListener(this);
-                dynamicsWorld.addCollisionObject(jcc.getCollisionObject());
+                dynamicsWorld.removeCollisionObject(jcc.getCollisionObject());
             }
         }
     }
