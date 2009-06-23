@@ -47,6 +47,7 @@ import com.jme.bounding.BoundingSphere;
 import com.jme.bounding.BoundingVolume;
 import com.jme.scene.TriMesh;
 
+import java.util.logging.Logger;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Quat4f;
 
@@ -176,7 +177,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
                 collisionShape = bs;
                 worldTransform.set(transform);
             } else {
-                System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv);
+                Logger.getLogger(JBulletCollisionComponent.class.getName()).warning("JBullet CollisionComponent BOUNDS NOT SUPPORTED !" + bv +"  node "+node);
             }
         }
         
@@ -228,7 +229,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             transform.origin.y = center.y;
             transform.origin.z = center.z;
         } else {
-            System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv);
+            System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv +"  node "+node);
         }
         
         //collisionObject.setCollisionShape(collisionShape);

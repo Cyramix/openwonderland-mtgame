@@ -522,6 +522,10 @@ class Renderer extends Thread {
         displaySystem.setRenderThread(isRenderThread);
     }
 
+    boolean isRenderThread() {
+        return displaySystem.isRenderThread();
+    }
+
     /**
      * Process all buffer and entity updates
      */
