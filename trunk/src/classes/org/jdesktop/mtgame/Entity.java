@@ -238,6 +238,6 @@ public class Entity {
    }
    
    public String toString() {
-       return(name);
+       return(name+" "+super.toString());
    }
 }

@@ -445,4 +445,8 @@ public class RenderManager {
         renderer.markAsRenderThread(isRenderThread);
     }
 
+    boolean isRenderThread() {
+        return renderer.isRenderThread();
+    }
+
 }
