@@ -75,6 +75,7 @@ public class LightNodeRotator extends ProcessorComponent {
      * The rotation target
      */
     private LightNode target = null;
+    private Node visTarget = null;
     
     /**
      * A name
@@ -85,9 +86,10 @@ public class LightNodeRotator extends ProcessorComponent {
      * The constructor
      */
     public LightNodeRotator(String name, WorldManager worldManager, LightNode target, 
-            Vector3f start, float increment) {
+            Node visTarget, Vector3f start, float increment) {
         this.worldManager = worldManager;
         this.target = target;
+        this.visTarget = visTarget;
         this.startTrans.set(start);
         this.increment = increment;
         this.name = name;
@@ -120,5 +122,9 @@ public class LightNodeRotator extends ProcessorComponent {
     public void commit(ProcessorArmingCollection collection) {
         target.setLocalTranslation(currentTrans);
         worldManager.addToUpdateList(target);
+        if (visTarget != null) {
+            visTarget.setLocalTranslation(currentTrans);
+            worldManager.addToUpdateList(visTarget);
+        }
     }
 }

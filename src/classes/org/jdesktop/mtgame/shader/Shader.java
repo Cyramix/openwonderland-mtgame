@@ -33,7 +33,14 @@ import org.jdesktop.mtgame.WorldManager;
 import org.jdesktop.mtgame.RenderUpdater;
 import com.jme.scene.state.GLSLShaderObjectsState;
 import com.jme.scene.state.RenderState;
+import com.jme.scene.state.TextureState;
 import com.jme.scene.Geometry;
+import com.jme.renderer.ColorRGBA;
+import com.jme.image.Texture;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.lang.Integer;
 
 /**
  *
@@ -46,20 +53,179 @@ public abstract class Shader implements RenderUpdater {
     private String vertexShader = null;
     
     private String fragmentShader = null;
+
+    /**
+     * The hashmap of uniforms
+     */
+    private HashMap uniforms = new HashMap();
+
+    /**
+     * The hashmap of uniforms
+     */
+    private ArrayList<String> requiredUniforms = new ArrayList<String>();
+
+    /**
+     * A boolean indicating that the uniforms have been loaded
+     */
+    private boolean uniformsLoaded = false;
+
+    /**
+     * The shadow map for this shader
+     */
+    private Texture shadowMap = null;
+
+    /**
+     * The index for the shadow map
+     */
+    private int shadowMapIndex = -1;
+
+    /**
+     * The WorldManager
+     */
+    private WorldManager worldManager = null;
     
     /**
      * The shader state object for this shader
      */
     protected GLSLShaderObjectsState shaderState = null;
     
-    public Shader(WorldManager worldManager, String vShader, String fShader) {
+    public Shader(String vShader, String fShader) {
         vertexShader = vShader;
-        fragmentShader = fShader;
+        fragmentShader = fShader;     
+    }
+
+    public void init(WorldManager worldManager) {
+        this.worldManager = worldManager;
         shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
                 createRendererState(RenderState.StateType.GLSLShaderObjects);
-        worldManager.addRenderUpdater(this, this);        
+        worldManager.addRenderUpdater(this, this);
     }
-    
+
+    /**
+     * Set the uniforms for this shader
+     */
+    public void setShaderUniforms(String[] u) {
+        for (int i=0; i<u.length; i++) {
+            parseUniform(u[i]);
+        }
+    }
+
+    /**
+     * Set the shadow map for this shader
+     */
+    public void setShadowMap(Texture t) {
+        shadowMap = t;
+    }
+
+    /**
+     * Get the shadow map for this shader
+     */
+    public Texture getShadowMap() {
+        return (shadowMap);
+    }
+
+    /**
+     * Set the shadow map index for this shader
+     */
+    public void setShadowMapIndex(int index) {
+        shadowMapIndex = index;
+    }
+
+    /**
+     * Get the shadow map index for this shader
+     */
+    public int getShadowMapIndex() {
+        return (shadowMapIndex);
+    }
+
+    private void parseUniform(String uniform) {
+        String[] tokens = uniform.split("\\ ");
+        String name = tokens[0];
+        if (name.contains("Color")) {
+            // Value is 4 floats
+            ColorRGBA val = new ColorRGBA();
+            val.r = Float.parseFloat(tokens[1]);
+            val.g = Float.parseFloat(tokens[2]);
+            val.b = Float.parseFloat(tokens[3]);
+            val.a = Float.parseFloat(tokens[4]);
+            uniforms.put(name, val);
+        } else if (name.contains("Map")) {
+            // Value is a texture file and an index
+        }
+    }
+
+    /**
+     * Add a uniform to the list of known uniforms
+     */
+    public void addUniform(String key, Object value) {
+        uniforms.put(key, value);
+    }
+
+
+    /**
+     * Add a uniform to the list of uniforms needed for this shader
+     */
+    public void addRequiredUniform(String key) {
+        requiredUniforms.add(key);
+    }
+
+    /**
+     * Checks if the given uniform is required for this shader
+     */
+    public boolean isRequiredUniform(String key) {
+        for (int i=0; i<requiredUniforms.size(); i++) {
+            if (requiredUniforms.get(i).equals(key)) {
+                return (true);
+            }
+        }
+        return (false);
+    }
+
+    /**
+     * Apply the uniforms to this shader
+     */
+    public void applyUniforms(Geometry g) {
+
+        if (uniformsLoaded) {
+            return;
+        }
+
+        Iterator keys = uniforms.keySet().iterator();
+
+        while (keys.hasNext()) {
+            String key = (String)keys.next();
+            if (isRequiredUniform(key)) {
+                if (key.contains("Color")) {
+                    ColorRGBA color = (ColorRGBA) uniforms.get(key);
+                    shaderState.setUniform(key, color.r, color.g, color.b, color.a);
+                } else if (key.contains("Map")) {
+                    Integer iVal = (Integer) uniforms.get(key);
+                    shaderState.setUniform(key, iVal.intValue());
+                }
+            }
+        }
+
+        if (shadowMap != null) {
+            shaderState.setUniform("ShadowMapIndex", shadowMapIndex);
+            applyShadowMap(g, shadowMapIndex);
+        }
+        uniformsLoaded = true;
+    }
+
+    /**
+     * Set up the shadow map for this shader
+     */
+    private void applyShadowMap(Geometry g, int index) {
+        TextureState ts = (TextureState)g.getRenderState(RenderState.StateType.Texture);
+
+        if (ts == null) {
+            ts = (TextureState)worldManager.getRenderManager().createRendererState(RenderState.StateType.Texture);
+            g.setRenderState(ts);
+        }
+
+        ts.setTexture(shadowMap, index);
+    }
+
     /**
      * Get the GLSLShaderObjectsState for this object
      */

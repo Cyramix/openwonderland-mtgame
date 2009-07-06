@@ -39,6 +39,7 @@ import com.jme.scene.CameraNode;
 import com.jme.renderer.Camera;
 import com.jme.scene.Skybox;
 import com.jme.renderer.pass.Pass;
+import org.jdesktop.mtgame.shader.Shader;
 
 /**
  * The RenderManager creates and controls the renderer threads.  It also acts as
@@ -169,6 +170,12 @@ public class RenderManager {
         renderer.addRenderBuffer(rb);
     }
 
+    /**
+     * Add a geometry lod to track.
+     */
+    public void addShadowMapShader(Shader s) {
+        renderer.addShadowMapShader(s);
+    }
 
     /**
      * Add a geometry lod to track.

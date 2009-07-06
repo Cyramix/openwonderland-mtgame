@@ -483,8 +483,9 @@ public class JMECollisionSystem extends CollisionSystem {
      * @param cr
      */
     public void findCollisions(Spatial sp, CollisionResults cr) {
-        synchronized (collisionComponents) {
-            synchronized (worldManager.getRenderManager().getCollisionLock()) {
+
+        synchronized (worldManager.getRenderManager().getCollisionLock()) {
+            synchronized (collisionComponents) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
                     JMECollisionComponent cc = (JMECollisionComponent) collisionComponents.get(i);
                     if (cc.isPickable()) {

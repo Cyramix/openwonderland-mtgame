@@ -59,6 +59,8 @@ import java.lang.reflect.Method;
 import javolution.util.FastMap;
 import javolution.util.FastList;
 import java.lang.Exception;
+import org.jdesktop.mtgame.shader.Shader;
+import com.jme.math.Matrix4f;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -217,6 +219,11 @@ class Renderer extends Thread {
      * The list of geometry lod's to update each frame
      */
     private ArrayList geometryLODs = new ArrayList();
+
+    /**
+     * The list of shadow map shaders to update each frame
+     */
+    private ArrayList<Shader> shadowMapShaders = new ArrayList<Shader>();
        
     /**
      * The array list of render components waiting
@@ -540,12 +547,6 @@ class Renderer extends Thread {
      * Process all jME related updates.  These happen once per canvas
      */
     void processJMEUpdates(float updateTime) {
-        /**
-         * This allows anyone that needs to do some updating in the render
-         * thread be called
-         */
-        processRenderUpdates();
-
         /* 
          * This block handles any state updates needed to any of the graphs
          */
@@ -560,6 +561,18 @@ class Renderer extends Thread {
         for (int i=0; i<geometryLODs.size(); i++) {
             GeometryLOD lod = (GeometryLOD) geometryLODs.get(i);
             lod.applyShader(position);
+        }
+
+        // Update the shadow map shaders
+        synchronized (shadowMapShaders) {
+            Matrix4f view = ((AbstractCamera) jmeRenderer.getCamera()).getModelViewMatrix();
+            view.invertLocal();
+            for (int i=0; i<shadowMapShaders.size(); i++) {
+                Shader shader = shadowMapShaders.get(i);
+                if (shader.getShaderState() != null) {
+                    shader.getShaderState().setUniform("inverseView", view, false);
+                }
+            }
         }
     }
     
@@ -673,28 +686,33 @@ class Renderer extends Thread {
             frameStartTime = System.nanoTime();
 
             processInternalUpdates();
+               
+            // Ready to update and render.  
+            bufferController.startFrame(jmeRenderer);
+            if (bufferController.anyBuffers()) {
+                currentScreenBuffer = bufferController.getCurrentOnscreenBuffer();
+                if (currentScreenBuffer != null &&
+                    currentScreenBuffer.makeCurrent(displaySystem, jmeRenderer)) {
+                    /*
+                     * This block of code handles calling entity processes which are
+                     * locked to the renderer - like the current camera.
+                     */
+                    runProcessorsTriggered();
 
-            /* 
-             * This block of code handles calling entity processes which are
-             * locked to the renderer - like the current camera.
-             */
-            runProcessorsTriggered();
-                
-            // Ready to update and render.  Don't let anyone in.
-            synchronized (jmeSGLock) {
-                // Process any jME updates.  We need to make an onscreen
-                // canvas current for this, so we pick the last one on the
-                // list.
-                bufferController.startFrame(jmeRenderer);
-                if (bufferController.anyBuffers()) {
-                    currentScreenBuffer = bufferController.getCurrentOnscreenBuffer();
-                    if (currentScreenBuffer != null &&
-                        currentScreenBuffer.makeCurrent(displaySystem, jmeRenderer)) {
+                    /**
+                     * This allows anyone that needs to do some updating in the render
+                     * thread be called
+                     */
+                    processRenderUpdates();
+
+                    synchronized (jmeSGLock) {
                         processJMEUpdates(totalTime / 1000000000.0f);
-                        bufferController.renderScene(displaySystem, jmeRenderer, this);
-                        bufferController.endFrame(jmeRenderer);
-                        currentScreenBuffer.release();
                     }
+
+                    // Finally, render the scene
+                    bufferController.renderScene(displaySystem, jmeRenderer, this);
+                    bufferController.endFrame(jmeRenderer);
+                    currentScreenBuffer.release();
                 }
             }
             /*
@@ -1324,6 +1342,15 @@ class Renderer extends Thread {
     public void addGeometryLOD(GeometryLOD lod) {
         synchronized (geometryLODMap) {
             geometryLODMap.put(lod.getGeometry(), lod);
+        }
+    }
+
+    /**
+     * Add a shadow map shader to update camera state upon
+     */
+    public void addShadowMapShader(Shader s) {
+        synchronized (shadowMapShaders) {
+            shadowMapShaders.add(s);
         }
     }
     

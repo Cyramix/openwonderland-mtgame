@@ -59,6 +59,11 @@ public class GeometryAttributes {
     private ArrayList shaderParams = new ArrayList();
 
     /**
+     * The list of shader uniforms
+     */
+    private ArrayList shaderUniforms = new ArrayList();
+
+    /**
      * The list of shader params
      */
     private ArrayList lowShaderParams = new ArrayList();
@@ -67,6 +72,16 @@ public class GeometryAttributes {
      * The distance cutoff for lod
      */
     private float distance = 10.0f;
+
+    /**
+     * A boolean indicating whether this geometry blocks light
+     */
+    private boolean shadowOccluder = false;
+
+    /**
+     * A boolean indicating whether this geometry receives shadows
+     */
+    private boolean shadowReceiver = false;
 
     /**
      * The default constructor
@@ -97,14 +112,49 @@ public class GeometryAttributes {
     }
 
     /**
-     * Get the CollisionComponent
+     * Get the occluder flag
+     */
+    public boolean getShadowOccluder() {
+        return (shadowOccluder);
+    }
+
+    /**
+     * Set the shader occluder flag
+     */
+    public void setShadowOccluder(boolean enable) {
+        shadowOccluder = enable;
+    }
+
+    /**
+     * Get the occluder flag
+     */
+    public boolean getShadowReceiver() {
+        return (shadowReceiver);
+    }
+
+    /**
+     * Set the shader occluder flag
+     */
+    public void setShadowReceiver(boolean enable) {
+        shadowReceiver = enable;
+    }
+
+    /**
+     * Add a shader parameter
      */
     public void addShaderParam(String param) {
         shaderParams.add(param);
     }
 
     /**
-     * Get the PickInfo
+     * Add a shader uniform
+     */
+    public void addShaderUniform(String param) {
+        shaderUniforms.add(param);
+    }
+
+    /**
+     * Get the shader params
      */
     public String[] getShaderParams() {
         String[] params = new String[shaderParams.size()];
@@ -112,6 +162,17 @@ public class GeometryAttributes {
             params[i] = (String) shaderParams.get(i);
         }
         return (params);
+    }
+
+    /**
+     * Get the shader uniforms
+     */
+    public String[] getShaderUniforms() {
+        String[] uniforms = new String[shaderUniforms.size()];
+        for (int i=0; i<uniforms.length; i++) {
+            uniforms[i] = (String) shaderUniforms.get(i);
+        }
+        return (uniforms);
     }
     
     /**

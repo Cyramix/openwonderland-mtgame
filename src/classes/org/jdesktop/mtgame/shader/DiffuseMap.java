@@ -42,73 +42,97 @@ public class DiffuseMap extends Shader {
     /**
      * The vertex and fragment shader
      */
+
     protected static final String vShader =
-        "varying vec3 EyeDir;" +
-        "varying vec3 LightDir[2];" +
-        "varying vec3 VNormal;" +
+        "varying vec3 viewDirection;" +
+        "varying vec3 lightDirection[3];" +
+        "varying vec3 fNormal; " +
         "void main(void)" +
         "{" +
-        "        VNormal = normalize(gl_NormalMatrix * gl_Normal);" +
-        "        gl_Position = ftransform();" +
+        "        fNormal = gl_NormalMatrix * gl_Normal;" +
         "        vec3 vVertex = vec3(gl_ModelViewMatrix * gl_Vertex);" +
+        "        gl_Position = ftransform();" +
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
-        "        gl_TexCoord[1] = gl_MultiTexCoord1;" +
-        "" +
-        "        LightDir[0] = normalize(gl_LightSource[0].position.xyz - vVertex);" +
-        "        LightDir[1] = normalize(gl_LightSource[1].position.xyz - vVertex);" +
-        "        EyeDir = normalize(vVertex);" +
+
+        "        lightDirection[0] = gl_LightSource[0].position.xyz - vVertex;" +
+        "        lightDirection[1] = gl_LightSource[1].position.xyz - vVertex;" +
+        "        lightDirection[2] = gl_LightSource[2].position.xyz - vVertex;" +
+        "        viewDirection = -vVertex;" +
         "}";
-    
-    protected static final String fShader =
-        "varying vec3 LightDir[2];" +
-        "varying vec3 VNormal;" +
-        "varying vec3 EyeDir;" +
+
+    private static final String fShader =
+        "varying vec3 viewDirection;" +
+        "varying vec3 lightDirection[3];" +
+        "varying vec3 fNormal; " +
         "uniform sampler2D DiffuseMapIndex;" +
-        "vec3 FragLocalNormal;" +
-        "vec4 finalColor;" +
-        "vec4 diffuseColor;" +
+        "uniform vec4 ambientMaterialColor; " +
+        "uniform vec4 diffuseMaterialColor; " +
+        "uniform vec4 specularMaterialColor; " +
+        "vec3 normal;" +
+        "vec3 finalColor;" +
+        "vec3 diffuseColor;" +
         "vec3 specularColor;" +
         "float NdotL;" +
-        "float spec;" +
         "vec3 reflectDir;" +
+
         "void main(void) { " +
-        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
+                 // Do some setup
+        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
+        "        normal = normalize(fNormal);" +
         "        specularColor = vec3(1.0, 1.0, 1.0);" +
-        "        finalColor.rgb  = gl_FrontMaterial.ambient.rgb * gl_LightSource[0].ambient.rgb;" +
+
+        "        vec3 ambientMat = ambientMaterialColor.rgb; " +
+        "        vec3 diffuseMat = diffuseMaterialColor.rgb; " +
+        "        vec3 specularMat = specularMaterialColor.rgb; " +
+        "        finalColor.rgb  = ambientMat * diffuseColor;" +
+
                  // Compute diffuse for light0
-        "        NdotL = clamp(dot(VNormal, LightDir[0]), 0.0, 1.0);" +
-        "        finalColor.rgb += diffuseColor.rgb * NdotL * gl_LightSource[0].diffuse.rgb;" +
+        "        vec3 ldir = normalize(lightDirection[0]); " +
+        "        vec3 vdir = normalize(viewDirection); " +
+        "        NdotL = max(0.0, dot(normal, ldir));" +
+        "        finalColor.rgb += (diffuseMat * diffuseColor.rgb * NdotL * gl_LightSource[0].diffuse.rgb);" +
 
                  // Compte specular for light0
-        "        reflectDir = reflect(LightDir[0], VNormal);" +
-        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
-        "        spec = pow(spec, 32.0);" +
-        "        finalColor.rgb += spec * specularColor * gl_LightSource[0].specular.rgb;" +
+        "        reflectDir = normalize(reflect(normal, ldir));" +
+        "        float fRDotV = max( 0.0, dot( reflectDir, vdir ) );" +
+        "        finalColor.rgb += (specularMat * pow( fRDotV, 25.0 ) * specularColor * gl_LightSource[0].specular.rgb);" +
 
                  // Compute diffuse for light1
-        "        finalColor.rgb += gl_FrontMaterial.ambient.rgb * gl_LightSource[1].ambient.rgb;" +
-        "        NdotL = clamp(dot(VNormal, LightDir[1]), 0.0, 1.0);" +
-        "        finalColor.rgb += diffuseColor.rgb * NdotL * gl_LightSource[1].diffuse.rgb;" +
+        "        ldir = normalize(lightDirection[1]); " +
+        "        NdotL = max(0.0, dot(normal, ldir));" +
+        "        finalColor.rgb += (diffuseMat * diffuseColor.rgb * NdotL * gl_LightSource[1].diffuse.rgb);" +
 
                  // Compte specular for light1
-        "        reflectDir = reflect(LightDir[1], VNormal);" +
-        "        spec = max(dot(EyeDir, reflectDir), 0.0);" +
-        "        spec = pow(spec, 32.0);" +
-        "        finalColor.rgb = min(finalColor.rgb + (spec * specularColor * gl_LightSource[1].specular.rgb), vec3(1.0));" +
+        "        reflectDir = normalize(reflect(normal, ldir));" +
+        "        fRDotV = max( 0.0, dot( reflectDir, vdir ) );" +
+        "        finalColor.rgb += (specularMat * pow( fRDotV, 25.0 ) * specularColor * gl_LightSource[1].specular.rgb);" +
 
-                 // Final assignment
-        "        gl_FragColor = finalColor;" +
+                 // Compute diffuse for light2
+        "        ldir = normalize(lightDirection[2]); " +
+        "        NdotL = max(0.0, dot(normal, ldir));" +
+        "        finalColor.rgb += (diffuseMat * diffuseColor.rgb * NdotL * gl_LightSource[2].diffuse.rgb);" +
+
+                 // Compte specular for light2
+        "        reflectDir = normalize(reflect(normal, ldir));" +
+        "        fRDotV = max( 0.0, dot( reflectDir, vdir ) );" +
+        "        finalColor.rgb += (specularMat * pow( fRDotV, 25.0 ) * specularColor * gl_LightSource[2].specular.rgb);" +
+
+        "        gl_FragColor.rgb = finalColor;" +
         "}";
     
-    public DiffuseMap(WorldManager worldManager) {
-        super(worldManager, vShader, fShader);
+    public DiffuseMap() {
+        super(vShader, fShader);
+        addRequiredUniform("DiffuseMapIndex");
+        addRequiredUniform("ambientMaterialColor");
+        addRequiredUniform("diffuseMaterialColor");
+        addRequiredUniform("specularMaterialColor");
     }
     
     /**
      * This applies this shader to the given geometry
      */
     public void applyToGeometry(Geometry geo) {
-        shaderState.setUniform("DiffuseMapIndex", 0);
+        applyUniforms(geo);
         geo.setRenderState(shaderState);
     }
 }

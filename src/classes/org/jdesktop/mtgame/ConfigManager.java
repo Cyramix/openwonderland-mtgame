@@ -31,25 +31,19 @@ package org.jdesktop.mtgame;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jdesktop.mtgame.shader.DiffuseNormalMap;
-import org.jdesktop.mtgame.shader.DiffuseMap;
-import org.jdesktop.mtgame.shader.DiffuseMapAO;
-import org.jdesktop.mtgame.shader.DiffuseMapAlpha;
-import org.jdesktop.mtgame.shader.DiffuseMapAlphaMap;
-import org.jdesktop.mtgame.shader.DiffuseNormalSpecMap;
-import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMap;
-import org.jdesktop.mtgame.shader.DiffuseNormalSpecMapAlpha;
-import org.jdesktop.mtgame.shader.DiffuseNormalSpecAOMapAlpha;
 import org.jdesktop.mtgame.shader.Shader;
 import com.jme.scene.Spatial;
 import com.jme.scene.Node;
 import com.jme.scene.Geometry;
 import com.jme.scene.TriMesh;
+import com.jme.scene.Line;
+import com.jme.scene.shape.Quad;
 import com.jme.scene.SharedMesh;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.TextureState;
 import com.jme.scene.state.ZBufferState;
+import com.jme.scene.state.MaterialState;
 import com.jme.image.Texture;
 import com.jme.util.TextureManager;
 import java.net.URL;
@@ -58,6 +52,7 @@ import com.jme.util.geom.TangentBinormalGenerator;
 import com.jme.scene.VBOInfo;
 import com.jme.math.Vector3f;
 import com.jme.math.Quaternion;
+import com.jme.renderer.ColorRGBA;
 import java.nio.FloatBuffer;
 
 import java.util.HashMap;
@@ -119,6 +114,17 @@ public class ConfigManager implements ResourceLocator {
     private String baseURL = null;
     
     private boolean localResourceLocatorInstalled = false;
+
+    int normalIndex = 0;
+    boolean showNormals = false;
+    boolean showTangents = false;
+
+    private ShadowMapRenderBuffer shadowMapBuffer = null;
+    private int shadowMapWidth = 1024;
+    private int shadowMapHeight = 1024;
+    private ArrayList<Node> shadowSpatials = new ArrayList<Node>();
+    private boolean showShadowMap = false;
+    private Node shadowDebug = null;
 
     /**
      * The Default Constructor
@@ -198,6 +204,9 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("ShaderParam")) {
                 token = token.substring(11).trim();
                 ga.addShaderParam(token);
+            } else if (token.startsWith("ShaderUniform")) {
+                token = token.substring(13).trim();
+                ga.addShaderUniform(token);
             } else if (token.startsWith("Shader")) {
                 token = token.substring(6).trim();
                 ga.setShaderName(token);
@@ -210,6 +219,12 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("LowShader")) {
                 token = token.substring(9).trim();
                 ga.setLowShaderName(token);
+            } else if (token.startsWith("ShadowOccluder")) {
+                token = token.substring(14).trim();
+                ga.setShadowOccluder(Boolean.parseBoolean(token));
+            } else if (token.startsWith("ShadowReceiver")) {
+                token = token.substring(14).trim();
+                ga.setShadowReceiver(Boolean.parseBoolean(token));
             } else if (token.startsWith("DataDir")) {
                 token = token.substring(7).trim();
                 setDataDirectory(token);
@@ -222,7 +237,17 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("Collada")) {
                 token = token.substring(7).trim();
                 loadColladaFile(token);
+            } else if (token.startsWith("ShadowMapEnable")) {
+                token = token.substring(15).trim();
+                processShadowMap(token);
+            } else if (token.startsWith("ShadowMapWidth")) {
+                token = token.substring(14).trim();
+                setShadowMapWidth(token);
+            } else if (token.startsWith("ShadowMapHeight")) {
+                token = token.substring(15).trim();
+                setShadowMapHeight(token);
             }
+
             token = nextToken(tokens);
         }
     }
@@ -263,6 +288,79 @@ public class ConfigManager implements ResourceLocator {
             Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
         }
         currentToken = lastCurrentToken;
+    }
+
+    /**
+     * Process a shadow map enable
+     */
+    private void processShadowMap(String token) {
+        if (token.equals("true")) {
+            if (shadowMapBuffer == null) {
+                Vector3f up = new Vector3f(-1.0f, 1.0f, -1.0f);
+                Vector3f lookAt = new Vector3f();
+                Vector3f position = new Vector3f(125.0f, 100.0f, 125.0f);
+                createShadowBuffer(lookAt, position, up);
+            }
+         } else {
+            if (shadowMapBuffer != null) {
+                // TODO: Implement this
+                //worldManager.getRenderManager().removeRenderBuffer(shadowMapBuffer);
+            }
+        }
+    }
+
+    /**
+     * Create a shadowmap buffer with the given position and direction
+     * @param dir
+     * @param pos
+     */
+    private void createShadowBuffer(Vector3f lookAt, Vector3f pos, Vector3f up) {
+        shadowMapBuffer = (ShadowMapRenderBuffer) worldManager.getRenderManager().createRenderBuffer(RenderBuffer.Target.SHADOWMAP, shadowMapWidth, shadowMapHeight);
+        shadowMapBuffer.setCameraLookAt(lookAt);
+        shadowMapBuffer.setCameraUp(up);
+        shadowMapBuffer.setCameraPosition(pos);
+        shadowMapBuffer.setManageRenderScenes(true);
+        shadowMapBuffer.setBackgroundColor(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+
+        worldManager.getRenderManager().addRenderBuffer(shadowMapBuffer);
+    }
+
+    private void createDebugShadowMap() {
+        shadowDebug = new Node("Shadow Debug");
+        Quad shadowImage = new Quad("Shadow Quad", shadowMapWidth, shadowMapHeight);
+        Entity e = new Entity("Shadow Debug ");
+
+        shadowDebug.attachChild(shadowImage);
+        shadowDebug.setLocalTranslation(new Vector3f(0.0f, 0.0f, 100.0f));
+
+        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        shadowDebug.setRenderState(buf);
+
+        TextureState ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Texture);
+        ts.setEnabled(true);
+        ts.setTexture(shadowMapBuffer.getTexture(), 0);
+        shadowDebug.setRenderState(ts);
+
+        RenderComponent shadowDebugRC = worldManager.getRenderManager().createRenderComponent(shadowDebug);
+        shadowDebugRC.setLightingEnabled(false);
+        e.addComponent(RenderComponent.class, shadowDebugRC);
+        worldManager.addEntity(e);
+    }
+
+    /**
+     * Set the shadow map width
+     */
+    private void setShadowMapWidth(String width) {
+        shadowMapWidth = Integer.parseInt(width);
+    }
+
+    /**
+     * Set the shadow map height
+     */
+    private void setShadowMapHeight(String height) {
+        shadowMapHeight = Integer.parseInt(height);
     }
 
     /**
@@ -329,6 +427,40 @@ public class ConfigManager implements ResourceLocator {
         //System.out.println("Adding: " + model);
         modelRoot.attachChild(model);
 
+        if (showNormals) {
+            int normalCount = countNormals(model, 0, false);
+            //System.out.println("Number of NORMALS: " + normalCount);
+            Vector3f[] lineData = new Vector3f[normalCount*2];
+            normalIndex = 0;
+            parseModel(0, model, lineData, false);
+            Line normalGeometry = new Line("Normal Geometry", lineData, null, null, null);
+            MaterialState ms = (MaterialState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Material);
+            ms.setDiffuse(new ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
+            normalGeometry.setRenderState(ms);
+            //FlatShader shader = new FlatShader(wm);
+            //shader.applyToGeometry(normalGeometry);
+            Node normalNode = new Node();
+            normalNode.attachChild(normalGeometry);
+            model.attachChild(normalNode);
+        }
+
+        if (showTangents) {
+            int normalCount = countNormals(model, 0, true);
+            //System.out.println("Number of Tangents: " + normalCount);
+            Vector3f[] lineData = new Vector3f[normalCount*2];
+            normalIndex = 0;
+            parseModel(0, model, lineData, true);
+            Line normalGeometry = new Line("Tangent Geometry", lineData, null, null, null);
+            MaterialState ms = (MaterialState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Material);
+            ms.setDiffuse(new ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f));
+            normalGeometry.setRenderState(ms);
+            //FlatShader shader = new FlatShader(wm);
+            //shader.applyToGeometry(normalGeometry);
+            Node normalNode = new Node();
+            normalNode.attachChild(normalGeometry);
+            model.attachChild(normalNode);
+        }
+
         Entity e = new Entity("Model");
         RenderComponent sc = worldManager.getRenderManager().createRenderComponent(modelRoot);
         JMECollisionComponent cc = collisionSystem.createCollisionComponent(modelRoot);
@@ -341,14 +473,92 @@ public class ConfigManager implements ResourceLocator {
             loadListener.entityLoaded(e);
     }
 
+    int countNormals(Spatial model, int currentCount, boolean tangents) {
+        if (model instanceof Node) {
+            Node n = (Node) model;
+            for (int i = 0; i < n.getQuantity(); i++) {
+                currentCount = countNormals(n.getChild(i), currentCount, tangents);
+            }
+        } else if (model instanceof Geometry) {
+            Geometry geo = (Geometry) model;
+            //System.out.println("Buffer: " + geo.getColorBuffer());
+            //System.out.println("Buffer: " + geo.getBinormalBuffer());
+            //System.out.println("Buffer: " + geo.getTangentBuffer());
+            //System.out.println("Buffer: " + geo.getNormalBuffer());
+            if (tangents) {
+                if (geo.getTangentBuffer() != null) {
+                    currentCount += geo.getVertexCount();
+                }
+            } else {
+                currentCount += geo.getVertexCount();
+            }
+        }
+        return (currentCount);
+    }
+
+    void parseModel(int level, Spatial model, Vector3f[] lineData, boolean tangents) {
+        FloatBuffer lBuffer = null;
+        if (model instanceof Node) {
+            Node n = (Node) model;
+            for (int i = 0; i < n.getQuantity(); i++) {
+                parseModel(level + 1, n.getChild(i), lineData, tangents);
+            }
+        } else if (model instanceof Geometry) {
+            Geometry geo = (Geometry) model;
+            //System.out.println("FOUND GEOMETRY: " + geo.getName());
+
+            if (lineData != null) {
+                FloatBuffer vBuffer = geo.getVertexBuffer();
+                if (tangents) {
+                    lBuffer = geo.getTangentBuffer();
+                } else {
+                    lBuffer = geo.getNormalBuffer();
+                }
+                if (lBuffer != null) {
+                    vBuffer.rewind();
+                    lBuffer.rewind();
+                    float nScale = 1.0f;
+                    for (int i = 0; i < geo.getVertexCount(); i++) {
+                        lineData[normalIndex] = new Vector3f();
+                        lineData[normalIndex].x = vBuffer.get();
+                        lineData[normalIndex].y = vBuffer.get();
+                        lineData[normalIndex].z = vBuffer.get();
+                        lineData[normalIndex + 1] = new Vector3f();
+                        lineData[normalIndex + 1].x = lineData[normalIndex].x + nScale * lBuffer.get();
+                        lineData[normalIndex + 1].y = lineData[normalIndex].y + nScale * lBuffer.get();
+                        lineData[normalIndex + 1].z = lineData[normalIndex].z + nScale * lBuffer.get();
+                        normalIndex += 2;
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Apply the configuration map information to a jME graph
      */
     public void applyConfig(Spatial s) {
+        clearShadowSpatials();
         parseModel(s, 0);
+        addShadowSpatials();
     }
-    
+
+    private void clearShadowSpatials() {
+        shadowSpatials.clear();
+    }
+
+    private void addShadowSpatials() {
+        for (int i=0; i<shadowSpatials.size(); i++) {
+            RenderComponent rc = worldManager.getRenderManager().createRenderComponent(shadowSpatials.get(i));
+            shadowMapBuffer.addRenderScene(rc);
+        }
+
+        if (showShadowMap && (shadowDebug == null)) {
+            createDebugShadowMap();
+        }
+
+    }
+
     void parseModel(Spatial model, int level) {
         GeometryAttributes ga = (GeometryAttributes)configMap.get(model.getName());
         if (ga != null) {
@@ -374,7 +584,7 @@ public class ConfigManager implements ResourceLocator {
         TextureState lowTS = null;
 
         if (!ga.getShaderName().equals("None")) {
-            if (s instanceof SharedMesh) {
+            if (s instanceof TriMesh) {
                 VBOInfo vboInfo = new VBOInfo();
                 vboInfo.setVBOTangentEnabled(true);
                 vboInfo.setVBONormalEnabled(true);
@@ -383,11 +593,22 @@ public class ConfigManager implements ResourceLocator {
                 //((SharedMesh)s).getTarget().setVBOInfo(vboInfo);
             }
 
+            boolean usesShadowMap = ga.getShadowReceiver();
             highShader = createShader(ga.getShaderName(), s);
-            highTS = createTextureState(ga.getShaderParams(), s);
+            highTS = createTextureState(ga.getShaderUniforms(), s, highShader);
+            highShader.setShaderUniforms(ga.getShaderUniforms());
+            if (usesShadowMap) {
+                highShader.setShadowMap(shadowMapBuffer.getTexture());
+                worldManager.getRenderManager().addShadowMapShader(highShader);
+            }
             if (ga.getLowShaderName() != null) {
                 lowShader = createShader(ga.getLowShaderName(), s);
-                lowTS = createTextureState(ga.getLowShaderParams(), s);
+                lowTS = createTextureState(ga.getShaderUniforms(), s, lowShader);
+                lowShader.setShaderUniforms(ga.getShaderUniforms());
+                if (usesShadowMap) {
+                    lowShader.setShadowMap(shadowMapBuffer.getTexture());
+                    worldManager.getRenderManager().addShadowMapShader(lowShader);
+                }
                 GeometryLOD geoLOD = new GeometryLOD((Geometry)s, lowShader, highShader,
                         lowTS, highTS, ga.getDistance());
                 worldManager.getRenderManager().addGeometryLOD(geoLOD);
@@ -395,11 +616,12 @@ public class ConfigManager implements ResourceLocator {
                 // Just apply and move on...
                 s.setRenderState(highTS);
                 highShader.applyToGeometry((Geometry)s);
-            }
-                    
+            }           
         }
-        
 
+        if (ga.getShadowOccluder()) {
+            shadowSpatials.add(s.getParent());
+        }
     }
 
 
@@ -409,42 +631,18 @@ public class ConfigManager implements ResourceLocator {
     private Shader createShader(String name, Spatial s) {
         Shader shader = null;
 
-        if (name.equals("DiffuseNormalMap")) {
-            shader = new DiffuseNormalMap(worldManager);
-        } else if (name.equals("DiffuseNormalSpecMap")) {
-            shader = new DiffuseNormalSpecMap(worldManager);
-        } else if (name.equals("DiffuseMapAO")) {
-            shader = new DiffuseMapAO(worldManager);
-        } else if (name.equals("DiffuseNormalSpecAOMap")) {
-            shader = new DiffuseNormalSpecAOMap(worldManager);
-        } else if (name.equals("DiffuseNormalSpecAOMapAlpha")) {
-            shader = new DiffuseNormalSpecAOMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
-            as.setEnabled(true);
-            as.setReference(0.5f);
-            as.setTestFunction(BlendState.TestFunction.GreaterThan);
-            as.setTestEnabled(true);
-            s.setRenderState(as);
-        } else if (name.equals("DiffuseNormalSpecMapAlpha")) {
-            shader = new DiffuseNormalSpecMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
-            as.setEnabled(true);
-            as.setReference(0.5f);
-            as.setTestFunction(BlendState.TestFunction.GreaterThan);
-            as.setTestEnabled(true);
-            s.setRenderState(as);
-        } else if (name.equals("DiffuseMap")) {
-            shader = new DiffuseMap(worldManager);
-        } else if (name.equals("DiffuseMapAlpha")) {
-            shader = new DiffuseMapAlpha(worldManager);
-            BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
-            as.setEnabled(true);
-            as.setReference(0.5f);
-            as.setTestFunction(BlendState.TestFunction.GreaterThan);
-            as.setTestEnabled(true);
-            s.setRenderState(as);
-        } else if (name.equals("DiffuseMapAlphaMap")) {
-            shader = new DiffuseMapAlphaMap(worldManager);
+        try {
+            shader = (Shader)Class.forName("org.jdesktop.mtgame.shader." + name).newInstance();
+        } catch (java.lang.ClassNotFoundException ce) {
+            System.out.println("Shader Not Found: " + ce);
+        } catch (java.lang.InstantiationException ie) {
+            System.out.println("Shader Not Found: " + ie);
+        } catch (java.lang.IllegalAccessException iae) {
+            System.out.println("Shader Not Found: " + iae);
+        }
+        shader.init(worldManager);
+
+        if (name.contains("Alpha")) {
             BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
             as.setReference(0.5f);
@@ -457,47 +655,23 @@ public class ConfigManager implements ResourceLocator {
     }
 
 
-    private TextureState createTextureState(String[] params, Spatial s) {
-        TextureState ts = ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Texture);;
-         // Loop through the shader params
-        for (int i=0; i<params.length; i++) {
-            String param = params[i];
-            String textureName = null;
+    private TextureState createTextureState(String[] uniforms, Spatial s, Shader shader) {
+        TextureState ts = (TextureState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Texture);
 
-            if (param.startsWith("DiffuseMap")) {
-                param = param.substring(10).trim();
-                int index = param.indexOf(' ');
-                textureName = param.substring(0, index);
-                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
+         // Loop through the shader params
+        for (int i=0; i<uniforms.length; i++) {
+            String[] tokens = uniforms[i].split("\\ ");
+            String name = tokens[0];
+            if (name.contains("Map")) {
+                String textureName = tokens[1];
+                int tcIndex = Integer.valueOf(tokens[2]);
                 loadTexture(s, textureName, tcIndex, ts);
-            } else if (param.startsWith("NormalMap")) {
-                param = param.substring(9).trim();
-                int index = param.indexOf(' ');
-                textureName = param.substring(0, index);
-                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex, ts);
-            } else if (param.startsWith("SpecularMap")) {
-                param = param.substring(11).trim();
-                int index = param.indexOf(' ');
-                textureName = param.substring(0, index);
-                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex, ts);
-            } else if (param.startsWith("AmbientOccMap")) {
-                param = param.substring(13).trim();
-                int index = param.indexOf(' ');
-                textureName = param.substring(0, index);
-                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex, ts);
-            } else if (param.startsWith("AlphaMap")) {
-                param = param.substring(8).trim();
-                int index = param.indexOf(' ');
-                textureName = param.substring(0, index);
-                int tcIndex = Integer.valueOf(param.substring(index).trim()).intValue();
-                loadTexture(s, textureName, tcIndex, ts);
+                shader.addUniform(name + "Index", new Integer(tcIndex));
             }
         }
         return (ts);
     }
+
     /**
      * Load the specified texture
      */

@@ -39,19 +39,22 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseMapAO extends Shader {
+public class DiffuseShadowMapAO extends Shader {
     /**
      * The vertex and fragment shader
      */
     protected static final String vShader =
         "varying vec3 viewDirection;" +
         "varying vec3 lightDirection[3];" +
+        "varying vec4 shadowCoordinate;" +
+        "uniform mat4 inverseView;" +
         "varying vec3 normal;" +
         "void main(void)" +
         "{" +
         "        normal = gl_NormalMatrix * gl_Normal;" +
         "        vec3 vVertex = vec3(gl_ModelViewMatrix * gl_Vertex);" +
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
+        "        shadowCoordinate = gl_TextureMatrix[2] * inverseView * (gl_ModelViewMatrix * gl_Vertex);" +
         "" +
         "        lightDirection[0] = normalize(gl_LightSource[0].position.xyz - vVertex);" +
         "        lightDirection[1] = normalize(gl_LightSource[1].position.xyz - vVertex);" +
@@ -67,6 +70,8 @@ public class DiffuseMapAO extends Shader {
 
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D AmbientOccMapIndex;" +
+        "uniform sampler2D ShadowMapIndex;" +
+        "varying vec4 shadowCoordinate;" +
         "uniform vec4 ambientMaterialColor; " +
         "uniform vec4 diffuseMaterialColor; " +
         "uniform vec4 specularMaterialColor; " +
@@ -78,6 +83,19 @@ public class DiffuseMapAO extends Shader {
         "float spec;" +
         "float fRDotV;" +
         "vec3 reflectDir;" +
+        "vec2 shadowC; " +
+
+        "float sampleShadowXY(vec2 shadowCoord, float fragDepth)"+
+        "{"+
+        "   float depth = 1.0;" +
+        "   float shadowDepth = texture2D(ShadowMapIndex, shadowCoord).r;"+
+        "   if (fragDepth > shadowDepth + 0.0001) " +
+        "       depth = 0.0;" +
+        "   return depth;" +
+//        "   float depth = (fragDepth)/(shadowDepth);"+
+//        "   return depth > shadowBias ? 0.0 : 1.0;"+
+        "}"+
+
         "void main(void) { " +
         "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
         "        ambientOcc = texture2D(AmbientOccMapIndex, gl_TexCoord[0].st).rgb;" +
@@ -112,16 +130,28 @@ public class DiffuseMapAO extends Shader {
         "        fRDotV = max( 0.0, dot( reflectDir, vdir ) );" +
         "        finalColor.rgb += specMat * pow( fRDotV, 25.0 ) * specularColor * gl_LightSource[0].specular.rgb;" +
 
-        "        gl_FragColor.rgb = finalColor.rgb * ambientOcc;" +
+        "        shadowC = shadowCoordinate.xy/shadowCoordinate.w; " +
+        "        float fragDepth = shadowCoordinate.z/shadowCoordinate.w;" +
+        "		 float x, y, shadow;" +
+		"        for (y = -1.5 ; y <=1.5 ; y+=1.0)" +
+		"            for (x = -1.5 ; x <=1.5 ; x+=1.0)" +
+		"                shadow += sampleShadowXY(vec2(x/2048.0+shadowC.x,y/2048.0+shadowC.y), fragDepth); " +
+		"        shadow /= 16.0;" +
+//        "        float shadow = sampleShadowXY(shadowC, fragDepth); " +
+        "        shadow = min(1.0, shadow + 0.4); " +
+
+        "        gl_FragColor.rgb = finalColor.rgb * ambientOcc * shadow;" +
         "}";
     
-    public DiffuseMapAO() {
+    public DiffuseShadowMapAO() {
         super(vShader, fShader);
         addRequiredUniform("DiffuseMapIndex");
         addRequiredUniform("AmbientOccMapIndex");
+        addRequiredUniform("ShadowMapIndex");
         addRequiredUniform("ambientMaterialColor");
         addRequiredUniform("diffuseMaterialColor");
         addRequiredUniform("specularMaterialColor");
+        setShadowMapIndex(2);
     }
     
     /**
