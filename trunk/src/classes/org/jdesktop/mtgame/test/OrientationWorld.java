@@ -29,7 +29,7 @@
 
 package org.jdesktop.mtgame.test;
 
-import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
+import org.jdesktop.mtgame.processor.LightCameraProcessor;
 import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
@@ -49,6 +49,7 @@ import com.jme.scene.TriMesh;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
+import com.jme.light.Light;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
@@ -57,7 +58,7 @@ import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
-import com.jme.scene.shape.Box;
+import com.jme.scene.shape.Sphere;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
@@ -170,7 +171,7 @@ public class OrientationWorld {
     private Skybox skybox = null;
     private RenderCapture renderCapture = null;
     private boolean doCapture = false;
-    
+
     public OrientationWorld(String[] args) {
         wm = new WorldManager("TestWorld");
         
@@ -187,14 +188,15 @@ public class OrientationWorld {
         collisionSystem = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
         LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
-                lightNode, new Vector3f(0, 0, 100), (float) (1.0f * Math.PI / 180.0f));
+                lightNode, null, new Vector3f(0, 0, 100), (float) (1.0f * Math.PI / 180.0f));
         Entity e = new Entity("Light Rotator");
         e.addComponent(RotationProcessor.class, rp);
         //wm.addEntity(e);
         
         createUI(wm);  
         createCameraEntity(wm);  
-        setGlobalLights();
+        //setGlobalLights();
+        createLights();
         createSkybox(wm);
         try {
             FileInputStream fs = new FileInputStream(assetDir + "worldData.mtg");
@@ -204,7 +206,137 @@ public class OrientationWorld {
         }
 
         //createAxis();
-        createMirror();
+        //createMirror();
+    }
+
+    private void createLights() {
+        Light[] lights = new Light[3];
+
+        float radius = 75.0f;
+        float lheight = 30.0f;
+        float x = (float)(radius*Math.cos(Math.PI/6));
+        float z = (float)(radius*Math.sin(Math.PI/6));
+        lights[0] = createLight(x, lheight, z);
+        x = (float)(radius*Math.cos(5*Math.PI/6));
+        z = (float)(radius*Math.sin(5*Math.PI/6));
+        lights[1] = createLight(x, lheight, z);
+        x = (float)(radius*Math.cos(3*Math.PI/2));
+        z = (float)(radius*Math.sin(3*Math.PI/2));
+        lights[2] = createLight(x, lheight, z);
+
+        LightProcessor lp = new LightProcessor(wm, lights, 20.0f, 0.6f, 0.0f, 0.7f);
+        Entity e = new Entity("Light Processor");
+        e.addComponent(LightProcessor.class, lp);
+        //wm.addEntity(e);
+    }
+
+    private Light createLight(float x, float y, float z) {
+        lightNode = new LightNode();
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+        //light.setLightMask(LightState.MASK_DIFFUSE);
+        //light.setLocation(new Vector3f(10, 100, 10));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(x, y, z);
+        wm.getRenderManager().addLight(lightNode);
+
+        Sphere sp = new Sphere("", 10, 10, 1.0f);
+        Node n = new Node("");
+        n.setLocalTranslation(x, y, z);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        n.setRenderState(buf);
+        n.attachChild(sp);
+        RenderComponent lsp = wm.getRenderManager().createRenderComponent(n);
+        lsp.setLightingEnabled(false);
+
+        LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
+                lightNode, n, new Vector3f(0, 50, 50), (float) (1.0f * Math.PI / 180.0f));
+        Entity e = new Entity("Light Rotator");
+        //e.addComponent(RotationProcessor.class, rp);
+        e.addComponent(RenderComponent.class, lsp);
+        wm.addEntity(e);
+
+        return (light);
+    }
+
+    class LightProcessor extends ProcessorComponent {
+        /**
+         * The WorldManager - used for adding to update list
+         */
+        private WorldManager worldManager = null;
+
+        /**
+         * The Time it takes to do a full cycle
+         */
+        private float cycleTime = 0.0f;
+
+        /**
+         * The increment each frame
+         */
+        private float currentLight = 0.0f;
+        private ColorRGBA diffuse = new ColorRGBA();
+        private float increment = 0.01f;
+        private float low = 0.0f;
+        private float high = 0.0f;
+
+        /**
+         * The light targets
+         */
+        private Light[] targets = null;
+
+        /**
+         * The constructor
+         */
+        public LightProcessor(WorldManager worldManager, Light[] targets, float cycleTime, float currentLight,
+                float low, float high) {
+            this.worldManager = worldManager;
+            this.targets = targets;
+            this.cycleTime = cycleTime;
+            this.currentLight = currentLight;
+            this.low = low;
+            this.high = high;
+            increment = (high - low)/(60.0f * cycleTime);
+            System.out.println("Increment is : " + increment);
+            setArmingCondition(new NewFrameCondition(this));
+        }
+
+        /**
+         * The initialize method
+         */
+        public void initialize() {
+            //setArmingCondition(new NewFrameCondition(this));
+        }
+
+        /**
+         * The Calculate method
+         */
+        public void compute(ProcessorArmingCollection collection) {
+            currentLight += increment;
+            if (currentLight > high) {
+                currentLight = high;
+                increment = -increment;
+            }
+
+            if (currentLight < low) {
+                currentLight = low;
+                increment = -increment;
+            }
+        }
+
+        /**
+         * The commit method
+         */
+        public void commit(ProcessorArmingCollection collection) {
+            diffuse.set(currentLight, currentLight, currentLight, 1.0f);
+            for (int i=0; i<targets.length; i++) {
+                targets[i].setDiffuse(diffuse);
+            }
+        }
     }
 
     void createMirror() {
@@ -368,6 +500,7 @@ public class OrientationWorld {
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, true, false, renderCapture);
         //OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
+        //LightCameraProcessor eventProcessor = new LightCameraProcessor(cameraListener, cc.getCamera(), wm, camera);
         eventProcessor.setRunInRenderer(true);
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
@@ -693,19 +826,6 @@ public class OrientationWorld {
                         normalIndex += 2;
                     }
                 }
-            }
-        }
-        
-        void assignShader(Geometry geo, String shaderFlag, boolean normalMap) {
-            if (shaderFlag.equals("MTGAMEDiffuseNormalMap")) {
-                if (normalMap) {
-                    DiffuseNormalMap shader = new DiffuseNormalMap(wm);
-                    shader.applyToGeometry(geo);
-                } else {
-                    DiffuseMap shader = new DiffuseMap(wm);
-                    shader.applyToGeometry(geo);
-                }
-                //System.out.println("Assigning Shader: " + shaderFlag);
             }
         }
     }

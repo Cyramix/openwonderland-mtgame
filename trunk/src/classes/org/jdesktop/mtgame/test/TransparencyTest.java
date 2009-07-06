@@ -35,34 +35,23 @@ import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
 import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
-import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.*;
-import com.jme.util.geom.TangentBinormalGenerator;
 import com.jme.scene.Node;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
-import com.jme.scene.TriMesh;
-import com.jme.light.DirectionalLight;
 import com.jme.renderer.ColorRGBA;
-import com.jme.scene.state.TextureState;
-import com.jme.image.Texture;
-import com.jme.scene.Spatial.CullHint;
-import com.jme.scene.Spatial;
-import com.jme.scene.Geometry;
-import com.jme.image.Image;
-import com.jme.util.TextureManager;
-import com.jme.scene.TexCoords;
+import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
-import com.jme.scene.shape.RoundedBox;
 import com.jme.scene.shape.Box;
-import com.jme.scene.shape.Quad;
+import com.jme.scene.shape.Cylinder;
+import com.jme.scene.shape.Disk;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
@@ -91,9 +80,6 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
 
-import java.net.URL;
-import java.net.MalformedURLException;
-
 import java.util.Random;
 
 
@@ -102,7 +88,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class WorldShader {
+public class TransparencyTest {
     /**
      * The WorldManager for this world
      */
@@ -116,7 +102,7 @@ public class WorldShader {
     /**
      * The desired frame rate
      */
-    private int desiredFrameRate = 60;
+    private int desiredFrameRate = 500;
     
     /**
      * The width and height of our 3D window
@@ -154,178 +140,32 @@ public class WorldShader {
         
     private Canvas canvas = null;
     private RenderBuffer rb = null;
-    private ShadowMapRenderBuffer shadowMapBuffer = null;
-    private DiffuseNormalMap shader = null;
     
-    public WorldShader(String[] args) {
+    public TransparencyTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
-        wm.getRenderManager().setMinSamples(4);
+        
+        lightNode = new LightNode();
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setLocation(new Vector3f(100, 100, 100));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(0.0f, 0.0f, 50.0f);
+        wm.getRenderManager().addLight(lightNode);
         
         createUI(wm);  
         createCameraEntity(wm);   
         createGrid(wm);
-        //wm.addEntity(grid);
+        wm.addEntity(grid);
         createAxis();
         wm.addEntity(axis);
-        shader = new DiffuseNormalMap();
-        shader.init(wm);
-        createGlobalLight();
-        createBoxes();
-        //createFloor();
-        //loadTree();
-    }
-                  
-    private void loadTree() {
-        FileInputStream fileStream = null;
-        try {
-            fileStream = new FileInputStream("/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/obj_lamp.dae");
-        } catch (FileNotFoundException ex) {
-            System.out.println(ex);
-        }
-                            
-        ColladaImporter.load(fileStream, "Model");
-        Node model = ColladaImporter.getModel();
-        model.setLocalTranslation(20.0f, 0.0f, 20.0f);
+         
+        createCylinders(wm);
         
-        parseTree(model);
-        
-        Entity e = new Entity("Tree ");
-        RenderComponent sc = wm.getRenderManager().createRenderComponent(model);
-        e.addComponent(RenderComponent.class, sc);
-
-        ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
-        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                model, (float) (1.0f * Math.PI / 180.0f));
-        pcc.addProcessor(rp);
-        e.addComponent(ProcessorCollectionComponent.class, pcc);
-        wm.addEntity(e);
-    }
-    
-    void parseTree(Spatial s) {
-        if (s instanceof Geometry) {
-            URL durl = null;
-            URL nurl = null;
-            Geometry g = (Geometry)s; 
-            TangentBinormalGenerator.generate((TriMesh)g);
-
-            Texture tex2d = null;
-            Texture normMap = null;
-        
-            try {
-                if (g.getName().contains("trunk")) {
-                    System.out.println("Found Trunk: " + g);
-                    durl = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/vegetation/veg_bark_D.jpg");
-                    nurl = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/vegetation/veg_bark_N.jpg");
-                } else if (g.getName().contains("branches")) {
-                    durl = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/vegetation/veg_redtree.png");
-                    nurl = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/vegetation/veg_redtree_N.tga");
-                    System.out.println("Found Branches: " + g);
-                }
-            } catch (MalformedURLException ex) {
-                System.out.println(ex);
-            }
-            
-            tex2d = TextureManager.loadTexture(durl,
-                    Texture.MinificationFilter.BilinearNearestMipMap,
-                    Texture.MagnificationFilter.Bilinear);
-            tex2d.setWrap(Texture.WrapMode.Clamp);
-            normMap = TextureManager.loadTexture(nurl,
-                    Texture.MinificationFilter.NearestNeighborNoMipMaps,
-                    Texture.MagnificationFilter.NearestNeighbor);
-            normMap.setWrap(Texture.WrapMode.Clamp);
-
-            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
-            buf.setEnabled(true);
-            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-            g.setRenderState(buf);
-
-            TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
-            ts.setEnabled(true);
-            ts.setTexture(tex2d, 0);
-            ts.setTexture(normMap, 1);
-            //ts.setTexture(shadowMapBuffer.getTexture(), 2);
-            g.setRenderState(ts);
-            
-        } else if (s instanceof Node) {
-            Node n = (Node) s;
-            for (int i=0; i<n.getQuantity(); i++) {
-                parseTree(n.getChild(i));
-            }
-        }
-    }
-    
-    private void createGlobalLight() {
-        Vector3f direction = new Vector3f(-1.0f, -1.0f, -1.0f);
-        Vector3f position = new Vector3f(100.0f, 100.0f, 100.0f);
-        
-        //PointLight light = new PointLight();
-        DirectionalLight light = new DirectionalLight();
-        light.setDiffuse(new ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-        //light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        light.setEnabled(true);
-        LightNode ln = new LightNode();
-        ln.setLight(light);
-        ln.setLocalTranslation(position);
-        wm.getRenderManager().addLight(ln); 
-        
-        createShadowBuffer(direction, position);
-        LightProcessor lp = new LightProcessor(wm, ln, shadowMapBuffer, (float)(1.0f * Math.PI / 180.0f));
-        Entity e = new Entity("Light Rotator");
-        e.addComponent(ProcessorComponent.class, lp);
-        //wm.addEntity(e);
-    }
-    
-    private void createShadowBuffer(Vector3f dir, Vector3f pos) {
-        int shadowWidth = 2048;
-        int shadowHeight = 2048;
-     
-        shadowMapBuffer = (ShadowMapRenderBuffer) wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.SHADOWMAP, shadowWidth, shadowHeight);
-        shadowMapBuffer.setCameraLookAt(new Vector3f());
-        shadowMapBuffer.setCameraUp(new Vector3f(-1.0f, 1.0f, -1.0f));
-        shadowMapBuffer.setCameraPosition(pos);
-        shadowMapBuffer.setManageRenderScenes(true);
-        wm.getRenderManager().addRenderBuffer(shadowMapBuffer);   
-    }
-        
-    class LightProcessor extends ProcessorComponent {     
-        private WorldManager worldManager = null;
-        private float degrees = 0.0f;
-        private float increment = 0.0f;
-        private Quaternion quaternion = new Quaternion();
-        private LightNode target = null;
-        private ShadowMapRenderBuffer smb = null;
-        Vector3f position = new Vector3f(100.0f, 100.0f, 100.0f);
-        Vector3f positionOut = new Vector3f(100.0f, 100.0f, 100.0f);
-        Vector3f up = new Vector3f(-1.0f, 1.0f, -1.0f);
-        Vector3f upOut = new Vector3f(-1.0f, 1.0f, -1.0f);
-
-        public LightProcessor(WorldManager worldManager, LightNode ln, ShadowMapRenderBuffer sb, float increment) {
-            this.worldManager = worldManager;
-            this.target = ln;
-            this.increment = increment;
-            this.smb = sb;
-            setArmingCondition(new NewFrameCondition(this));
-        }
-
-        public void initialize() {
-        }
-
-        public void compute(ProcessorArmingCollection collection) {
-            degrees += increment;
-            quaternion.fromAngles(0.0f, degrees, 0.0f);
-            quaternion.mult(up, upOut);
-            quaternion.mult(position, positionOut);
-        }
-
-        public void commit(ProcessorArmingCollection collection) {
-            target.setLocalTranslation(positionOut);
-            worldManager.addToUpdateList(target);
-            smb.setCameraPosition(positionOut);
-            smb.setCameraUp(upOut);
-        }
     }
     
     private void createCameraEntity(WorldManager wm) {
@@ -356,7 +196,7 @@ public class WorldShader {
         
         ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
         pcc.addProcessor(eventProcessor);
-        //pcc.addProcessor(selector);
+        pcc.addProcessor(selector);
         camera.addComponent(ProcessorCollectionComponent.class, pcc);
         
         wm.addEntity(camera);
@@ -435,7 +275,7 @@ public class WorldShader {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        WorldShader worldBuilder = new WorldShader(args);
+        TransparencyTest worldBuilder = new TransparencyTest(args);
         
     }
     
@@ -640,7 +480,7 @@ public class WorldShader {
             node.setLocalTranslation(0.0f, 0.0f, 0.0f);
             teapot.setModelBound(bbox);
             addModel(node);
-            //addToVisibleBounds(teapot);
+            addToVisibleBounds(teapot);
         }
             
         private void addToVisibleBounds(Geometry g) {
@@ -746,126 +586,13 @@ public class WorldShader {
     }
     
     /**
-     * Create various boxes with different materials/shaders
-     */
-    void createBoxes() {
-        
-        Texture diffuseT = null;
-        Texture normalT = null;
-        Texture specT = null;
-        
-        String loc = "file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/";
-
-        // Start with the brick
-        diffuseT = loadTexture(loc + "buildings/bldg_brick_002.png");
-        normalT = loadTexture(loc + "buildings/bldg_brick_N_002.png");
-        specT = loadTexture(loc + "buildings/bldg_brick_S_001.png");
-        createBoxModel(10.0f, 0.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(20.0f, 0.0f, 10.0f, diffuseT, normalT, null);
-        createBoxModel(30.0f, 00.0f, 10.0f, diffuseT, normalT, specT);
-
-        // Now wood
-        diffuseT = loadTexture(loc + "buildings/bldg_floor_wood_D.png");
-        normalT = loadTexture(loc + "buildings/bldg_floor_wood_N.png");
-        specT = loadTexture(loc + "buildings/bldg_floor_wood_S.png");
-        createBoxModel(10.0f, 10.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(20.0f, 10.0f, 10.0f, diffuseT, normalT, null);
-        createBoxModel(30.0f, 10.0f, 10.0f, diffuseT, normalT, specT);
-        
-        // Now some tile
-        diffuseT = loadTexture(loc + "buildings/bldg_floor_tile.png");
-        normalT = loadTexture(loc + "buildings/bldg_floor_tile_N.png");
-        createBoxModel(10.0f, 20.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(20.0f, 20.0f, 10.0f, diffuseT, normalT, null);
-        
-        // Now some tile
-        diffuseT = loadTexture(loc + "terrain/terr_pebbles_001.png");
-        normalT = loadTexture(loc + "terrain/terr_pebbles_N_001.png");
-        specT = loadTexture(loc + "terrain/terr_pebbles_S_001.png");
-        createBoxModel(-10.0f, 20.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(-20.0f, 20.0f, 10.0f, diffuseT, normalT, null);
-        createBoxModel(-30.0f, 20.0f, 10.0f, diffuseT, normalT, specT);
-        
-                
-        // Now some tile
-        diffuseT = loadTexture(loc + "terrain/terr_water_001.png");
-        normalT = loadTexture(loc + "terrain/terr_water_N_001.png");
-        specT = loadTexture(loc + "terrain/terr_water_S_001.png");
-        createBoxModel(-10.0f, 10.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(-20.0f, 10.0f, 10.0f, diffuseT, normalT, null);
-        createBoxModel(-30.0f, 10.0f, 10.0f, diffuseT, normalT, specT);
-                        
-        // Now some tile
-        diffuseT = loadTexture(loc + "vegetation/veg_shrub_002.png");
-        normalT = loadTexture(loc + "vegetation/veg_shrub_N_002.png");
-        specT = loadTexture(loc + "vegetation/veg_shrub_S_002.png");
-        createBoxModel(-10.0f, 0.0f, 10.0f, diffuseT, null, null);
-        createBoxModel(-20.0f, 0.0f, 10.0f, diffuseT, normalT, null);
-        createBoxModel(-30.0f, 0.0f, 10.0f, diffuseT, normalT, specT);
-        
-    }
-
-    private Texture loadTexture(String path) {
-        Texture texture = null;
-        try {
-            URL url = new URL(path);
-            texture = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.BilinearNearestMipMap,
-                    Texture.MagnificationFilter.Bilinear);
-            texture.setWrap(Texture.WrapMode.Repeat);
-        } catch (MalformedURLException ex) {
-            System.out.println(ex);
-        }
-        return (texture);
-    }
-     
-    private void createBoxModel(float x, float y, float z,
-            Texture dMap, Texture nMap, Texture sMap) {
-        Node node = new Node();
-        RoundedBox box = new RoundedBox("BOX");
-        node.attachChild(box);
-        node.setLocalScale(new Vector3f(5.0f, 5.0f, 5.0f));
-        
-        TangentBinormalGenerator.generate(box);
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
-        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
-        if (dMap != null) {
-           ts.setTexture(dMap, 0); 
-        }
-        if (nMap != null) {
-           ts.setTexture(nMap, 1); 
-        }
-        if (sMap != null) {
-           ts.setTexture(sMap, 2); 
-        }
-        shader.applyToGeometry(box);
-        node.setRenderState(buf);
-        node.setRenderState(ts);
-        node.setLocalTranslation(x, y, z);
-
-        Entity e = new Entity("Box ");
-        RenderComponent rc = wm.getRenderManager().createRenderComponent(node);
-        e.addComponent(RenderComponent.class, rc);
-        ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
-        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
-                node, (float) (1.0f * Math.PI / 180.0f));
-        pcc.addProcessor(rp);
-        //e.addComponent(ProcessorCollectionComponent.class, pcc);
-        wm.addEntity(e);
-    }
-        
-    /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
-    private void createRandomTeapots(WorldManager wm) {
+    private void createCylinders(WorldManager wm) {
         float x = 0.0f;
         float y = 0.0f;
         float z = 0.0f;
-        boolean transparent = false;
-        int numTeapots = 25;
+        int numCylinders = 25;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
@@ -873,147 +600,68 @@ public class WorldShader {
         JMECollisionSystem collisionSystem = (JMECollisionSystem) 
                 wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        Texture tex2d = null;
-        Texture normMap = null;
-        try {
-            URL url = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/buildings/bldg_brick_002.png");
-            tex2d = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.BilinearNearestMipMap,
-                    Texture.MagnificationFilter.Bilinear);
-            tex2d.setWrap(Texture.WrapMode.Repeat);
-            url = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/buildings/bldg_brick_N_002.png");
-            normMap = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.NearestNeighborNoMipMaps,
-                    Texture.MagnificationFilter.NearestNeighbor);
-            normMap.setWrap(Texture.WrapMode.Repeat);
-        } catch (MalformedURLException ex) {
-            System.out.println(ex);
-        }
-        
-        for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*50.0f) - 25.0f;
-            y = (r.nextFloat()*50.0f) - 25.0f;
-            z = (r.nextFloat()*50.0f) - 25.0f;
-            transparent = r.nextBoolean();
+        for (int i=0; i<numCylinders; i++) {
+            x = (r.nextFloat()*100.0f) - 50.0f;
+            y = 0.0f;
+            z = (r.nextFloat()*100.0f) - 50.0f;
+            Node teapot = createCylinderModel(x, y, z);
             
-            Node teapot = createTeapotModel(x, y, z, transparent, tex2d, normMap);
-            teapot.setLocalScale(5.0f);
-            
-            //teapot.setCullHint(CullHint.Never);
-            //shadowMapBuffer.addRenderScene(teapot);
-            
-            e = new Entity("Teapot " + i);
+            e = new Entity("Cylinder " + i);
             sc = wm.getRenderManager().createRenderComponent(teapot);
+            sc.setLightingEnabled(false);
             cc = collisionSystem.createCollisionComponent(teapot);
             e.addComponent(RenderComponent.class, sc);
             e.addComponent(CollisionComponent.class, cc);
-
-            
-            ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
-            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (1.0f * Math.PI / 180.0f));       
-            pcc.addProcessor(rp);
-            //e.addComponent(ProcessorCollectionComponent.class, pcc);
             wm.addEntity(e);
                         
         }
     }
     
-    private Node createTeapotModel(float x, float y, float z, boolean transparent, 
-            Texture t, Texture nMap) {
+    private Node createCylinderModel(float x, float y, float z) {
         Node node = new Node();
-        //Teapot teapot = new Teapot();
-        //teapot.resetData();
-        RoundedBox teapot = new RoundedBox("BOX");
-        node.attachChild(teapot);
+        Cylinder cylinder = new Cylinder("", 20, 10, 5.0f, 10.0f);
+        Disk top = new Disk("", 20, 10, 5.0f);
 
-        //Triangle[] tris = new Triangle[teapot.getTriangleCount()];
+        Quaternion dq = new Quaternion();
+        dq.fromAngleAxis((float)Math.toRadians(180.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        top.setLocalRotation(dq);
+        top.setLocalTranslation(0.0f, 0.0f, -5.0f);
 
-        //BoundingBox bbox = new BoundingBox();
-        //bbox.computeFromTris(teapot.getMeshAsTriangles(tris), 0, tris.length);
-        
-        TangentBinormalGenerator.generate(teapot);
+        node.attachChild(cylinder);
+        node.attachChild(top);
+
+        Triangle[] tris = new Triangle[cylinder.getTriangleCount()];
+
+        BoundingBox bbox = new BoundingBox();
+        bbox.computeFromTris(cylinder.getMeshAsTriangles(tris), 0, tris.length);
 
         ColorRGBA color = new ColorRGBA();
 
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        
+        BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
+        as.setEnabled(true);
+        as.setBlendEnabled(true);
+        as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+        as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+        node.setRenderState(as);
+        color.set(0.0f, 1.0f, 1.0f, 0.75f);
 
+        cylinder.setDefaultColor(color);
+        top.setDefaultColor(color);
         MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
-        
-        TextureState ts = (TextureState)wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
-        ts.setTexture(t, 0);
-        if (transparent) {
-            ts.setTexture(nMap, 1);
-        }
-        
-        shader.applyToGeometry(teapot);
-        
+
+        Quaternion q = new Quaternion();
+        q.fromAngleAxis((float)Math.toRadians(90.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        node.setLocalRotation(q);
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setRenderState(ts);
         node.setLocalTranslation(x, y, z);
-        //node.setModelBound(bbox); 
+        node.setModelBound(bbox); 
         
         return (node);
-    }
-    
-    private void createFloor() {
-                
-        RenderComponent orthoRC = null;
-        Quad quadGeo = null;
-        Node orthoQuad = new Node();
-        quadGeo = new Quad("Ortho", 100, 100);
-        Entity e = new Entity("Ortho ");
-        
-        TangentBinormalGenerator.generate(quadGeo);
-        
-        TexCoords coords = quadGeo.getTextureCoords(0);
-        coords.coords.rewind();
-        coords.coords.put(0.0f).put(10.0f);
-        coords.coords.put(0.0f).put(0.0f);
-        coords.coords.put(10.0f).put(0.0f);
-        coords.coords.put(10.0f).put(10.0f);
-        
-        Texture tex2d = null;
-        Texture normMap = null;
-        try {
-            URL url = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/buildings/bldg_floor_tile.png");
-            tex2d = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.BilinearNearestMipMap,
-                    Texture.MagnificationFilter.Bilinear);
-            tex2d.setWrap(Texture.WrapMode.Repeat);
-            url = new URL("file:/Users/runner/NetBeansProjects/lg3d-wonderland-art-src/orientation/buildings/bldg_floor_tile_N.png");
-            normMap = TextureManager.loadTexture(url,
-                    Texture.MinificationFilter.NearestNeighborNoMipMaps,
-                    Texture.MagnificationFilter.NearestNeighbor);
-            normMap.setWrap(Texture.WrapMode.Repeat);
-        } catch (MalformedURLException ex) {
-            System.out.println(ex);
-        }
-        
-        shader.applyToGeometry(quadGeo);
-        
-        orthoQuad.attachChild(quadGeo);
-        Quaternion q = new Quaternion();
-        q.fromAngleAxis((float)(Math.PI/2.0), new Vector3f(1.0f, 0.0f, 0.0f));
-        orthoQuad.setLocalRotation(q);
-
-        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        orthoQuad.setRenderState(buf);
-                
-        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
-        ts.setEnabled(true);
-        ts.setTexture(tex2d, 0);
-        ts.setTexture(normMap, 1);
-        quadGeo.setRenderState(ts);
- 
-        orthoRC = wm.getRenderManager().createRenderComponent(orthoQuad);
-        e.addComponent(RenderComponent.class, orthoRC);
-        wm.addEntity(e);
     }
 }

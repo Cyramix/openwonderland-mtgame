@@ -135,12 +135,12 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         shadowMapTexture.setApply(Texture.ApplyMode.Modulate);
         shadowMapTexture.setMinificationFilter(Texture.MinificationFilter.NearestNeighborNoMipMaps);
         shadowMapTexture.setWrap(Texture.WrapMode.Clamp);
-        shadowMapTexture.setMagnificationFilter(Texture.MagnificationFilter.Bilinear);
+        shadowMapTexture.setMagnificationFilter(Texture.MagnificationFilter.NearestNeighbor);
         
         shadowMapTexture.setRenderToTextureType(Texture.RenderToTextureType.Depth);
         shadowMapTexture.setMatrix(new Matrix4f());
         shadowMapTexture.setEnvironmentalMapMode(Texture.EnvironmentalMapMode.EyeLinear);
-        shadowMapTexture.setDepthCompareMode(DepthTextureCompareMode.RtoTexture);
+        shadowMapTexture.setDepthCompareMode(DepthTextureCompareMode.None);
         shadowMapTexture.setDepthCompareFunc(DepthTextureCompareFunc.GreaterThanEqual);
         shadowMapTexture.setDepthMode(DepthTextureMode.Intensity);
 
@@ -291,25 +291,42 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         camera.lookAt(cameraLookAt, cameraUp);
         
         //System.out.println("Position: " + cameraPosition);
+        //System.out.println("LookAt: " + cameraLookAt);
         //System.out.println("Up: " + cameraUp);
         if (cameraIsParallel) {
             camera.setParallelProjection(true);
-            camera.setFrustum(1.0f, 3000.0f, -75, 75, -75, 75);
+            camera.setFrustum(1.0f, 3000.0f, -100, 100, -100, 100);
         } else {
             camera.setParallelProjection(false);
-            camera.setFrustumPerspective(60.0f, getWidth()/getHeight(), 1.0f, 1000.0f);
+            camera.setFrustumPerspective(45.0f, getWidth()/getHeight(), 1.0f, 200.0f);
         }
+        camera.update();
+        camera.apply();
         
         
         Matrix4f proj = new Matrix4f();
         Matrix4f view = new Matrix4f();
+        Matrix4f texM = new Matrix4f();
         proj.set(((AbstractCamera)camera).getProjectionMatrix());
         //System.out.println("PROJ MATRIX: " + proj);
         view.set(((AbstractCamera)camera).getModelViewMatrix());
+        //view.invertLocal();
+        
+        
+        texM.set(view);
+        texM.multLocal(proj);
+        texM.multLocal(biasMatrix);
+        texM.transposeLocal();
+        //texM.transposeLocal();
+//        texM.set(view);
+//        texM.multLocal(proj);
+//        texM.multLocal(biasMatrix);
+//        texM.transposeLocal();
         //System.out.println("VIEW MATRIX: " + view);
-        view.multLocal(proj).multLocal(biasMatrix).transposeLocal();
+        //view.multLocal(proj).multLocal(biasMatrix).invertLocal();//.transposeLocal();
         //System.out.println("MATRIX: " + view);
-        shadowMapTexture.getMatrix().set(view);
+        //shadowMapTexture.getMatrix().set(view);
+        shadowMapTexture.getMatrix().set(texM);
     }
 
     /**

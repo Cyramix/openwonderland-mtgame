@@ -39,19 +39,23 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalSpecMapAlpha extends Shader {
+public class DiffuseNormalShadowMap extends Shader {
     /**
      * The vertex and fragment shader
      */
     protected static final String vShader =
         "varying vec3 viewDirection;" +
         "varying vec3 lightDirection[3];" +
+        "varying vec4 shadowCoordinate;" +
+        "uniform mat4 inverseView; " +
+
         "void main(void)" +
         "{" +
         "        vec3 n = normalize(gl_NormalMatrix * gl_Normal);" +
         "        vec3 t = normalize(gl_NormalMatrix * gl_SecondaryColor.xyz);" +
         "        vec3 b = cross(t, n);" +
         "        vec3 vVertex = vec3(gl_ModelViewMatrix * gl_Vertex);" +
+        "        shadowCoordinate = gl_TextureMatrix[2] * inverseView * (gl_ModelViewMatrix * gl_Vertex);" +
         "        gl_Position = ftransform();" +
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
         "        viewDirection.x = dot(-vVertex, t);" +
@@ -77,29 +81,42 @@ public class DiffuseNormalSpecMapAlpha extends Shader {
     private static final String fShader =
         "varying vec3 viewDirection;" +
         "varying vec3 lightDirection[3];" +
+        "varying vec4 shadowCoordinate;" +
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D NormalMapIndex;" +
-        "uniform sampler2D SpecularMapIndex;" +
+        "uniform sampler2D ShadowMapIndex;" +
         "uniform vec4 ambientMaterialColor; " +
         "uniform vec4 diffuseMaterialColor; " +
         "uniform vec4 specularMaterialColor; " +
         "vec3 normal;" +
         "vec3 finalColor;" +
-        "vec4 diffuseColor;" +
+        "vec3 diffuseColor;" +
         "vec3 specularColor;" +
         "float NdotL;" +
         "vec3 reflectDir;" +
+        "vec2 shadowC; " +
+
+        "float sampleShadowXY(vec2 shadowCoord, float fragDepth)"+
+        "{"+
+        "   float depth = 1.0;" +
+        "   float shadowDepth = texture2D(ShadowMapIndex, shadowCoord).r;"+
+        "   if (fragDepth > shadowDepth + 0.0001) " +
+        "       depth = 0.0;" +
+        "   return depth;" +
+//        "   float depth = (fragDepth)/(shadowDepth);"+
+//        "   return depth > shadowBias ? 0.0 : 1.0;"+
+        "}"+
 
         "void main(void) { " +
                  // Do some setup
-        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
+        "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st).rgb;" +
         "        normal = normalize(texture2D(NormalMapIndex, gl_TexCoord[0].st).xyz * 2.0 - 1.0);" +
-        "        specularColor = texture2D(SpecularMapIndex, gl_TexCoord[0].st).rgb;" +
+        "        specularColor = vec3(1, 1, 1);" +
 
         "        vec3 ambientMat = ambientMaterialColor.rgb; " +
         "        vec3 diffuseMat = diffuseMaterialColor.rgb; " +
         "        vec3 specularMat = specularMaterialColor.rgb; " +
-        "        finalColor.rgb  = ambientMat * diffuseColor.rgb;" +
+        "        finalColor.rgb  = ambientMat * diffuseColor;" +
 
                  // Compute diffuse for light0
         "        vec3 ldir = normalize(lightDirection[0]); " +
@@ -132,17 +149,27 @@ public class DiffuseNormalSpecMapAlpha extends Shader {
         "        fRDotV = max( 0.0, dot( reflectDir, vdir ) );" +
         "        finalColor.rgb += (specularMat * pow( fRDotV, 25.0 ) * specularColor * gl_LightSource[2].specular.rgb);" +
 
-        "        gl_FragColor = vec4(finalColor, diffuseColor.a);" +
+        "        shadowC = shadowCoordinate.xy/shadowCoordinate.w; " +
+        "        float fragDepth = shadowCoordinate.z/shadowCoordinate.w;" +
+        "		 float x, y, shadow;" +
+		"        for (y = -1.5 ; y <=1.5 ; y+=1.0)" +
+		"            for (x = -1.5 ; x <=1.5 ; x+=1.0)" +
+		"                shadow += sampleShadowXY(vec2(x/2048.0+shadowC.x,y/2048.0+shadowC.y), fragDepth); " +
+		"        shadow /= 16.0;" +
+//        "        float shadow = sampleShadowXY(shadowC, fragDepth); " +
+        "        shadow = min(1.0, shadow + 0.4); " +
+        "        gl_FragColor.rgb = finalColor * shadow;" +
         "}";
-
-    public DiffuseNormalSpecMapAlpha() {
+    
+    public DiffuseNormalShadowMap() {
         super(vShader, fShader);
         addRequiredUniform("DiffuseMapIndex");
         addRequiredUniform("NormalMapIndex");
-        addRequiredUniform("SpecularMapIndex");
+        addRequiredUniform("ShadowMapIndex");
         addRequiredUniform("ambientMaterialColor");
         addRequiredUniform("diffuseMaterialColor");
         addRequiredUniform("specularMaterialColor");
+        setShadowMapIndex(2);
     }
 
     /**

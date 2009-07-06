@@ -79,16 +79,17 @@ public class DiffuseMapAlphaMap extends Shader {
 //        "        finalColor = min(finalColor + spec, vec3(1.0));" +        "        gl_FragColor = vec4(finalColor, 1.0);" +
         "}";
     
-    public DiffuseMapAlphaMap(WorldManager worldManager) {
-        super(worldManager, vShader, fShader);
+    public DiffuseMapAlphaMap() {
+        super(vShader, fShader);
+        addRequiredUniform("DiffuseMapIndex");
+        addRequiredUniform("AlphaMapIndex");
     }
 
     /**
      * This applies this shader to the given geometry
      */
     public void applyToGeometry(Geometry geo) {
-        shaderState.setUniform("DiffuseMapIndex", 0);
-        shaderState.setUniform("AlphaMapIndex", 1);
+        applyUniforms(geo);
         geo.setRenderState(shaderState);
     }
 }

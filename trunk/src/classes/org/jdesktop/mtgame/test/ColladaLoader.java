@@ -44,6 +44,7 @@ import com.jme.scene.Node;
 import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
 import com.jme.scene.TriMesh;
+import com.jme.scene.SharedMesh;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
@@ -55,7 +56,7 @@ import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
-import com.jme.scene.shape.Box;
+import com.jme.scene.shape.Sphere;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
@@ -153,8 +154,8 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    private String assetDir = "/Users/runner/Desktop/models/nicole/";
-    private String loadfile = assetDir + "models/CapeHouse3-exp.dae";
+    private String assetDir = "/Users/runner/Desktop/";
+    private String loadfile = assetDir + "EssexCampus6-4.dae";
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -162,23 +163,8 @@ public class ColladaLoader {
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
         
-        lightNode = new LightNode();
-        PointLight light = new PointLight();
-        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
-        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
-        //light.setLocation(new Vector3f(10, 10, 10));
-        light.setEnabled(true);
-        lightNode.setLight(light);
-        lightNode.setLocalTranslation(100.0f, 100.0f, 100.0f);
-        wm.getRenderManager().addLight(lightNode);
-        
-        LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
-                lightNode, new Vector3f(0, 0, 100), (float) (1.0f * Math.PI / 180.0f));
-        Entity e = new Entity("Light Rotator");
-        e.addComponent(RotationProcessor.class, rp);
-        //wm.addEntity(e);
-        
-        createUI(wm);  
+        createUI(wm);
+        createLights();
         createCameraEntity(wm);   
         createGrid(wm);
         //wm.addEntity(grid);
@@ -189,7 +175,50 @@ public class ColladaLoader {
         //createRandomTeapots(wm);
         
     }
-    
+
+    private void createLights() {
+        float radius = 50.0f;
+        float x = (float)(radius*Math.cos(Math.PI/6));
+        float z = (float)(radius*Math.sin(Math.PI/6));
+        createLight(x, radius, z);
+        x = (float)(radius*Math.cos(5*Math.PI/6));
+        z = (float)(radius*Math.sin(5*Math.PI/6));
+        createLight(x, radius, z);
+        x = (float)(radius*Math.cos(3*Math.PI/2));
+        z = (float)(radius*Math.sin(3*Math.PI/2));
+        createLight(x, radius, z);
+    }
+
+    private void createLight(float x, float y, float z) {
+        lightNode = new LightNode();
+        PointLight light = new PointLight();
+        light.setDiffuse(new ColorRGBA(0.75f, 0.75f, 0.75f, 0.75f));
+        light.setAmbient(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        //light.setLocation(new Vector3f(10, 100, 10));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(x, y, z);
+        wm.getRenderManager().addLight(lightNode);
+
+        Sphere sp = new Sphere("", 10, 10, 1.0f);
+        Node n = new Node("");
+        n.setLocalTranslation(x, y, z);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        n.setRenderState(buf);
+        n.attachChild(sp);
+        RenderComponent lsp = wm.getRenderManager().createRenderComponent(n);
+        lsp.setLightingEnabled(false);
+
+        LightNodeRotator rp = new LightNodeRotator("Light Rotator", wm,
+                lightNode, n, new Vector3f(0, 50, 50), (float) (1.0f * Math.PI / 180.0f));
+        Entity e = new Entity("Light Rotator");
+        //e.addComponent(RotationProcessor.class, rp);
+        e.addComponent(RenderComponent.class, lsp);
+        wm.addEntity(e);
+    }
+
     private void createCameraEntity(WorldManager wm) {
         Node cameraSG = createCameraGraph(wm);
         
@@ -205,8 +234,9 @@ public class ColladaLoader {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera);
-        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
+        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, false, false, null);
+
+        //OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
@@ -339,8 +369,8 @@ public class ColladaLoader {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:" + assetDir + "images/";
-        String textureSubdirName = assetDir + "images/";
+        String textureSubdir = "file:" + assetDir + "./";
+        String textureSubdirName = assetDir + "./";
 
 
 
@@ -444,7 +474,7 @@ public class ColladaLoader {
             buf.setEnabled(true);
             buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
             modelRoot.setRenderState(buf);
-            modelRoot.setLocalScale(0.04f);
+            //modelRoot.setLocalScale(1.0f);
 
             Quaternion rot = new Quaternion();
             Vector3f axis = new Vector3f(1.0f, 0.0f, 0.0f);
@@ -459,7 +489,10 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
+            JMECollisionSystem cs = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
+            JMECollisionComponent cc = cs.createCollisionComponent(model);
             e.addComponent(RenderComponent.class, sc);
+            e.addComponent(JMECollisionComponent.class, cc);
             wm.addEntity(e);              
         }
     
@@ -531,11 +564,7 @@ public class ColladaLoader {
             // Now load the model
             ColladaImporter.load(fileStream, "Model");
             Node model = ColladaImporter.getModel();
-            if (normalMap) {
-                model.setLocalTranslation(10.0f, 0.0f, 0.0f);
-            } else {
-                model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
-            }
+            //model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
             model.setLocalScale(5.0f);
             transpList.clear();
             //parseModel(0, model, normalMap, transpList);
@@ -559,37 +588,22 @@ public class ColladaLoader {
                 Geometry geo = (Geometry)model;
                 
                 String str = "";
-                //if (geo instanceof TriMesh && str != null) {
+                if (geo instanceof TriMesh && str != null) {
                     //System.out.println("Generating Tangents: " + geo);
                     //TangentBinormalGenerator.generate((TriMesh)geo);
-                    //System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
-                    //System.out.println("Normal Buffer: " + geo.getNormalBuffer());
-                    //System.out.println("Color Buffer: " + geo.getColorBuffer());
-                    //System.out.println("TC 0 Buffer: " + geo.getTextureCoords(0));
-                    //System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
-                    //System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
-                    //System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
-                    //assignShader(geo, str, normalMap);
-                //}
+//                    System.out.println("Vertex Buffer: " + geo.getVertexBuffer());
+//                    System.out.println("Normal Buffer: " + geo.getNormalBuffer());
+//                    System.out.println("Color Buffer: " + geo.getColorBuffer());
+//                    System.out.println("TC 0 Buffer: " + geo.getTextureCoords(0));
+//                    System.out.println("TC 1 Buffer: " + geo.getTextureCoords(1));
+//                    System.out.println("Tangent Buffer: " + geo.getTangentBuffer());
+//                    System.out.println("Binormal Buffer: " + geo.getBinormalBuffer());
+                }
 
                 BlendState bs = (BlendState)geo.getRenderState(RenderState.StateType.Blend);
                 if (geo instanceof TriMesh && bs != null && bs.isEnabled() && bs.isBlendEnabled()) {
                     tList.add(geo);
                 }
-            }
-        }
-        
-        void assignShader(Geometry geo, String shaderFlag, boolean normalMap) {
-            if (shaderFlag.equals("MTGAMEDiffuseNormalMap")) {
-                if (normalMap) {
-                    DiffuseNormalMap shader = new DiffuseNormalMap(wm);
-                    System.out.println("Assigning to " + geo);
-                    shader.applyToGeometry(geo);
-                } else {
-                    DiffuseMap shader = new DiffuseMap(wm);
-                    shader.applyToGeometry(geo);
-                }
-                //System.out.println("Assigning Shader: " + shaderFlag);
             }
         }
     }

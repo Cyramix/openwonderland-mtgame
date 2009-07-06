@@ -1964,7 +1964,8 @@ public class PortalTest {
                 "}";
 
         public PortalShader(WorldManager worldManager) {
-            super(worldManager, vShader, fShader);
+            super(vShader, fShader);
+            init(worldManager);
         }
 
         /**

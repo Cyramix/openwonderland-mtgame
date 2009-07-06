@@ -39,7 +39,7 @@ import com.jme.scene.Geometry;
  *
  * @author Doug Twilleager
  */
-public class DiffuseNormalSpecMapAlpha extends Shader {
+public class DiffuseNormalMapAlpha extends Shader {
     /**
      * The vertex and fragment shader
      */
@@ -79,7 +79,6 @@ public class DiffuseNormalSpecMapAlpha extends Shader {
         "varying vec3 lightDirection[3];" +
         "uniform sampler2D DiffuseMapIndex;" +
         "uniform sampler2D NormalMapIndex;" +
-        "uniform sampler2D SpecularMapIndex;" +
         "uniform vec4 ambientMaterialColor; " +
         "uniform vec4 diffuseMaterialColor; " +
         "uniform vec4 specularMaterialColor; " +
@@ -94,7 +93,7 @@ public class DiffuseNormalSpecMapAlpha extends Shader {
                  // Do some setup
         "        diffuseColor = texture2D(DiffuseMapIndex, gl_TexCoord[0].st);" +
         "        normal = normalize(texture2D(NormalMapIndex, gl_TexCoord[0].st).xyz * 2.0 - 1.0);" +
-        "        specularColor = texture2D(SpecularMapIndex, gl_TexCoord[0].st).rgb;" +
+        "        specularColor = vec3(1, 1, 1);" +
 
         "        vec3 ambientMat = ambientMaterialColor.rgb; " +
         "        vec3 diffuseMat = diffuseMaterialColor.rgb; " +
@@ -134,12 +133,11 @@ public class DiffuseNormalSpecMapAlpha extends Shader {
 
         "        gl_FragColor = vec4(finalColor, diffuseColor.a);" +
         "}";
-
-    public DiffuseNormalSpecMapAlpha() {
+    
+    public DiffuseNormalMapAlpha() {
         super(vShader, fShader);
         addRequiredUniform("DiffuseMapIndex");
         addRequiredUniform("NormalMapIndex");
-        addRequiredUniform("SpecularMapIndex");
         addRequiredUniform("ambientMaterialColor");
         addRequiredUniform("diffuseMaterialColor");
         addRequiredUniform("specularMaterialColor");
