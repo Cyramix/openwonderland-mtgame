@@ -94,6 +94,16 @@ public class CameraComponent extends EntityComponent {
      * A boolen indicating whether or not we are using parallel projection
      */
     private boolean isParallel = false;
+
+    /**
+     * A lock for making changes to the CameraComponent
+     */
+    private Object lock = new Object();
+
+    /**
+     * A changed flag
+     */
+    private boolean changed = false;
     
     /**
      * The constructor
@@ -146,14 +156,34 @@ public class CameraComponent extends EntityComponent {
         camera.setParallelProjection(isParallel);
         cameraNode.setCamera(camera);    
     }
-    
+
+    /**
+     * Update the jME Camera with our latest settings
+     */
+    void update() {
+        synchronized (lock) {
+            if (changed && camera != null) {
+                if (!isParallel) {
+                    camera.setFrustumPerspective(fieldOfView, aspectRatio, nearClip, farClip);
+                } else {
+                    camera.setFrustum(nearClip, farClip, left, right, top, bottom);
+                }
+                camera.setParallelProjection(isParallel);
+                cameraNode.setCamera(camera);
+                changed = false;
+            }
+        }
+    }
     
     /**
      * Set the viewport width and height
      */
     public void setViewport(int width, int height) {
-        this.width = width;
-        this.height = height;
+        synchronized (lock) {
+            this.width = width;
+            this.height = height;
+            changed = true;
+        }
     }
     
     /**
@@ -174,7 +204,10 @@ public class CameraComponent extends EntityComponent {
      * Set the Field of View
      */
     public void setFieldOfView(float fov) {
-        fieldOfView = fov;
+        synchronized (lock) {
+            fieldOfView = fov;
+            changed = true;
+        }
     }
     
     /**
@@ -188,7 +221,10 @@ public class CameraComponent extends EntityComponent {
      * Set the aspect ratio
      */
     public void setAspectRatio(float ratio) {
-        aspectRatio = ratio;
+        synchronized (lock) {
+            aspectRatio = ratio;
+            changed = true;
+        }
     }
     
     /**
@@ -202,8 +238,11 @@ public class CameraComponent extends EntityComponent {
      * Set the near and far clip distances
      */
     public void setClipDistances(float near, float far) {
-        nearClip = near;
-        farClip = far;
+        synchronized (lock) {
+            nearClip = near;
+            farClip = far;
+            changed = true;
+        }
     }
     
     /**
@@ -224,7 +263,10 @@ public class CameraComponent extends EntityComponent {
      * Set the camera scene graph
      */
     public void setCameraSceneGraph(Node sg) {
-        cameraSceneGraph = sg;
+        synchronized (lock) {
+            cameraSceneGraph = sg;
+            changed = true;
+        }
     }
     
     /**
@@ -238,7 +280,10 @@ public class CameraComponent extends EntityComponent {
      * Set the CameraNode reference
      */
     public void setCameraNode(CameraNode cn) {
-        cameraNode = cn;
+        synchronized (lock) {
+            cameraNode = cn;
+            changed = true;
+        }
     }
     
     /**
@@ -252,7 +297,10 @@ public class CameraComponent extends EntityComponent {
      * Set the primary camera flag
      */
     public void setPrimary(boolean primary) {
-        this.primary = primary;
+        synchronized (lock) {
+            this.primary = primary;
+            changed = true;
+        }
     }
     
     /**
@@ -267,7 +315,10 @@ public class CameraComponent extends EntityComponent {
      * Note: This is used by the renderer
      */
     public void setCamera(Camera camera) {
-        this.camera = camera;
+        synchronized (lock) {
+            this.camera = camera;
+            changed = true;
+        }
     }
     
     /**
