@@ -128,7 +128,6 @@ public class SelectionProcessor extends AWTEventProcessorComponent {
         collisionSystem = (JMECollisionSystem) 
                 worldManager.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        setEntity(myEntity);
         this.cameraEntity = cameraEntity;
         boundingPickResults.setCheckDistance(true);
         trianglePickResults.setCheckDistance(true);

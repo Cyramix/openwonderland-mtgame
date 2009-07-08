@@ -182,7 +182,6 @@ public class FPSCameraProcessor extends AWTEventProcessorComponent {
         target = cameraNode;
         worldManager = wm;
         renderCapture = capture;
-        setEntity(myEntity);
         
         collection = new ProcessorArmingCollection(this);
         collection.addCondition(new AwtEventCondition(this));

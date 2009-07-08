@@ -249,6 +249,13 @@ public class RenderManager {
     public boolean getRunning() {
         return (renderer.getRunning());
     }
+
+    /**
+     * Get the renderer thread
+     */
+    Thread getRenderer() {
+        return (renderer);
+    }
     
     /**
      * Acquire the Swing/AWT lock.  Most users do not need to acquire and release

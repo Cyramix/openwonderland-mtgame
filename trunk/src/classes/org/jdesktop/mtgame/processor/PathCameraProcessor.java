@@ -93,7 +93,6 @@ public class PathCameraProcessor extends AWTEventProcessorComponent {
         super(listener);
         target = cameraNode;
         worldManager = wm;
-        setEntity(myEntity);
 
         this.positions = positions;
         this.rots = rots;

@@ -124,8 +124,6 @@ public class LightCameraProcessor extends AWTEventProcessorComponent {
         super(listener);
         this.target = camera;
         worldManager = wm;
-        setEntity(myEntity);
-        //getEntity().setPosition(position.x, position.y, position.z);
         
         collection = new ProcessorArmingCollection(this);        
         collection.addCondition(new AwtEventCondition(this));
