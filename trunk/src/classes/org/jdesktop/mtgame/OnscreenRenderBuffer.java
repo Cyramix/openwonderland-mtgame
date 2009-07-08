@@ -151,6 +151,7 @@ public class OnscreenRenderBuffer extends RenderBuffer {
 
         CameraComponent cc = getCameraComponent();
         if (cc != null) {
+            cc.update();
             Camera camera = cc.getCamera();
             if (getWidth() != canvas.getWidth() ||
                 getHeight() != canvas.getHeight()) {
