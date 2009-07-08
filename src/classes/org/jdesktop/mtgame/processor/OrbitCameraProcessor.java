@@ -142,8 +142,6 @@ public class OrbitCameraProcessor extends AWTEventProcessorComponent {
         super(listener);
         target = cameraNode;
         worldManager = wm;
-        setEntity(myEntity);
-        //getEntity().setPosition(position.x, position.y, position.z);
         
         collection = new ProcessorArmingCollection(this);        
         collection.addCondition(new AwtEventCondition(this));

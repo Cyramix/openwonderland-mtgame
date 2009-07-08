@@ -1341,7 +1341,6 @@ public class PortalTest {
             super(listener);
             target = cameraNode;
             worldManager = wm;
-            setEntity(myEntity);
 
             collection = new ProcessorArmingCollection(this);
             collection.addCondition(new AwtEventCondition(this));
@@ -1807,7 +1806,6 @@ public class PortalTest {
         public PortalAnimationProcessor(WorldManager wm, Entity myEntity, Vector3f positions,
                 Quaternion rots, float[] times) {
             worldManager = wm;
-            setEntity(myEntity);
 
             this.position = positions;
             this.rotation = rots;

@@ -141,7 +141,6 @@ public class JBSelectionProcessor extends AWTEventProcessorComponent {
         physicsSystem = (JBulletPhysicsSystem) 
                 worldManager.getPhysicsManager().loadPhysicsSystem(JBulletPhysicsSystem.class, collisionSystem);
         
-        setEntity(myEntity);
         this.cameraEntity = cameraEntity;
         boundingPickResults.setCheckDistance(true);
         trianglePickResults.setCheckDistance(true);

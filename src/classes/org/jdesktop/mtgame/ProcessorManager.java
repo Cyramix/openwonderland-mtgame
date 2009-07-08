@@ -253,7 +253,8 @@ class ProcessorManager extends Thread {
      * Add a component to be potentially processed
      */
     void addComponent(EntityComponent c) {
-
+        
+        c.setLive(true);
         if (c instanceof ProcessorComponent) {
             ProcessorComponent pc = (ProcessorComponent) c;
             pc.setEntityProcessController(this);
@@ -298,6 +299,7 @@ class ProcessorManager extends Thread {
                 procs[i].setEntityProcessController(null);
             }
         }
+        c.setLive(false);
     }
     
     /**

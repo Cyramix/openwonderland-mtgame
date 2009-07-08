@@ -90,7 +90,6 @@ public class EyeSelectionProcessor extends AWTEventProcessorComponent {
         collisionSystem = (JMECollisionSystem) 
                 worldManager.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         
-        setEntity(myEntity);
         this.cameraEntity = cameraEntity;     
         cc = (CameraComponent) cameraEntity.getComponent(CameraComponent.class);
         eyeRay.origin.set(origin);

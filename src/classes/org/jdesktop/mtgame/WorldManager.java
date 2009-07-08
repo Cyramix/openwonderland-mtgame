@@ -245,7 +245,7 @@ public class WorldManager {
         if (ProcessorComponent.class.isInstance(c) ||
             ProcessorCollectionComponent.class.isInstance(c)) {
             processorManager.addComponent(c);
-        }  
+        }
     }
     
     /**
@@ -266,7 +266,19 @@ public class WorldManager {
         if (ProcessorComponent.class.isInstance(c) ||
             ProcessorCollectionComponent.class.isInstance(c)) {
             processorManager.removeComponent(c);
-        }    
+        }
+
+        // Don't return until the appropriate subsystem has marked
+        // the component as non-live
+        if (Thread.currentThread() != renderManager.getRenderer()) {
+            while (c.isLive()) {
+                try {
+                    Thread.currentThread().sleep(0, 10);
+                } catch (java.lang.InterruptedException ie) {
+                    // Just wrap around
+                }
+            }
+        }
     }
     
     /**

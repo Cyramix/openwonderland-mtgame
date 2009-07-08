@@ -122,7 +122,7 @@ class Renderer extends Thread {
     /**
      * The array list of camera's
      */
-    private ArrayList cameras = new ArrayList();
+    private ArrayList<CameraComponentOp> cameras = new ArrayList<CameraComponentOp>();
     
     /**
      * A boolean indicating that the camera list has changed
@@ -132,8 +132,13 @@ class Renderer extends Thread {
     /**
      * The list of all skyboxes
      */
-    private ArrayList skyboxes = new ArrayList();
-    
+    private ArrayList<SkyboxComponentOp> skyboxes = new ArrayList<SkyboxComponentOp>();
+
+    /**
+     * The list of all skyboxes known to the renderer
+     */
+    private ArrayList<SkyboxComponent> renderSkyboxes = new ArrayList<SkyboxComponent>();
+
     /**
      * A boolean indicating that the skybox list has changed
      */
@@ -177,7 +182,7 @@ class Renderer extends Thread {
     /**
      * The array list of passes
      */
-    private ArrayList passes = new ArrayList();
+    private ArrayList<PassComponentOp> passes = new ArrayList<PassComponentOp>();
     
     /**
      * A boolean indicating that the pass list has changed
@@ -392,6 +397,45 @@ class Renderer extends Thread {
 
         RenderComponentOp(RenderComponent rc, boolean add) {
             this.rc = rc;
+            this.add = add;
+        }
+    }
+
+    /**
+     * A class to hold camera component actions
+     */
+    class CameraComponentOp {
+        CameraComponent cc = null;
+        boolean add = false;
+
+        CameraComponentOp(CameraComponent cc, boolean add) {
+            this.cc = cc;
+            this.add = add;
+        }
+    }
+
+    /**
+     * A class to hold skybox component actions
+     */
+    class SkyboxComponentOp {
+        SkyboxComponent sc = null;
+        boolean add = false;
+
+        SkyboxComponentOp(SkyboxComponent sc, boolean add) {
+            this.sc = sc;
+            this.add = add;
+        }
+    }
+
+    /**
+     * A class to hold pass component actions
+     */
+    class PassComponentOp {
+        PassComponent pc = null;
+        boolean add = false;
+
+        PassComponentOp(PassComponent pc, boolean add) {
+            this.pc = pc;
             this.add = add;
         }
     }
@@ -1015,9 +1059,11 @@ class Renderer extends Thread {
                             node.updateGeometricState(referenceTime, true);
                             node.updateRenderState();
                         }
+                        ccop.cc.setLive(true);
                         ccop.cc.getCollisionSystem().addCollisionComponent(ccop.cc);
                     } else {
                         ccop.cc.getCollisionSystem().removeCollisionComponent(ccop.cc);
+                        ccop.cc.setLive(false);
                     }
                 }
                 collisionComponents.clear();
@@ -1216,9 +1262,9 @@ class Renderer extends Thread {
     void addComponent(EntityComponent c) {
         synchronized (entityLock) {
 
-            // Lot's of things can have a camera
             if (c instanceof CameraComponent) {
-                cameras.add(c);
+                CameraComponentOp ccop = new CameraComponentOp((CameraComponent)c, true);
+                cameras.add(ccop);
                 camerasChanged = true;
                 entityChanged = true;
             }
@@ -1231,33 +1277,29 @@ class Renderer extends Thread {
             }
                                          
             if (c instanceof SkyboxComponent) {
-                synchronized (skyboxes) {
-                    Spatial sg = ((SkyboxComponent)c).getSkybox();
-                    BlendState bs = (BlendState)sg.getRenderState(RenderState.StateType.Blend);
-                    traverseGraph(sg, false, bs);
-                    skyboxes.add(c);
-                    skyboxChanged = true;
-                    entityChanged = true;
-                }
+                Spatial sg = ((SkyboxComponent) c).getSkybox();
+                BlendState bs = (BlendState) sg.getRenderState(RenderState.StateType.Blend);
+                traverseGraph(sg, false, bs);
+                SkyboxComponentOp scop = new SkyboxComponentOp((SkyboxComponent) c, true);
+                skyboxes.add(scop);
+                skyboxChanged = true;
+                entityChanged = true;
             }
                                               
             if (c instanceof PassComponent) {
-                synchronized (passes) {
-                    passes.add(c);
-                    passesChanged = true;
-                    entityChanged = true;
-                }
+                PassComponentOp pcop = new PassComponentOp((PassComponent) c, true);
+                passes.add(pcop);
+                passesChanged = true;
+                entityChanged = true;
             }
                    
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
-                synchronized (scenes) {
-                    processSceneGraph((RenderComponent)c, true);
-                    RenderComponentOp rcop = new RenderComponentOp((RenderComponent)c, true);
-                    scenes.add(rcop);
-                    scenesChanged = true;
-                    entityChanged = true;
-                }
+                processSceneGraph((RenderComponent) c, true);
+                RenderComponentOp rcop = new RenderComponentOp((RenderComponent) c, true);
+                scenes.add(rcop);
+                scenesChanged = true;
+                entityChanged = true;
             }
         }
     }
@@ -1270,7 +1312,8 @@ class Renderer extends Thread {
         synchronized (entityLock) {
             // Lot's of things can have a camera
             if (c instanceof CameraComponent) {
-                cameras.remove(c);
+                CameraComponentOp ccop = new CameraComponentOp((CameraComponent)c, false);
+                cameras.add(ccop);
                 camerasChanged = true;
                 entityChanged = true;
             }
@@ -1282,32 +1325,28 @@ class Renderer extends Thread {
                     collisionComponents.add(ccop);
                 }
             }
-                                         
+
             if (c instanceof SkyboxComponent) {
-                synchronized (skyboxes) {
-                    skyboxes.remove(c);
-                    skyboxChanged = true;
-                    entityChanged = true;
-                }
+                SkyboxComponentOp scop = new SkyboxComponentOp((SkyboxComponent) c, false);
+                skyboxes.add(scop);
+                skyboxChanged = true;
+                entityChanged = true;
             }
-                                                                  
+
             if (c instanceof PassComponent) {
-                synchronized (passes) {
-                    passes.remove(c);
-                    passesChanged = true;
-                    entityChanged = true;
-                }
+                PassComponentOp pcop = new PassComponentOp((PassComponent) c, false);
+                passes.add(pcop);
+                passesChanged = true;
+                entityChanged = true;
             }
             
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
-                synchronized (scenes) {
-                    processSceneGraph((RenderComponent)c, false);
-                    RenderComponentOp rcop = new RenderComponentOp((RenderComponent)c, false);
-                    scenes.add(rcop);
-                    scenesChanged = true;
-                    entityChanged = true;
-                }
+                processSceneGraph((RenderComponent) c, false);
+                RenderComponentOp rcop = new RenderComponentOp((RenderComponent) c, false);
+                scenes.add(rcop);
+                scenesChanged = true;
+                entityChanged = true;
             }
         }
     }
@@ -1538,38 +1577,19 @@ class Renderer extends Thread {
      * Check for camera changes
      */
     void processCamerasChanged() {
-        int len = 0;
-        CameraComponent camera = null;
-        
-        // Minimize the number of additions to the cameraUpdateList
-        // First, let's look for removals
-        len = renderCameras.size();
-        for (int i=0; i<len;) {
-            camera = (CameraComponent) renderCameras.get(i);
-            if (cameras.contains(camera)) {
-                // move on to the next
-                i++;
-            } else {
-                // remove the scene, this will shift things down
-                renderCameras.remove(camera);
-                len--;
-            }
-        }
-        
-        // Now let's look for additions
-        for (int i=0; i<cameras.size(); i++) {
-            camera = (CameraComponent) cameras.get(i);
-            if (!renderCameras.contains(camera)) {
+        for (int i = 0; i < cameras.size(); i++) {
+            CameraComponentOp ccop = cameras.get(i);
+            CameraComponent camera = ccop.cc;
+            if (ccop.add) {
+                camera.setLive(true);
                 renderCameras.add(camera);
                 cameraUpdateList.add(camera);
+            } else {
+                renderCameras.remove(camera);
+                camera.setLive(false);
             }
         }
-        
-        // Just a sanity check
-        if (cameras.size() != renderCameras.size()) {
-            System.out.println("Error, Camera sizes differ");
-        }
-               
+        cameras.clear();
     }
     
         
@@ -1579,36 +1599,50 @@ class Renderer extends Thread {
     void processSkyboxChanged() {
         SkyboxComponent sbox = null;
 
-        synchronized (skyboxes) {
-            currentSkybox = null;
-            for (int i=0; i<skyboxes.size(); i++) {
-                sbox = (SkyboxComponent) skyboxes.get(i);
-                if (sbox.getCurrent()) {
-                    currentSkybox = sbox.getSkybox();
-                    addToUpdateList(currentSkybox);
-                    break;
-                }
+        for (int i = 0; i < skyboxes.size(); i++) {
+            SkyboxComponentOp scop = skyboxes.get(i);
+            SkyboxComponent skybox = scop.sc;
+            if (scop.add) {
+                skybox.setLive(true);
+                skybox.getSkybox().setLive(true);
+                renderSkyboxes.add(skybox);
+            } else {
+                renderSkyboxes.remove(skybox);
+                skybox.getSkybox().setLive(false);
+                skybox.setLive(false);
             }
         }
-               
+        skyboxes.clear();
+
+        // Now pick the current one
+        currentSkybox = null;
+        for (int i = 0; i < renderSkyboxes.size(); i++) {
+            sbox = (SkyboxComponent) renderSkyboxes.get(i);
+            if (sbox.getCurrent()) {
+                currentSkybox = sbox.getSkybox();
+                addToUpdateList(currentSkybox);
+                break;
+            }
+        }
     }
 
     /**
      * Check for scene changes
      */
     void processScenesChanged() {
-        int len = 0;
-        RenderComponent scene = null;
-
         for (int i = 0; i < scenes.size(); i++) {
             RenderComponentOp rcop = (RenderComponentOp) scenes.get(i);
             if (rcop.add) {
+                rcop.rc.getSceneRoot().setLive(true);
+                rcop.rc.setLive(true);
                 addToRenderTechnique(rcop.rc);
                 renderScenes.add(rcop.rc);
                 addToUpdateList(rcop.rc.getSceneRoot());
             } else {
-                renderScenes.remove(rcop.rc);
+                renderScenes.remove(rcop.rc);            
                 removeFromRenderTechnique(rcop.rc);
+                rcop.rc.getSceneRoot().setLive(false);
+                rcop.rc.setLive(false);
             }
         }
         scenes.clear();
@@ -1709,38 +1743,18 @@ class Renderer extends Thread {
      * Check for pass changes
      */
     void processPassesChanged() {
-        int len = 0;
-        PassComponent pass = null;
-        
-        // Minimize the numner of additions to the updateList
-        // First, let's look for removals
-        len = passList.size();
-        for (int i=0; i<len;) {
-            pass = (PassComponent) passList.get(i);
-            if (passes.contains(pass)) {
-                // move on to the next
-                i++;
+        for (int i = 0; i < passes.size(); i++) {
+            PassComponentOp pcop = (PassComponentOp) passes.get(i);
+            if (pcop.add) {
+                pcop.pc.setLive(true);
+                passList.add(pcop.pc);
+                addToPassUpdateList(pcop.pc.getPass());
             } else {
-                // remove the scene, this will shift things down
-                passList.remove(pass);
-                len--;
+                passList.remove(pcop.pc);
+                pcop.pc.setLive(false);
             }
         }
-        
-        // Now let's look for additions
-        for (int i=0; i<passes.size(); i++) {
-            pass = (PassComponent) passes.get(i);
-            if (!passList.contains(pass)) {
-                passList.add(pass);
-                addToPassUpdateList(pass.getPass());
-            }
-        }
-        
-        // Just a sanity check
-        if (passes.size() != passList.size()) {
-            System.out.println("Error, Pass sizes differ: " + passes.size() + ", " + passList.size());
-        }
-       
+        passes.clear();
     }
 
     /**

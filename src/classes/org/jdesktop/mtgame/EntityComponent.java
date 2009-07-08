@@ -41,7 +41,13 @@ public abstract class EntityComponent {
    private Entity entity = null;
 
    /**
+    * A boolean indicating that this component is live in the system
+    */
+   private boolean live = false;
+
+   /**
     * Set the entity of this component
+    * @deprecated
     */
    public void setEntity(Entity ent) {
        entity = ent;
@@ -52,5 +58,19 @@ public abstract class EntityComponent {
     */
    public Entity getEntity() {
        return (entity);
-   }  
+   }
+
+   /**
+    * Set the live flag for this component
+    */
+   void setLive(boolean l) {
+       live = l;
+   }
+
+   /**
+    * Return if this component is live
+    */
+   boolean isLive() {
+       return (live);
+   }
 }

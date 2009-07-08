@@ -102,7 +102,6 @@ public class MouseSelectionProcessor extends AWTEventProcessorComponent {
                 worldManager.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
         cc = (CameraComponent) cameraEntity.getComponent(CameraComponent.class);
         
-        setEntity(myEntity);
         this.cameraEntity = cameraEntity;     
         cc = (CameraComponent) cameraEntity.getComponent(CameraComponent.class);
         eyeRay.origin.set(origin);
