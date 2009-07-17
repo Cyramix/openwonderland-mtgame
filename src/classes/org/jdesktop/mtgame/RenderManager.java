@@ -209,6 +209,14 @@ public class RenderManager {
     }
 
     /**
+     * Returns whether or not OpenGL 2.0 is supported
+     */
+    public boolean supportsOpenGL20() {
+        renderer.waitUntilReady();
+        return (renderer.supportsOpenGL20());
+    }
+
+    /**
      * Add a global light to the scene
      */
     public void addLight(LightNode light) {
@@ -348,6 +356,13 @@ public class RenderManager {
     }
 
     /**
+     * Set the levels to be used for render component lod's
+     */
+    public void setRenderComponentLODLevels(float[] levels) {
+        renderer.setRenderComponentLODLevels(levels);
+    }
+
+    /**
      * Set the desired BufferController
      */
     public void setBufferController(BufferController bc) {
@@ -374,6 +389,20 @@ public class RenderManager {
     void removeNodeChangedListener(NodeChangedListener l) {
         renderer.removeNodeChangedListener(l);
     }  
+
+    /**
+     * Add a RenderComponent to be tracked by the LOD system
+     */
+    public void addRenderComponentLOD(RenderComponentLOD lod, RenderComponent rc, Object obj) {
+        renderer.addRenderComponentLOD(lod, rc, obj);
+    }
+
+    /**
+     * Remove a RenderComponent to be tracked by the LOD system
+     */
+    public void removeRenderComponentLOD(RenderComponentLOD lod) {
+        renderer.removeRenderComponentLOD(lod);
+    }
 
     /**
      * Add a node to the update lists

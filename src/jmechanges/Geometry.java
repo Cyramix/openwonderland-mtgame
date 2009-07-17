@@ -92,7 +92,7 @@ public abstract class Geometry extends Spatial implements Serializable, Savable 
     protected transient FloatBuffer vertBuf;
 
     /** The geometry's per Texture per vertex texture coordinate information. */
-    protected transient ArrayList<TexCoords> texBuf;
+    protected ArrayList<TexCoords> texBuf;
 
     /** The geometry's per vertex color information. */
     protected transient FloatBuffer tangentBuf;
