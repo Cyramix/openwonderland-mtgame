@@ -91,6 +91,11 @@ public class RenderComponent extends EntityComponent {
    private String renderTechniqueName = "org.jdesktop.mtgame.DefaultRenderTechnique";
 
    /**
+    * The current level of detail level
+    */
+   private int currentLODLevel = 0;
+
+   /**
     * The default constructor
     */
    RenderComponent(Node node) {
@@ -145,7 +150,32 @@ public class RenderComponent extends EntityComponent {
    public Node getSceneRoot() {
        return (sceneRoot);
    }
-   
+
+   /**
+    * Set the scene root
+    */
+   public void setSceneRoot(Node node) {
+       Entity e = getEntity();
+       Node oldAp = null;
+
+       if (sceneRoot != null) {
+           // Clean up all the old stuff
+           if (attachPoint != null) {
+               // Save the attach point
+               oldAp = attachPoint;
+               setAttachPoint(null);
+           }
+       }
+
+       sceneRoot = node;
+       if (oldAp != null) {
+           setAttachPoint(oldAp);
+       }
+       if (e != null && e.getWorldManager() != null) {
+           e.getWorldManager().getRenderManager().changeOrthoFlag(this);
+       }
+   }
+
    /**
     * Set the attach point for this RenderComponent
     * This can only be called from a commit method if it is attaching/detaching
@@ -209,7 +239,21 @@ public class RenderComponent extends EntityComponent {
    public boolean getOrtho() {
        return (ortho);
    }
-   
+
+   /**
+    * Set the current LOD level
+    */
+   void setCurrentLOD(int level) {
+        currentLODLevel = level;
+   }
+
+   /**
+    * Get the current LOD level
+    */
+   public int getCurrentLOD() {
+       return (currentLODLevel);
+   }
+
    /**
     * Set the lighting enable flag
     */

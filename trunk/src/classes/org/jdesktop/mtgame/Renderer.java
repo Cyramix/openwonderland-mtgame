@@ -360,6 +360,16 @@ class Renderer extends Thread {
     private Object jmeSGLock = new Object();
 
     /**
+     * The list of render component lod's
+     */
+    private FastList<RenderComponentLODObject> renderComponentLODs = new  FastList<RenderComponentLODObject>();
+
+    /**
+     * The array of increasing distances to use for render component lod's
+     */
+    private float[] renderComponentLODLevels = null;
+
+    /**
      * A class to hold collision component actions
      */
     class CollisionComponentOp {
@@ -456,6 +466,21 @@ class Renderer extends Thread {
         OrthoOp(RenderComponent rc, boolean on) {
             this.rc = rc;
             this.on = on;
+        }
+    }
+
+    /**
+     * A class to hold RenderComponent LOD info
+     */
+    class RenderComponentLODObject {
+        RenderComponent rc = null;
+        RenderComponentLOD rclod = null;
+        Object obj = null;
+
+        RenderComponentLODObject(RenderComponentLOD rclod, RenderComponent rc, Object obj) {
+            this.rclod = rclod;
+            this.rc = rc;
+            this.obj = obj;
         }
     }
 
@@ -663,6 +688,10 @@ class Renderer extends Thread {
     boolean getRunning() {
         return (running);
     }
+
+    boolean supportsOpenGL20() {
+        return (jmeRenderer.supportsOpenGL20());
+    }
     
     // We need to call this method reflectively because it isn't available in Java 5
     // BTW: we don't support Java 5 on Linux, so this is okay.
@@ -748,6 +777,12 @@ class Renderer extends Thread {
                      * thread be called
                      */
                     processRenderUpdates();
+
+                    /**
+                     * Process the RenderComponent LOD's.  Do it here, so any changes
+                     * can take effect this frame.
+                     */
+                    processRenderComponentLODs(currentScreenBuffer.getCameraComponent().getCamera(), renderComponentLODLevels);
 
                     synchronized (jmeSGLock) {
                         processJMEUpdates(totalTime / 1000000000.0f);
@@ -1428,7 +1463,74 @@ class Renderer extends Thread {
             nodeListeners.remove(l);
         }
     } 
-    
+
+    /**
+     * Add a RenderComponent to be tracked by the LOD system
+     */
+    void addRenderComponentLOD(RenderComponentLOD lod, RenderComponent rc, Object obj) {
+        synchronized (renderComponentLODs) {
+            renderComponentLODs.add(new RenderComponentLODObject(lod, rc, obj));
+        }
+    }
+
+    /**
+     * Remove a RenderComponent to be tracked by the LOD system
+     */
+    void removeRenderComponentLOD(RenderComponentLOD lod) {
+        RenderComponentLODObject lodobj = null;
+
+        synchronized (renderComponentLODs) {
+            for (int i=0; i<renderComponentLODs.size(); i++) {
+                lodobj = renderComponentLODs.get(i);
+                if (lodobj.rclod == lod) {
+                    renderComponentLODs.remove(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * This goes through each RenderComponent LOD, calculates the distance to
+     * the object, compares it to the current levels, and calls the RenderComponentLOD
+     * if needed.
+     */
+    void processRenderComponentLODs(Camera camera, float[] levels) {
+        synchronized (renderComponentLODs) {
+            for (int i=0; i<renderComponentLODs.size(); i++) {
+                RenderComponentLODObject lodobj = renderComponentLODs.get(i);
+                int level = calculateLevel(camera, lodobj.rc.getSceneRoot(), levels);
+                if (level != lodobj.rc.getCurrentLOD()) {
+                    int lastLevel = lodobj.rc.getCurrentLOD();
+                    lodobj.rc.setCurrentLOD(level);
+                    System.out.println("Switching from level: " + lastLevel + " to " + level);
+                    lodobj.rclod.updateLOD(lodobj.rc, lastLevel, level, lodobj.obj);
+                }
+            }
+        }
+    }
+
+    /**
+     * This calculates the lod level for the node given
+     */
+    int calculateLevel(Camera camera, Node n, float[] levels) {
+        int level = 0;
+
+        if (levels == null) {
+            return (level);
+        }
+
+        float dist = n.getWorldBound().distanceTo(camera.getLocation());
+        for (level=0; level<levels.length; level++) {
+            if (dist >= levels[level]) {
+                continue;
+            } else {
+                break;
+            }
+        }
+        return (level);
+    }
+
     /**
      * Notify the node changed listeners.
      */
@@ -1763,6 +1865,19 @@ class Renderer extends Thread {
     void setDesiredFrameRate(int fps) {
         desiredFrameRate = fps;
         desiredFrameTime = 1000000000/desiredFrameRate;
+    }
+
+    /**
+     * Set the levels to be used for render component lod's
+     */
+    void setRenderComponentLODLevels(float[] levels) {
+        float[] newLevels = null;
+
+        if (levels != null) {
+            newLevels = new float[levels.length];
+        }
+        System.arraycopy(levels, 0, newLevels, 0, levels.length);
+        renderComponentLODLevels = newLevels;
     }
          
     /**
