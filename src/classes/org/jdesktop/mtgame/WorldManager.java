@@ -280,7 +280,21 @@ public class WorldManager {
             }
         }
     }
-    
+
+    /**
+     * Add a listener for processor component lod changes
+     */
+    public void addProcessorComponentLOD(ProcessorComponentLOD lod, ProcessorComponent pc, Object obj) {
+        processorManager.addProcessorComponentLOD(lod, pc, obj);
+    }
+
+    /**
+     * Set the levels to be used for processor component lod's
+     */
+    public void setProcessorComponentLODLevels(float[] levels) {
+        processorManager.setProcessorComponentLODLevels(levels);
+    }
+
     /**
      * Post an event to the system
      */

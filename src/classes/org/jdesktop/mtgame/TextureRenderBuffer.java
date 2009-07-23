@@ -222,7 +222,7 @@ public class TextureRenderBuffer extends RenderBuffer {
         renderList.clear();
         if (getManageRenderScenes()) {
             synchronized (renderComponentList) {
-                renderList(renderer, managedRenderList);
+                renderList(renderer, getManagedRenderList());
                 renderPassList(renderer, managedPassList);
             }
         } else {

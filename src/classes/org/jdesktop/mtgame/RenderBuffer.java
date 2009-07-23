@@ -99,7 +99,7 @@ public abstract class RenderBuffer {
      * These lists are only accessed if manage render scenes is true.
      */
     protected FastList<RenderComponent> renderComponentList = new FastList();
-    protected FastList<Spatial> managedRenderList = new FastList();
+    private FastList<Spatial> managedRenderList = new FastList();
     protected FastList<PassComponent> managedPassList = new FastList();
 
     /**
@@ -297,8 +297,19 @@ public abstract class RenderBuffer {
     public void addRenderScene(RenderComponent rc) {
         synchronized (renderComponentList) {
             renderComponentList.add(rc);
-            managedRenderList.add(rc.getSceneRoot());
         }
+    }
+
+    /**
+     * Get the list of managed render component spatials
+     */
+    protected FastList<Spatial> getManagedRenderList() {
+        managedRenderList.clear();
+
+        for (int i=0; i<renderComponentList.size(); i++) {
+            managedRenderList.add(renderComponentList.get(i).getSceneRoot());
+        }
+        return (managedRenderList);
     }
       
     /**
@@ -308,7 +319,6 @@ public abstract class RenderBuffer {
     public void removeRenderScene(RenderComponent rc) {
         synchronized (renderComponentList) {
             renderComponentList.remove(rc);
-            managedRenderList.remove(rc.getSceneRoot());
         }
     }
            
@@ -319,7 +329,6 @@ public abstract class RenderBuffer {
     public void removeRenderScene(int index) {
         synchronized (renderComponentList) {
             renderComponentList.remove(index);
-            managedRenderList.remove(index);
         }
     }    
         

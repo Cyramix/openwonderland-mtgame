@@ -154,6 +154,10 @@ public class DefaultRenderTechnique implements RenderTechnique {
      * They are asumed to be sorted front to back
      */
     public FastList<Spatial> getSpatials(RenderBuffer rb) {
+        spatialList.clear();
+        for (int i=0; i<componentList.size(); i++) {
+            spatialList.add(componentList.get(i).getSceneRoot());
+        }
         return (spatialList);
     }
 
@@ -169,10 +173,7 @@ public class DefaultRenderTechnique implements RenderTechnique {
      */
     public void addRenderComponent(RenderComponent rc) {
         rc.setRenderTechnique(this);
-        //BlendState blendState = (BlendState) rc.getSceneRoot().getRenderState(RenderState.StateType.Blend);
-        //traverseGraph(rc.getSceneRoot(), rc.getOrtho(), blendState, true);
         componentList.add(rc);
-        spatialList.add(rc.getSceneRoot());
 
     }
 
@@ -180,10 +181,7 @@ public class DefaultRenderTechnique implements RenderTechnique {
      * This method is called when RenderComponent is removed
      */
     public void removeRenderComponent(RenderComponent rc) {
-        //BlendState blendState = (BlendState) rc.getSceneRoot().getRenderState(RenderState.StateType.Blend);
         rc.setRenderTechnique(null);
-        //traverseGraph(rc.getSceneRoot(), rc.getOrtho(), blendState, false);
-        spatialList.remove(rc.getSceneRoot());
         componentList.remove(rc);
     }
 

@@ -29,6 +29,8 @@
 
 package org.jdesktop.mtgame;
 
+import com.jme.math.Vector3f;
+
 /**
 * 
 * The processor runs in two phases - compute and commit.  Due to the lack of
@@ -77,6 +79,16 @@ public abstract class ProcessorComponent extends EntityComponent {
     * in a manner that it is safe to make swing methods calls
     */
    private boolean swingSafe = false;
+
+   /**
+    * The current level of detail level for this processor component
+    */
+   private int lodLevel = -1;
+
+   /**
+    * The location of this processor
+    */
+   private Vector3f location = new Vector3f();
 
    /**
     * The compute callback to be defined by the subclass.
@@ -142,6 +154,7 @@ public abstract class ProcessorComponent extends EntityComponent {
     * for this ProcessComponent to make Swing method calls in the processor
     * commit method.  The default value of this flag is false, so it is not safe
     * to make Swing method calls from a ProcessorComponent commit method.
+    * @deprecated
     */
    public void setSwingSafe(boolean flag) {
        swingSafe = flag;
@@ -149,9 +162,42 @@ public abstract class ProcessorComponent extends EntityComponent {
    
    /**
     * Get the current value of the SwingSafe flag
+    * @deprecated
     */
    public boolean getSwingSafe() {
        return (swingSafe);
+   }
+
+   /**
+    * Set the current lod level
+    */
+   void setLODLevel(int level) {
+       lodLevel = level;
+   }
+
+   /**
+    * Set the current lod level
+    */
+   public int getLODLevel() {
+       return (lodLevel);
+   }
+
+   /**
+    * Set the Location of thie processor component
+    */
+   public void setLocation(Vector3f location) {
+       synchronized (this.location) {
+           this.location.set(location.x, location.y, location.z);
+       }
+   }
+
+   /**
+    * Get the Location of thie processor component
+    */
+   public void getLocation(Vector3f location) {
+       synchronized (this.location) {
+           location.set(this.location.x, this.location.y, this.location.z);
+       }
    }
 
    /**

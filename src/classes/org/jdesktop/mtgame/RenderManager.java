@@ -40,6 +40,7 @@ import com.jme.renderer.Camera;
 import com.jme.scene.Skybox;
 import com.jme.renderer.pass.Pass;
 import org.jdesktop.mtgame.shader.Shader;
+import java.util.ArrayList;
 
 /**
  * The RenderManager creates and controls the renderer threads.  It also acts as
@@ -296,19 +297,33 @@ public class RenderManager {
     /**
      * Change the ortho flag for this render component
      */
-    void changeOrthoFlag(RenderComponent rc) {
+    void updateOrtho(RenderComponent rc, boolean flag) {
         // Pass the change onto the renderer
-        renderer.changeOrthoFlag(rc);
+        renderer.updateOrtho(rc, flag);
     }
         
     /**
      * Change the lighting information for this render component
      */
-    void changeLighting(RenderComponent rc) {
+    void updateLighting(RenderComponent rc) {
         // Pass the change onto the renderer
-        renderer.changeLighting(rc);
+        renderer.updateLighting(rc);
     }
-    
+
+    /**
+     * Update the scene root of a render component
+     */
+    void updateSceneRoot(RenderComponent rc, Node scene) {
+        renderer.updateSceneRoot(rc, scene);
+    }
+
+    /**
+     * Update the scene root of a render component
+     */
+    void updateAttachPoint(RenderComponent rc, Node attachPoint) {
+        renderer.updateAttachPoint(rc, attachPoint);
+    }
+
     /**
      * Add a component to our processing list
      */
@@ -474,6 +489,14 @@ public class RenderManager {
      */
     Object getCollisionLock() {
         return (renderer.getCollisionLock());
+    }
+
+    /**
+     * Get the current set of global lights
+     * @return
+     */
+    ArrayList getGlobalLights() {
+        return (renderer.getGlobalLights());
     }
 
     /**

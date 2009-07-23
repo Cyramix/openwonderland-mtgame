@@ -267,7 +267,7 @@ public class CubeMapRenderBuffer extends RenderBuffer {
         renderer.clearQueue();
         if (getManageRenderScenes()) {
             synchronized (renderComponentList) {
-                renderList(renderer, managedRenderList);
+                renderList(renderer, getManagedRenderList());
                 renderPassList(renderer, managedPassList);
             }
         } else {
