@@ -26,265 +26,361 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package org.jdesktop.mtgame;
 
 import com.jme.scene.Node;
+import com.jme.scene.Spatial;
+import com.jme.scene.state.BlendState;
 import com.jme.scene.state.LightState;
 import com.jme.scene.state.RenderState;
 import com.jme.light.LightNode;
 import java.util.ArrayList;
 
 /**
-* This is an entity component that implements the visual representation of 
-* an entity.
-* 
-* @author Doug Twilleager
-*/
+ * This is an entity component that implements the visual representation of
+ * an entity.
+ *
+ * @author Doug Twilleager
+ */
 public class RenderComponent extends EntityComponent {
-   /**
-    * The base node for the JME Scene Graph
-    */
-   private Node sceneRoot = null;
-   
-   /**
-    * A sometimes non-null place for this RenderComponent to attach to.
-    */
-   private Node attachPoint = null;
-   
-   /**
-    * A flag to indicate whether or not this render component should
-    * use an orthographic projection
-    */
-   private boolean ortho = false;
-   
-   /**
-    * This flag controls whether or not lighting is applied to 
-    * this RenderComponent
-    */
-   private boolean lightingEnabled = true;
-   
-   /**
-    * The lights that only apply to this RenderCompoenent
-    */
-   private ArrayList lights = new ArrayList();
-   
-   /**
-    * The LightState that is used to apply lighting to just this
-    * RenderComponent.
-    */
-   private LightState lightState = null;
+    /**
+     * The base node for the JME Scene Graph
+     */
+    private Node sceneRoot = null;
 
-   /**
-    * An object used for render techniques
-    */
-   private Object renderTechniqueObject = null;
+    /**
+     * A sometimes non-null place for this RenderComponent to attach to.
+     */
+    private Node attachPoint = null;
 
-   /**
-    * The render technique for this render component
-    */
-   private RenderTechnique renderTechnique = null;
+    /**
+     * A flag to indicate whether or not this render component should
+     * use an orthographic projection
+     */
+    private boolean ortho = false;
 
-   /**
-    * An object used for render techniques
-    */
-   private String renderTechniqueName = "org.jdesktop.mtgame.DefaultRenderTechnique";
+    /**
+     * This flag controls whether or not lighting is applied to
+     * this RenderComponent
+     */
+    private boolean lightingEnabled = true;
 
-   /**
-    * The current level of detail level
-    */
-   private int currentLODLevel = 0;
+    /**
+     * The lights that only apply to this RenderCompoenent
+     */
+    private ArrayList lights = new ArrayList();
 
-   /**
-    * The default constructor
-    */
-   RenderComponent(Node node) {
-       sceneRoot = node;
-   }
-    
-   /**
-    * The constructor with attach point
-    */
-   RenderComponent(Node node, Node attachPoint) {
-       sceneRoot = node;
-       this.attachPoint = attachPoint;
-   }
+    /**
+     * The LightState that is used to apply lighting to just this
+     * RenderComponent.
+     */
+    private LightState lightState = null;
 
-   /**
-    * The constructor with RenderTechnique
-    */
-   RenderComponent(String rt, Node node, Object rtObject) {
-       renderTechniqueName = rt;
-       sceneRoot = node;
-       renderTechniqueObject = rtObject;
-   }
+    /**
+     * An object used for render techniques
+     */
+    private Object renderTechniqueObject = null;
 
-   /**
-    * Set the render technique
-    */
-   void setRenderTechnique(RenderTechnique rt) {
-       renderTechnique = rt;
-   }
+    /**
+     * The render technique for this render component
+     */
+    private RenderTechnique renderTechnique = null;
 
-   /**
-    * Get the render technique
-    */
-   RenderTechnique getRenderTechnique() {
-       return (renderTechnique);
-   }
+    /**
+     * An object used for render techniques
+     */
+    private String renderTechniqueName = "org.jdesktop.mtgame.DefaultRenderTechnique";
 
-   public void setEntity(Entity entity) {
-       super.setEntity(entity);
-   }
+    /**
+     * The current level of detail level
+     */
+    private int currentLODLevel = 0;
 
-   /**
-    * Get the name of the render technique
-    */
-   public String getRenderTechniqueName() {
-       return (renderTechniqueName);
-   }
-   
-   /**
-    * Get the scene root
-    */
-   public Node getSceneRoot() {
-       return (sceneRoot);
-   }
+    /**
+     * This boolean indicates that we are waiting for an update
+     */
+    boolean pendingUpdate = false;
 
-   /**
-    * Set the scene root
-    */
-   public void setSceneRoot(Node node) {
-       Entity e = getEntity();
-       Node oldAp = null;
+    /**
+     * The default constructor
+     */
+    RenderComponent(Node node) {
+        sceneRoot = node;
+    }
 
-       if (sceneRoot != null) {
-           // Clean up all the old stuff
-           if (attachPoint != null) {
-               // Save the attach point
-               oldAp = attachPoint;
-               setAttachPoint(null);
-           }
-       }
+    /**
+     * The constructor with attach point
+     */
+    RenderComponent(Node node, Node attachPoint) {
+        sceneRoot = node;
+        this.attachPoint = attachPoint;
+    }
 
-       sceneRoot = node;
-       if (oldAp != null) {
-           setAttachPoint(oldAp);
-       }
-       if (e != null && e.getWorldManager() != null) {
-           e.getWorldManager().getRenderManager().changeOrthoFlag(this);
-       }
-   }
+    /**
+     * The constructor with RenderTechnique
+     */
+    RenderComponent(String rt, Node node, Object rtObject) {
+        renderTechniqueName = rt;
+        sceneRoot = node;
+        renderTechniqueObject = rtObject;
+    }
 
-   /**
-    * Set the attach point for this RenderComponent
-    * This can only be called from a commit method if it is attaching/detaching
-    * from a live entity.
-    *
-    * @parameter ap - the parent node to which the sceneRoot of this component will be attached
-    */
-   public void setAttachPoint(Node ap) {
-       Entity e = getEntity();
+    /**
+     * Set the render technique
+     */
+    void setRenderTechnique(RenderTechnique rt) {
+        renderTechnique = rt;
+    }
 
-       // Nothing to do if we don't have an entity
-       if (e != null && e.getWorldManager() != null) {
-           synchronized (e.getWorldManager().getRenderManager().getJMESGLock()) {
-               // First, see if we need to detach from our current location
-               if (attachPoint != null) {
-                   // Detach and put the highest parent on the update list
-                   Node current = attachPoint;
-                   Node parent = current.getParent();
-                   while (parent != null) {
-                       current = parent;
-                       parent = parent.getParent();
-                   }
-                   attachPoint.detachChild(sceneRoot);
-                   e.getWorldManager().addToUpdateList(current);
-               }
+    /**
+     * Get the render technique
+     */
+    RenderTechnique getRenderTechnique() {
+        return (renderTechnique);
+    }
 
-               // Now, see if we need to notify new attachment
-               if (ap != null) {
-                   ap.attachChild(sceneRoot);
-                   e.getWorldManager().addToUpdateList(ap);
-               }
-           }
-       }
-       attachPoint = ap;
-   }
-   
-   /**
-    * Set the attach point for this RenderComponent
-    */
-   public Node getAttachPoint() {
-       return(attachPoint);
-   }
-   
-   /**
-    * Set the othographic projection flag
-    */
-   public void setOrtho(boolean flag) {
-       Entity e = getEntity();
+    public void setEntity(Entity entity) {
+        super.setEntity(entity);
+    }
 
-       if (ortho != flag) {
-           ortho = flag;
-           if (e != null && e.getWorldManager() != null) {
-               e.getWorldManager().getRenderManager().changeOrthoFlag(this);
-           }
-       }
-   }
-   
-   /**
-    * Get the value of the orthographic projection flag
-    */
-   public boolean getOrtho() {
-       return (ortho);
-   }
+    /**
+     * Get the name of the render technique
+     */
+    public String getRenderTechniqueName() {
+        return (renderTechniqueName);
+    }
 
-   /**
-    * Set the current LOD level
-    */
-   void setCurrentLOD(int level) {
+    /**
+     * Get the scene root
+     */
+    public Node getSceneRoot() {
+        return (sceneRoot);
+    }
+
+    /**
+     * This waits for the update to finish
+     */
+    void waitForUpdate() {
+        while (pendingUpdate) {
+            try {
+                Thread.currentThread().sleep(0, 10);
+            } catch (java.lang.InterruptedException ie) {
+                // Just wrap around
+            }
+        }
+    }
+
+    /**
+     * Set the scene root
+     */
+    public void setSceneRoot(Node node) {
+        if (isLive()) {
+            pendingUpdate = true;
+            getEntity().getWorldManager().getRenderManager().updateSceneRoot(this, node);
+            waitForUpdate();
+        } else {
+            sceneRoot = node;
+        }
+    }
+
+    /**
+     * Update any scene graph state for this RenderComponent
+     */
+    void updateSceneRoot(WorldManager wm, Node newRoot) {
+        // Start with attach points
+        if (attachPoint != null) {
+            Node oap = attachPoint;
+            updateAttachPoint(wm, null, false);
+            attachPoint = oap;
+        }
+
+        sceneRoot.setLive(false);
+        sceneRoot = newRoot;
+        newRoot.setLive(true);
+        updateAttachPoint(wm, attachPoint, false);
+        updateOrtho(wm, ortho, false);
+        updateLightState(wm, false);
+        wm.addToUpdateList(sceneRoot);
+        pendingUpdate = false;
+    }
+
+    /**
+     * Set the attach point for this RenderComponent
+     * This can only be called from a commit method if it is attaching/detaching
+     * from a live entity.
+     *
+     * @parameter ap - the parent node to which the sceneRoot of this component will be attached
+     */
+    public void setAttachPoint(Node ap) {
+        if (isLive()) {
+            pendingUpdate = true;
+            getEntity().getWorldManager().getRenderManager().updateAttachPoint(this, ap);
+            waitForUpdate();
+        } else {
+            attachPoint = ap;
+        }
+    }
+
+    /**
+     * Do the processing of a changed attach point
+     */
+    void updateAttachPoint(WorldManager wm, Node newAttachPoint, boolean clearUpdate) {
+        if (attachPoint != null) {
+            // Detach and put the highest parent on the update list
+            Node current = attachPoint;
+            Node parent = current.getParent();
+            while (parent != null) {
+                current = parent;
+                parent = parent.getParent();
+            }
+            attachPoint.detachChild(sceneRoot);
+            wm.addToUpdateList(current);
+        }
+
+        // Now, see if we need to notify new attachment
+        if (newAttachPoint != null) {
+            newAttachPoint.attachChild(sceneRoot);
+            wm.addToUpdateList(newAttachPoint);
+        }
+
+        attachPoint = newAttachPoint;
+        if (clearUpdate) {
+            pendingUpdate = false;
+        }
+    }
+
+    /**
+     * Set the attach point for this RenderComponent
+     */
+    public Node getAttachPoint() {
+        return (attachPoint);
+    }
+
+    /**
+     * Set the othographic projection flag
+     */
+    public void setOrtho(boolean flag) {
+        if (isLive()) {
+            pendingUpdate = true;
+            getEntity().getWorldManager().getRenderManager().updateOrtho(this, flag);
+            waitForUpdate();
+        } else {
+            ortho = flag;
+        }
+    }
+
+    /**
+     * Get the value of the orthographic projection flag
+     */
+    public boolean getOrtho() {
+        return (ortho);
+    }
+
+    /**
+     * Update ortho settings on the scene graph
+     */
+    void updateOrtho(WorldManager wm, boolean flag, boolean clearUpdate) {
+        ortho = flag;
+        BlendState bs = (BlendState) sceneRoot.getRenderState(RenderState.StateType.Blend);
+        traverseGraph(sceneRoot, flag, bs);
+        wm.addToUpdateList(sceneRoot);
+
+        if (clearUpdate) {
+            pendingUpdate = false;
+        }
+    }
+
+    /**
+     * Examine this node and travese it's children
+     */
+    void traverseGraph(Spatial sg, boolean ortho, BlendState bs) {
+
+        examineSpatial(sg, ortho, bs);
+        if (sg instanceof Node) {
+            Node node = (Node) sg;
+            for (int i = 0; i < node.getQuantity(); i++) {
+                Spatial child = node.getChild(i);
+                BlendState cbs = (BlendState) child.getRenderState(RenderState.StateType.Blend);
+                if (cbs == null) {
+                    traverseGraph(child, ortho, bs);
+                } else {
+                    traverseGraph(child, ortho, cbs);
+                }
+            }
+        }
+    }
+
+    /**
+     * Examine the given node
+     */
+    void examineSpatial(Spatial s, boolean ortho, BlendState bs) {
+        setRenderQueue(s, ortho, bs);
+    }
+
+    /**
+     * This mehod checks for transpaency attributes
+     */
+    void setRenderQueue(Spatial s, boolean ortho, BlendState bs) {
+        if (ortho) {
+            s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_ORTHO);
+        } else {
+            if (bs != null) {
+                if (bs.isBlendEnabled()) {
+                    s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_TRANSPARENT);
+                } else {
+                    s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_OPAQUE);
+                }
+            } else {
+                s.setRenderQueueMode(com.jme.renderer.Renderer.QUEUE_OPAQUE);
+            }
+        }
+    }
+
+    /**
+     * Set the current LOD level
+     */
+    void setCurrentLOD(int level) {
         currentLODLevel = level;
-   }
+    }
 
-   /**
-    * Get the current LOD level
-    */
-   public int getCurrentLOD() {
-       return (currentLODLevel);
-   }
+    /**
+     * Get the current LOD level
+     */
+    public int getCurrentLOD() {
+        return (currentLODLevel);
+    }
 
-   /**
-    * Set the lighting enable flag
-    */
-   public void setLightingEnabled(boolean flag) {
-       Entity e = getEntity();
-       
-       if (lightingEnabled != flag) {
-           lightingEnabled = flag;
-           if (e != null && e.getWorldManager() != null) {
-               e.getWorldManager().getRenderManager().changeLighting(this);
-           }
-       }
-   }
-   
-   /**
-    * Get the lighting enabled flag
-    */
-   public boolean getLightingEnabled() {
-       return (lightingEnabled);
-   }
-   
+    /**
+     * Set the lighting enable flag
+     */
+    public void setLightingEnabled(boolean flag) {
+        if (lightingEnabled != flag) {
+            lightingEnabled = flag;
+            if (isLive()) {
+                pendingUpdate = true;
+                getEntity().getWorldManager().getRenderManager().updateLighting(this);
+                waitForUpdate();
+            }
+        }
+    }
+
+    /**
+     * Get the lighting enabled flag
+     */
+    public boolean getLightingEnabled() {
+        return (lightingEnabled);
+    }
+
     /**
      * Add a global light to the scene
      */
     public void addLight(LightNode light) {
-        Entity e = getEntity();
-
         synchronized (lights) {
             lights.add(light);
-            if (e != null && e.getWorldManager() != null) {
-                e.getWorldManager().getRenderManager().changeLighting(this);
+            if (isLive()) {
+                pendingUpdate = true;
+                getEntity().getWorldManager().getRenderManager().updateLighting(this);
+                waitForUpdate();
             }
         }
     }
@@ -293,39 +389,41 @@ public class RenderComponent extends EntityComponent {
      * Remove a global light from the scene
      */
     public void removeLight(LightNode light) {
-        Entity e = getEntity();
-
         synchronized (lights) {
             lights.remove(light);
-            if (e != null && e.getWorldManager() != null) {
-                e.getWorldManager().getRenderManager().changeLighting(this);
+            if (isLive()) {
+                pendingUpdate = true;
+                getEntity().getWorldManager().getRenderManager().updateLighting(this);
+                waitForUpdate();
             }
         }
     }
-    
+
     /**
      * Create a LightState with the current set of lights
      */
-    void updateLightState(ArrayList globalLights) {
-        Entity e = getEntity();
-
-        lightState = (LightState) e.getWorldManager().
-                getRenderManager().createRendererState(RenderState.StateType.Light);
+    void updateLightState(WorldManager wm, boolean clearUpdate) {
+        ArrayList globalLights = wm.getRenderManager().getGlobalLights();
+        lightState = (LightState) wm.getRenderManager().createRendererState(RenderState.StateType.Light);
         for (int i = 0; i < globalLights.size(); i++) {
             LightNode ln = (LightNode) globalLights.get(i);
-            e.getWorldManager().addToUpdateList(ln);
+            wm.addToUpdateList(ln);
             lightState.attach(ln.getLight());
         }
 
         for (int i = 0; i < lights.size(); i++) {
             LightNode ln = (LightNode) lights.get(i);
-            e.getWorldManager().addToUpdateList(ln);
+            wm.addToUpdateList(ln);
             lightState.attach(ln.getLight());
         }
         lightState.setEnabled(lightingEnabled);
         sceneRoot.setRenderState(lightState);
+
+        if (clearUpdate) {
+            pendingUpdate = false;
+        }
     }
-    
+
     /**
      * Get the LightState for this RenderComponent
      */

@@ -139,8 +139,8 @@ public class AttachPointTest implements RenderUpdater {
         wm = new WorldManager("TestWorld");
         
         try {
-            vert = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleVertShader");
-            frag = new URL("file:/Users/runner/NetBeansProjects/mtgame/trunk/src/classes/org/jdesktop/mtgame/SampleFragShader");
+            vert = new URL("file:/Users/runner/NetBeansProjects/mtgame2/trunk/src/classes/org/jdesktop/mtgame/SampleVertShader");
+            frag = new URL("file:/Users/runner/NetBeansProjects/mtgame2/trunk/src/classes/org/jdesktop/mtgame/SampleFragShader");
         } catch (MalformedURLException e) {
             System.out.println(e);
         }

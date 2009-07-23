@@ -342,7 +342,7 @@ public class ShadowMapRenderBuffer extends RenderBuffer {
         renderList.clear();
         if (getManageRenderScenes()) {
             synchronized (renderComponentList) {
-                setRenderList(renderer, managedRenderList);
+                setRenderList(renderer, getManagedRenderList());
                 setPassList(renderer, managedPassList);
             }
         } else {

@@ -30,7 +30,10 @@
 package org.jdesktop.mtgame;
 
 import org.jdesktop.mtgame.processor.AWTEventProcessorComponent;
+import com.jme.renderer.Camera;
 import java.util.ArrayList;
+import javolution.util.FastList;
+import com.jme.math.Vector3f;
 
 /**
  * This is the controller for all processor components.  It handles triggers and
@@ -54,11 +57,6 @@ class ProcessorManager extends Thread {
      * The array of ProcessorThreads
      */
     private ProcessorThread[] processorThreads = null;
-    
-    /**
-     * The number of threads currently running
-     */
-    private int numProcessorsWorking = 0;
     
     /**
      * The list of entities that wish to be triggered on every render frame
@@ -89,11 +87,6 @@ class ProcessorManager extends Thread {
     private ArrayList processorsTriggered = new ArrayList();
     
     /**
-     * An instant snapshot of processors we are processing this frame.
-     */
-    private ArrayList currentProcessors = null;
-    
-    /**
      * The systems WorldManager
      */
     WorldManager worldManager = null;
@@ -117,7 +110,37 @@ class ProcessorManager extends Thread {
      * The number of available processors.  
      */
     private int availableProcessors = 0;
-    
+
+    /**
+     * The list of processors interested in being notified of lod changes
+     */
+    private FastList<ProcessorComponentLODObject> processorLODList = new FastList<ProcessorComponentLODObject>();
+
+    /**
+     * The array of increasing distances to use for processor component lod's
+     */
+    private float[] processorComponentLODLevels = new float[0];
+
+    /**
+     * The list of all processors
+     */
+    private FastList<ProcessorComponent> processorComponents = new FastList<ProcessorComponent>();
+
+    /**
+     * A class to hold ProcessorComponent LOD info
+     */
+    class ProcessorComponentLODObject {
+        ProcessorComponent pc = null;
+        ProcessorComponentLOD pclod = null;
+        Object obj = null;
+
+        ProcessorComponentLODObject(ProcessorComponentLOD pclod, ProcessorComponent pc, Object obj) {
+            this.pclod = pclod;
+            this.pc = pc;
+            this.obj = obj;
+        }
+    }
+
     /**
      * The default constructor
      */
@@ -128,9 +151,6 @@ class ProcessorManager extends Thread {
         
         // Just double it for now.
         numProcessorThreads = 2*numProcessors;
-        
-        // For initialization, all threads are running
-        numProcessorsWorking = numProcessorThreads;
         
         processorThreads = new ProcessorThread[numProcessorThreads];
         for (int i=0; i<numProcessorThreads; i++) {
@@ -166,6 +186,95 @@ class ProcessorManager extends Thread {
     
     boolean getRunning() {
         return (running);
+    }
+
+    /**
+     * Add a listener for processor component lod changes
+     */
+    void addProcessorComponentLOD(ProcessorComponentLOD lod, ProcessorComponent pc, Object obj) {
+        synchronized(processorLODList) {
+            processorLODList.add(new ProcessorComponentLODObject(lod, pc, obj));
+        }
+    }
+
+    /**
+     * Remove a ProcessorComponent to be tracked by the LOD system
+     */
+    void removeProcessorComponentLOD(ProcessorComponentLOD lod) {
+        ProcessorComponentLODObject lodobj = null;
+
+        synchronized (processorLODList) {
+            for (int i=0; i<processorLODList.size(); i++) {
+                lodobj = processorLODList.get(i);
+                if (lodobj.pclod == lod) {
+                    processorLODList.remove(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the processor level, given the point and camera
+     */
+    private int getProcessorLevel(Vector3f loc, Camera camera) {
+        int level = 0;
+
+        synchronized (processorComponentLODLevels) {
+            if (processorComponentLODLevels == null) {
+                return (level);
+            }
+
+            float dist = loc.distance(camera.getLocation());
+            for (level = 0; level < processorComponentLODLevels.length; level++) {
+                if (dist >= processorComponentLODLevels[level]) {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+        }
+        return (level);
+    }
+
+    /**
+     * This goes through all the processors and notifies them when their
+     * lod level has changed.
+     */
+    void updateProcessorComponentLODs(Camera camera) {
+        Vector3f loc = new Vector3f();
+        int level = -1;
+        int lastLevel = -1;
+
+        synchronized (processorLODList) {
+            for (int i = 0; i < processorLODList.size(); i++) {
+                ProcessorComponentLODObject lodobj = processorLODList.get(i);
+                lodobj.pc.getLocation(loc);
+                level = getProcessorLevel(loc, camera);
+                lastLevel = lodobj.pc.getLODLevel();
+                if (level != lastLevel) {
+                    lodobj.pc.setLODLevel(level);
+                    if (lodobj != null) {
+                        lodobj.pclod.updateLOD(lodobj.pc, lastLevel, level, lodobj.obj);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Set the levels to be used for processor component lod's
+     */
+    void setProcessorComponentLODLevels(float[] levels) {
+        float[] newLevels = null;
+
+        if (levels != null) {
+            newLevels = new float[levels.length];
+        }
+        System.arraycopy(levels, 0, newLevels, 0, levels.length);
+        synchronized (processorComponentLODLevels) {
+            processorComponentLODLevels = newLevels;
+        }
     }
     
     /**
@@ -258,6 +367,9 @@ class ProcessorManager extends Thread {
         if (c instanceof ProcessorComponent) {
             ProcessorComponent pc = (ProcessorComponent) c;
             pc.setEntityProcessController(this);
+            synchronized (processorComponents) {
+                processorComponents.add(pc);
+            }
             if (pc.getArmingCondition() != null) {
                 armProcessorComponent(pc.getArmingCondition());
             }
@@ -269,6 +381,9 @@ class ProcessorManager extends Thread {
             ProcessorComponent[] procs = pcc.getProcessors();
             for (int i = 0; i < procs.length; i++) {
                 procs[i].setEntityProcessController(this);
+                synchronized (processorComponents) {
+                    processorComponents.add(procs[i]);
+                }
                 if (procs[i].getArmingCondition() != null) {
                     armProcessorComponent(procs[i].getArmingCondition());
                 }
@@ -287,6 +402,9 @@ class ProcessorManager extends Thread {
                 disarmProcessorComponent(pc.getArmingCondition());
             }
             pc.setEntityProcessController(null);
+            synchronized (processorComponents) {
+                processorComponents.remove(pc);
+            }
         }
 
         if (c instanceof ProcessorCollectionComponent) {
@@ -297,6 +415,9 @@ class ProcessorManager extends Thread {
                     disarmProcessorComponent(procs[i].getArmingCondition());
                 }
                 procs[i].setEntityProcessController(null);
+                synchronized (processorComponents) {
+                    processorComponents.remove(procs[i]);
+                }
             }
         }
         c.setLive(false);

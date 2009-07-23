@@ -216,6 +216,28 @@ class Renderer extends Thread {
     private boolean orthosChanged = false;
 
     /**
+     * The array list of render components waiting
+     * to have their scene roots changed
+     */
+    private ArrayList<SceneRootOp> sceneRoots = new ArrayList();
+
+    /**
+     * A boolean indicating that the sceneRoots list has changed
+     */
+    private boolean sceneRootsChanged = false;
+
+    /**
+     * The array list of render components waiting
+     * to have their attach points changed
+     */
+    private ArrayList<AttachPointOp> attachPoints = new ArrayList();
+
+    /**
+     * A boolean indicating that the attachPoints list has changed
+     */
+    private boolean attachPointsChanged = false;
+
+    /**
      * A hashmap of geometry objects to track via geometry lod
      */
     private FastMap geometryLODMap = new FastMap();
@@ -466,6 +488,32 @@ class Renderer extends Thread {
         OrthoOp(RenderComponent rc, boolean on) {
             this.rc = rc;
             this.on = on;
+        }
+    }
+
+    /**
+     * A class to hold scene root changes
+     */
+    class SceneRootOp {
+        RenderComponent rc = null;
+        Node scene = null;
+
+        SceneRootOp(RenderComponent rc, Node scene) {
+            this.rc = rc;
+            this.scene = scene;
+        }
+    }
+
+    /**
+     * A class to hold attach point changes
+     */
+    class AttachPointOp {
+        RenderComponent rc = null;
+        Node attachPoint = null;
+
+        AttachPointOp(RenderComponent rc, Node attachPoint) {
+            this.rc = rc;
+            this.attachPoint = attachPoint;
         }
     }
 
@@ -742,6 +790,10 @@ class Renderer extends Thread {
         long frameStartTime = -1;
         long renderTime = -1;
         long totalTime = -1;
+        int statCount = 0;
+        long updateTime = 0;
+        long frameRenderTime = 0;
+        long commitTime = 0;
         
                     
         initRenderer();   
@@ -766,6 +818,11 @@ class Renderer extends Thread {
                 currentScreenBuffer = bufferController.getCurrentOnscreenBuffer();
                 if (currentScreenBuffer != null &&
                     currentScreenBuffer.makeCurrent(displaySystem, jmeRenderer)) {
+                    /**
+                     * Let the processor manager notify processors of any LOD changes
+                     */
+                    worldManager.getProcessorManager().updateProcessorComponentLODs(currentScreenBuffer.getCameraComponent().getCamera());
+
                     /*
                      * This block of code handles calling entity processes which are
                      * locked to the renderer - like the current camera.
@@ -782,15 +839,18 @@ class Renderer extends Thread {
                      * Process the RenderComponent LOD's.  Do it here, so any changes
                      * can take effect this frame.
                      */
-                    processRenderComponentLODs(currentScreenBuffer.getCameraComponent().getCamera(), renderComponentLODLevels);
+                    processRenderComponentLODs(currentScreenBuffer.getCameraComponent().getCamera());
 
                     synchronized (jmeSGLock) {
                         processJMEUpdates(totalTime / 1000000000.0f);
                     }
 
+                    updateTime = System.nanoTime();
                     // Finally, render the scene
                     bufferController.renderScene(displaySystem, jmeRenderer, this);
                     bufferController.endFrame(jmeRenderer);
+                    frameRenderTime = System.nanoTime();
+                    //System.out.println("Render Time: " + (frameRenderTime - updateTime)/1000000);
                     currentScreenBuffer.release();
                 }
             }
@@ -819,7 +879,9 @@ class Renderer extends Thread {
                     currentScreenBuffer.release();
                 }
             }
-                       
+
+            commitTime = System.nanoTime();
+
             // Let the processes know that we want to do a frame tick
             renderManager.triggerNewFrame();
 
@@ -829,6 +891,13 @@ class Renderer extends Thread {
           
             // Decide if we need to sleep
             totalTime = System.nanoTime() - frameStartTime;
+//                            System.out.println("-----------------------------------------------");
+//                System.out.println("Desired FR: " + desiredFrameRate);
+//                System.out.println("Update Time: " + (updateTime - frameStartTime)/1000000);
+//                System.out.println("Render Time: " + (frameRenderTime - updateTime)/1000000);
+//                System.out.println("Commit Time: " + (commitTime - frameRenderTime)/1000000);
+//                System.out.println("Total Time: " + totalTime/1000000);
+//                System.out.println("Desire Time: " + desiredFrameTime/1000000);
             if (totalTime < desiredFrameTime) {
                 // Sleep to hit the frame rate
                 try {
@@ -991,26 +1060,70 @@ class Renderer extends Thread {
     /**
      * Change the ortho flag for this render component
      */
-    void changeOrthoFlag(RenderComponent rc) {
+    void updateOrtho(RenderComponent rc, boolean flag) {
         synchronized (entityLock) {
             synchronized (orthos) {
-                OrthoOp oop = new OrthoOp(rc, rc.getOrtho());
-                orthos.add(oop);
-                orthosChanged = true;
-                entityChanged = true;
+                if (Thread.currentThread() == this) {
+                    rc.updateOrtho(worldManager, flag, true);
+                } else {
+                    OrthoOp oop = new OrthoOp(rc, flag);
+                    orthos.add(oop);
+                    orthosChanged = true;
+                    entityChanged = true;
+                }
             }
         }
     }
-           
+
+    /**
+     * Update the scene root of a render component
+     */
+    void updateSceneRoot(RenderComponent rc, Node scene) {
+        synchronized (entityLock) {
+            synchronized (sceneRoots) {
+                if (Thread.currentThread() == this) {
+                    rc.updateSceneRoot(worldManager, scene);
+                } else {
+                    SceneRootOp oop = new SceneRootOp(rc, scene);
+                    sceneRoots.add(oop);
+                    sceneRootsChanged = true;
+                    entityChanged = true;
+                }
+            }
+        }
+    }
+
+    /**
+     * Update the scene root of a render component
+     */
+    void updateAttachPoint(RenderComponent rc, Node attachPoint) {
+        synchronized (entityLock) {
+            synchronized (attachPoints) {
+                if (Thread.currentThread() == this) {
+                    rc.updateAttachPoint(worldManager, attachPoint, true);
+                } else {
+                    AttachPointOp oop = new AttachPointOp(rc, attachPoint);
+                    attachPoints.add(oop);
+                    attachPointsChanged = true;
+                    entityChanged = true;
+                }
+            }
+        }
+    }
+
     /**
      * Change the lighting info for this render component
      */
-    void changeLighting(RenderComponent rc) {
+    void updateLighting(RenderComponent rc) {
         synchronized (entityLock) {
             synchronized (componentLighting) {
-                componentLighting.add(rc);
-                componentLightingChanged = true;
-                entityChanged = true;
+                if (Thread.currentThread() == this) {
+                    rc.updateLightState(worldManager, true);
+                } else {
+                    componentLighting.add(rc);
+                    componentLightingChanged = true;
+                    entityChanged = true;
+                }
             }
         }
     }
@@ -1495,15 +1608,14 @@ class Renderer extends Thread {
      * the object, compares it to the current levels, and calls the RenderComponentLOD
      * if needed.
      */
-    void processRenderComponentLODs(Camera camera, float[] levels) {
+    void processRenderComponentLODs(Camera camera) {
         synchronized (renderComponentLODs) {
             for (int i=0; i<renderComponentLODs.size(); i++) {
                 RenderComponentLODObject lodobj = renderComponentLODs.get(i);
-                int level = calculateLevel(camera, lodobj.rc.getSceneRoot(), levels);
+                int level = calculateLevel(camera, lodobj.rc.getSceneRoot());
                 if (level != lodobj.rc.getCurrentLOD()) {
                     int lastLevel = lodobj.rc.getCurrentLOD();
                     lodobj.rc.setCurrentLOD(level);
-                    System.out.println("Switching from level: " + lastLevel + " to " + level);
                     lodobj.rclod.updateLOD(lodobj.rc, lastLevel, level, lodobj.obj);
                 }
             }
@@ -1513,19 +1625,25 @@ class Renderer extends Thread {
     /**
      * This calculates the lod level for the node given
      */
-    int calculateLevel(Camera camera, Node n, float[] levels) {
+    int calculateLevel(Camera camera, Node n) {
         int level = 0;
 
-        if (levels == null) {
-            return (level);
-        }
+        synchronized (renderComponentLODLevels) {
+            if (renderComponentLODLevels == null) {
+                return (level);
+            }
 
-        float dist = n.getWorldBound().distanceTo(camera.getLocation());
-        for (level=0; level<levels.length; level++) {
-            if (dist >= levels[level]) {
-                continue;
-            } else {
-                break;
+            if (n.getWorldBound() == null) {
+                return (level);
+            }
+
+            float dist = n.getWorldBound().distanceTo(camera.getLocation());
+            for (level = 0; level < renderComponentLODLevels.length; level++) {
+                if (dist >= renderComponentLODLevels[level]) {
+                    continue;
+                } else {
+                    break;
+                }
             }
         }
         return (level);
@@ -1610,7 +1728,7 @@ class Renderer extends Thread {
         // Now go through all the renderScenes and apply the light state
         for (int i=0; i<renderScenes.size(); i++) {
             RenderComponent scene = (RenderComponent) renderScenes.get(i);
-            scene.updateLightState(globalLights);
+            scene.updateLightState(worldManager, true);
             scene.getSceneRoot().updateRenderState();
         }
     }
@@ -1622,7 +1740,7 @@ class Renderer extends Thread {
         synchronized (componentLighting) {
             for (int i=0; i<componentLighting.size(); i++) {
                 RenderComponent rc = (RenderComponent) componentLighting.get(i);
-                rc.updateLightState(globalLights);
+                rc.updateLightState(worldManager, true);
                 rc.getSceneRoot().updateRenderState();
             }
             componentLighting.clear();
@@ -1669,6 +1787,14 @@ class Renderer extends Thread {
                 if (lightsChanged) {
                     processLightsChanged();
                     lightsChanged = false;
+                }
+                if (sceneRootsChanged) {
+                    processSceneRootsChanged();
+                    sceneRootsChanged = false;
+                }
+                if (attachPointsChanged) {
+                    processAttachPointsChanged();
+                    attachPointsChanged = false;
                 }
                 entityChanged = false;
             }
@@ -1877,7 +2003,9 @@ class Renderer extends Thread {
             newLevels = new float[levels.length];
         }
         System.arraycopy(levels, 0, newLevels, 0, levels.length);
-        renderComponentLODLevels = newLevels;
+        synchronized (renderComponentLODLevels) {
+            renderComponentLODLevels = newLevels;
+        }
     }
          
     /**
@@ -1946,14 +2074,38 @@ class Renderer extends Thread {
         synchronized (orthos) {
             for (int i=0; i<orthos.size(); i++) {
                 OrthoOp oop = orthos.get(i);
-                BlendState bs = (BlendState)oop.rc.getSceneRoot().getRenderState(RenderState.StateType.Blend);
-                traverseGraph(oop.rc.getSceneRoot(), oop.on, bs);
-                addToUpdateList(oop.rc.getSceneRoot());
+                oop.rc.updateOrtho(worldManager, oop.on, true);
             }
             orthos.clear();
         }
     }
-    
+
+    /**
+     * Check for scene root changes
+     */
+    void processSceneRootsChanged() {
+        synchronized (sceneRoots) {
+            for (int i=0; i<sceneRoots.size(); i++) {
+                SceneRootOp oop = sceneRoots.get(i);
+                oop.rc.updateSceneRoot(worldManager, oop.scene);
+            }
+            sceneRoots.clear();
+        }
+    }
+
+    /**
+     * Check for scene root changes
+     */
+    void processAttachPointsChanged() {
+        synchronized (attachPoints) {
+            for (int i=0; i<attachPoints.size(); i++) {
+                AttachPointOp oop = attachPoints.get(i);
+                oop.rc.updateAttachPoint(worldManager, oop.attachPoint, true);
+            }
+            attachPoints.clear();
+        }
+    }
+
     class MyImplementor extends SimpleCanvasImpl {
         /**
          * The Renderer to notify
@@ -1992,6 +2144,14 @@ class Renderer extends Thread {
     Object getCollisionLock() {
         return (pickLock);
     }
+
+    /**
+     * Get the current set of global lights
+     * @return
+     */
+    ArrayList getGlobalLights() {
+        return (globalLights);
+    }
     
     /**
      * The jme lock used during graph updates
@@ -2008,21 +2168,14 @@ class Renderer extends Thread {
 
         synchronized (jmeSGLock) {
             if (add) {
-                sc.updateLightState(globalLights);
+                sc.updateSceneRoot(worldManager, sg);
                 processGraphAddition(sg);
-                if (sc.getAttachPoint() != null) {
-                    processAttachPoint(sc, true);
-                }
-                addToUpdateList(sg);
             } else {
                 processGraphRemove(sg);
                 if (sc.getAttachPoint() != null) {
                     processAttachPoint(sc, false);
                 }
             }
-
-            BlendState bs = (BlendState)sg.getRenderState(RenderState.StateType.Blend);
-            traverseGraph(sg, sc.getOrtho(), bs);
         }
     }
     
