@@ -114,6 +114,18 @@ public class JMECollisionSystem extends CollisionSystem {
     }
     
     /**
+     * Returns whether the given node is a reporting node for the given 
+     * collision component.
+     * @param n The node to check.
+     * @param cc The collision component.
+     */
+    public boolean isReportingNode (Node n) {
+        synchronized (collisionComponents) {
+            return spatialMap.get(n) != null;
+        }
+    }
+
+    /**
      * A pick routine, which will pick against every scene rendered
      */
     public void pickAll(Ray ray, PickResults result, boolean includeOrtho, CameraComponent camera) {
