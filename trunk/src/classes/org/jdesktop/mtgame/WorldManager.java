@@ -412,6 +412,15 @@ public class WorldManager {
     }
 
     /**
+     * Load the configuration data given by the InputStream, but don't attach
+     * the entities to the world. Instead the ConfigLoadListener will be called
+     * each time an instance is loaded.
+     */
+    public void loadConfiguration(InputStream stream, ConfigLoadListener listener) {
+        configManager.loadConfiguration(stream, listener);
+    }
+
+    /**
      * Load the configuration data from the specified url, but don't attach
      * the entities to the world. Instead the ConfigLoadListener will be called
      * each time an instance is loaded.
@@ -420,7 +429,21 @@ public class WorldManager {
     public void loadConfiguration(URL url, ConfigLoadListener listener) {
         configManager.loadConfiguration(url, listener);
     }
-    
+
+    /**
+     * Get a named config instance
+     */
+    public ConfigInstance getConfigInstance(String name) {
+        return(configManager.getConfigInstance(name));
+    }
+
+    /**
+     * Get all of the config instances
+     */
+    public ConfigInstance[] getAllConfigInstances() {
+        return(configManager.getAllConfigInstances());
+    }
+
     /**
      * Apply the configuration map information to a jME graph
      */
@@ -496,6 +519,6 @@ public class WorldManager {
     }
 
     public interface ConfigLoadListener {
-        public void entityLoaded(Entity entity);
+        public void configLoaded(ConfigInstance ci);
     }
 }

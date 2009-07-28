@@ -36,14 +36,11 @@ import com.jme.scene.Spatial;
 import com.jme.scene.Node;
 import com.jme.scene.Geometry;
 import com.jme.scene.TriMesh;
-import com.jme.scene.Line;
 import com.jme.scene.shape.Quad;
-import com.jme.scene.SharedMesh;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.TextureState;
 import com.jme.scene.state.ZBufferState;
-import com.jme.scene.state.MaterialState;
 import com.jme.image.Texture;
 import com.jme.util.TextureManager;
 import java.net.URL;
@@ -53,15 +50,11 @@ import com.jme.scene.VBOInfo;
 import com.jme.math.Vector3f;
 import com.jme.math.Quaternion;
 import com.jme.renderer.ColorRGBA;
-import java.nio.FloatBuffer;
 
 import java.util.HashMap;
+import java.util.Collection;
 import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import com.jmex.model.collada.ColladaImporter;
 import com.jme.util.resource.ResourceLocator;
-import com.jme.util.resource.ResourceLocatorTool;
 import java.io.IOException;
 import java.util.ArrayList;
 import org.jdesktop.mtgame.WorldManager.ConfigLoadListener;
@@ -112,12 +105,6 @@ public class ConfigManager implements ResourceLocator {
     private ConfigLoadListener loadListener = null;
 
     private String baseURL = null;
-    
-    private boolean localResourceLocatorInstalled = false;
-
-    int normalIndex = 0;
-    boolean showNormals = false;
-    boolean showTangents = false;
 
     private ShadowMapRenderBuffer shadowMapBuffer = null;
     private int shadowMapWidth = 1024;
@@ -125,6 +112,11 @@ public class ConfigManager implements ResourceLocator {
     private ArrayList<Node> shadowSpatials = new ArrayList<Node>();
     private boolean showShadowMap = false;
     private Node shadowDebug = null;
+
+    /**
+     * A HashMap containing all ConfigInstances
+     */
+    private HashMap<String,ConfigInstance> configInstanceMap = new HashMap<String,ConfigInstance>();
 
     /**
      * The Default Constructor
@@ -135,10 +127,34 @@ public class ConfigManager implements ResourceLocator {
     }
 
     /**
+     * Get a named config instance
+     */
+    public ConfigInstance getConfigInstance(String name) {
+        return (configInstanceMap.get(name));
+    }
+
+    /**
+     * Get all of the ConfigInstances
+     */
+    public ConfigInstance[] getAllConfigInstances() {
+        ConfigInstance[] ret = new ConfigInstance[configInstanceMap.size()];
+        Collection<ConfigInstance> values = configInstanceMap.values();
+        ret = values.toArray(ret);
+        return (ret);
+    }
+
+    /**
      * Set the texture directory
      */
     void setTextureDirectory(String dir) {
         textureDir = dir;
+    }
+
+    /**
+     * Get the texture directory
+     */
+    public String getTextureDirectory() {
+        return (textureDir);
     }
 
     /**
@@ -147,15 +163,26 @@ public class ConfigManager implements ResourceLocator {
     void setDataDirectory(String dir) {
         dataDir = dir;
     }
-    
+
+    /**
+     * Get the data directory
+     */
+    public String getDataDirectory() {
+        return (dataDir);
+    }
+
+    /**
+     * Load the configuration data given by the InputStream
+     */
+    void loadConfiguration(InputStream stream, ConfigLoadListener listener) {
+        loadListener = listener;
+        loadConfiguration(stream);
+    }
+
     /**
      * Load the configuration data given by the InputStream
      */
     void loadConfiguration(InputStream stream) {
-        if (!localResourceLocatorInstalled) {
-            ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
-            localResourceLocatorInstalled = true;
-        }
 
         try {
             int numBytes = stream.available();
@@ -234,9 +261,6 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("ConfigFile")) {
                 token = token.substring(10).trim();
                 loadConfigFile(token);
-            } else if (token.startsWith("Collada")) {
-                token = token.substring(7).trim();
-                loadColladaFile(token);
             } else if (token.startsWith("ShadowMapEnable")) {
                 token = token.substring(15).trim();
                 processShadowMap(token);
@@ -246,6 +270,9 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("ShadowMapHeight")) {
                 token = token.substring(15).trim();
                 setShadowMapHeight(token);
+            } else if (token.startsWith("Instance")) {
+                token = token.substring(8).trim();
+                parseInstance(token);
             }
 
             token = nextToken(tokens);
@@ -364,13 +391,21 @@ public class ConfigManager implements ResourceLocator {
     }
 
     /**
-     * Load a collada file with the given name - it can be found in the
-     * data directory
+     * Parse an Instance entry
      */
-    void loadColladaFile(String colladaString) {
-        InputStream fileStream = null;
+    void parseInstance(String instance) {
+        ConfigInstance ci = null;
 
-        String[] tokens = colladaString.split(" ", -1);
+        // First, split everything up
+        String[] args = instance.split(" ");
+
+        // The instance name is first
+        String name = args[0];
+
+        // Then the implementing class
+        String implementor = args[1];
+
+        // Now, translation, rotation, and scale
 
         Vector3f trans = new Vector3f();
         Quaternion rot = new Quaternion();
@@ -378,158 +413,41 @@ public class ConfigManager implements ResourceLocator {
         float angle = 0.0f;
         Vector3f scale = new Vector3f();
 
-        String colladaFile = tokens[0];
-        trans.x = Float.parseFloat(tokens[1]);
-        trans.y = Float.parseFloat(tokens[2]);
-        trans.z = Float.parseFloat(tokens[3]);
-        axis.x = Float.parseFloat(tokens[4]);
-        axis.y = Float.parseFloat(tokens[5]);
-        axis.z = Float.parseFloat(tokens[6]);
-        angle = Float.parseFloat(tokens[7]);
-        scale.x = Float.parseFloat(tokens[8]);
-        scale.y = Float.parseFloat(tokens[9]);
-        scale.z = Float.parseFloat(tokens[10]);
+        trans.x = Float.parseFloat(args[2]);
+        trans.y = Float.parseFloat(args[3]);
+        trans.z = Float.parseFloat(args[4]);
+        axis.x = Float.parseFloat(args[5]);
+        axis.y = Float.parseFloat(args[6]);
+        axis.z = Float.parseFloat(args[7]);
+        angle = Float.parseFloat(args[8]);
+        scale.x = Float.parseFloat(args[9]);
+        scale.y = Float.parseFloat(args[10]);
+        scale.z = Float.parseFloat(args[11]);
         rot.fromAngleAxis(angle, axis);
 
         try {
-            URL url;
-            url = new URL(dataDir + "/" + colladaFile);
-            fileStream = url.openStream();
-        } catch (FileNotFoundException ex) {
-            System.out.println(ex);
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(ConfigManager.class.getName()).log(Level.SEVERE, null, ex);
+            ci = (ConfigInstance)Class.forName(implementor).newInstance();
+        } catch (java.lang.InstantiationException ie) {
+            System.out.println("Cannot create " + implementor + ": " + ie);
+        } catch (java.lang.IllegalAccessException ie) {
+            System.out.println("Cannot create " + implementor + ": " + ie);
+        } catch (java.lang.ClassNotFoundException ie) {
+            System.out.println("Cannot create " + implementor + ": " + ie);
         }
 
-        // Now load the model
-        ColladaImporter.load(fileStream, "Model");
-        Node model = ColladaImporter.getModel();
-        if (model != null) {
-            worldManager.applyConfig(model);
-
-            model.setLocalTranslation(trans);
-            model.setLocalRotation(rot);
-            model.setLocalScale(scale);
-            addModel(model);
-        }
-    }
-
-    void addModel(Node model) {
-        Node modelRoot = new Node("Model");
-
-        ZBufferState buf = (ZBufferState) worldManager.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
-        buf.setEnabled(true);
-        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        modelRoot.setRenderState(buf);
-
-        //System.out.println("Adding: " + model);
-        modelRoot.attachChild(model);
-
-        if (showNormals) {
-            int normalCount = countNormals(model, 0, false);
-            //System.out.println("Number of NORMALS: " + normalCount);
-            Vector3f[] lineData = new Vector3f[normalCount*2];
-            normalIndex = 0;
-            parseModel(0, model, lineData, false);
-            Line normalGeometry = new Line("Normal Geometry", lineData, null, null, null);
-            MaterialState ms = (MaterialState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Material);
-            ms.setDiffuse(new ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
-            normalGeometry.setRenderState(ms);
-            //FlatShader shader = new FlatShader(wm);
-            //shader.applyToGeometry(normalGeometry);
-            Node normalNode = new Node();
-            normalNode.attachChild(normalGeometry);
-            model.attachChild(normalNode);
-        }
-
-        if (showTangents) {
-            int normalCount = countNormals(model, 0, true);
-            //System.out.println("Number of Tangents: " + normalCount);
-            Vector3f[] lineData = new Vector3f[normalCount*2];
-            normalIndex = 0;
-            parseModel(0, model, lineData, true);
-            Line normalGeometry = new Line("Tangent Geometry", lineData, null, null, null);
-            MaterialState ms = (MaterialState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Material);
-            ms.setDiffuse(new ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f));
-            normalGeometry.setRenderState(ms);
-            //FlatShader shader = new FlatShader(wm);
-            //shader.applyToGeometry(normalGeometry);
-            Node normalNode = new Node();
-            normalNode.attachChild(normalGeometry);
-            model.attachChild(normalNode);
-        }
-
-        Entity e = new Entity("Model");
-        RenderComponent sc = worldManager.getRenderManager().createRenderComponent(modelRoot);
-        JMECollisionComponent cc = collisionSystem.createCollisionComponent(modelRoot);
-        e.addComponent(JMECollisionComponent.class, cc);
-        e.addComponent(RenderComponent.class, sc);
-
-        if (loadListener==null)
-            worldManager.addEntity(e);
-        else
-            loadListener.entityLoaded(e);
-    }
-
-    int countNormals(Spatial model, int currentCount, boolean tangents) {
-        if (model instanceof Node) {
-            Node n = (Node) model;
-            for (int i = 0; i < n.getQuantity(); i++) {
-                currentCount = countNormals(n.getChild(i), currentCount, tangents);
+        if (ci != null) {
+            String[] initArgs = new String[args.length - 12];
+            for (int i=0; i<initArgs.length; i++) {
+                initArgs[i] = args[i+12];
             }
-        } else if (model instanceof Geometry) {
-            Geometry geo = (Geometry) model;
-            //System.out.println("Buffer: " + geo.getColorBuffer());
-            //System.out.println("Buffer: " + geo.getBinormalBuffer());
-            //System.out.println("Buffer: " + geo.getTangentBuffer());
-            //System.out.println("Buffer: " + geo.getNormalBuffer());
-            if (tangents) {
-                if (geo.getTangentBuffer() != null) {
-                    currentCount += geo.getVertexCount();
-                }
-            } else {
-                currentCount += geo.getVertexCount();
+            ci.init(worldManager, this, name, trans, rot, scale, initArgs);
+            Node model = ci.getSceneGraph();
+            if (model != null) {
+                worldManager.applyConfig(model);
             }
-        }
-        return (currentCount);
-    }
-
-    void parseModel(int level, Spatial model, Vector3f[] lineData, boolean tangents) {
-        FloatBuffer lBuffer = null;
-        if (model instanceof Node) {
-            Node n = (Node) model;
-            for (int i = 0; i < n.getQuantity(); i++) {
-                parseModel(level + 1, n.getChild(i), lineData, tangents);
-            }
-        } else if (model instanceof Geometry) {
-            Geometry geo = (Geometry) model;
-            //System.out.println("FOUND GEOMETRY: " + geo.getName());
-
-            if (lineData != null) {
-                FloatBuffer vBuffer = geo.getVertexBuffer();
-                if (tangents) {
-                    lBuffer = geo.getTangentBuffer();
-                } else {
-                    lBuffer = geo.getNormalBuffer();
-                }
-                if (lBuffer != null) {
-                    vBuffer.rewind();
-                    lBuffer.rewind();
-                    float nScale = 1.0f;
-                    for (int i = 0; i < geo.getVertexCount(); i++) {
-                        lineData[normalIndex] = new Vector3f();
-                        lineData[normalIndex].x = vBuffer.get();
-                        lineData[normalIndex].y = vBuffer.get();
-                        lineData[normalIndex].z = vBuffer.get();
-                        lineData[normalIndex + 1] = new Vector3f();
-                        lineData[normalIndex + 1].x = lineData[normalIndex].x + nScale * lBuffer.get();
-                        lineData[normalIndex + 1].y = lineData[normalIndex].y + nScale * lBuffer.get();
-                        lineData[normalIndex + 1].z = lineData[normalIndex].z + nScale * lBuffer.get();
-                        normalIndex += 2;
-                    }
-                }
+            configInstanceMap.put(name, ci);
+            if (loadListener != null) {
+                loadListener.configLoaded(ci);
             }
         }
     }
@@ -676,12 +594,7 @@ public class ConfigManager implements ResourceLocator {
      * Load the specified texture
      */
     private void loadTexture(Spatial s, String name, int index, TextureState ts) {
-        String textureName;
-        
-        if (baseURL==null)
-            textureName = textureDir + "/" + name;
-        else
-            textureName = baseURL + "/" + textureDir + "/" +name;
+        String textureName = textureDir + "/" + name;
 
         Texture texture = (Texture)textureMap.get(textureName);
 
