@@ -497,7 +497,7 @@ public class JMECollisionSystem extends CollisionSystem {
             synchronized (collisionComponents) {
                 for (int i = 0; i < collisionComponents.size(); i++) {
                     JMECollisionComponent cc = (JMECollisionComponent) collisionComponents.get(i);
-                    if (cc.isPickable()) {
+                    if (cc.isCollidable()) {
                         Node node = cc.getNode();
                         node.findCollisions(sp, cr);
                     }

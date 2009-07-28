@@ -112,7 +112,7 @@ import java.awt.image.BufferedImage;
  * 
  * @author Doug Twilleager
  */
-public class OrientationWorld {
+public class OrientationWorld implements WorldManager.ConfigLoadListener {
     /**
      * The WorldManager for this world
      */
@@ -174,14 +174,7 @@ public class OrientationWorld {
 
     public OrientationWorld(String[] args) {
         wm = new WorldManager("TestWorld");
-        
-        try {
-            FileInputStream fs = new FileInputStream(assetDir + "worldConfig.mtg");
-            wm.loadConfiguration(fs);
-        } catch (java.io.FileNotFoundException e) {
-            System.out.println(e);
-        }
-        
+              
         processArgs(args);
         wm.getRenderManager().setDesiredFrameRate(desiredFrameRate);
         
@@ -198,15 +191,24 @@ public class OrientationWorld {
         //setGlobalLights();
         createLights();
         createSkybox(wm);
+
         try {
-            FileInputStream fs = new FileInputStream(assetDir + "worldData.mtg");
-            wm.loadConfiguration(fs);
+            FileInputStream fs = new FileInputStream(assetDir + "OrientationWorld.mtg");
+            wm.loadConfiguration(fs, this);
         } catch (java.io.FileNotFoundException ex) {
             System.out.println(ex);
         }
 
-        //createAxis();
+        ConfigInstance ci[] = wm.getAllConfigInstances();
+        for (int i=0; i<ci.length; i++) {
+            wm.addEntity(ci[i].getEntity());
+        }
         //createMirror();
+    }
+
+    public void configLoaded(ConfigInstance ci) {
+        System.out.println("------------- > Loaded: " + ci.getSceneGraph());
+        //addModel(ci.getSceneGraph());
     }
 
     private void createLights() {
@@ -301,7 +303,7 @@ public class OrientationWorld {
             this.low = low;
             this.high = high;
             increment = (high - low)/(60.0f * cycleTime);
-            System.out.println("Increment is : " + increment);
+            //System.out.println("Increment is : " + increment);
             setArmingCondition(new NewFrameCondition(this));
         }
 

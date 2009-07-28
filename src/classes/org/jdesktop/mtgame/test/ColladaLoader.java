@@ -87,6 +87,8 @@ import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
 import com.jme.util.resource.ResourceLocatorTool;
 import com.jme.util.resource.ResourceLocator;
+import com.jme.animation.AnimationController;
+import com.jme.scene.Controller;
 
 import java.util.Random;
 import java.net.URL;
@@ -156,7 +158,7 @@ public class ColladaLoader {
     
     private SwingFrame frame = null;
     private String assetDir = "/Users/runner/Desktop/models/";
-    private String loadfile = assetDir + "man_walk.dae";
+    private String loadfile = assetDir + "atest.dae";
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -370,8 +372,8 @@ public class ColladaLoader {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:" + assetDir + "OrientationWorld/textures/";
-        String textureSubdirName = assetDir + "OrientationWorld/textures/";
+        String textureSubdir = "file:" + assetDir + "./";
+        String textureSubdirName = assetDir + "./";
 
 
 
@@ -566,16 +568,30 @@ public class ColladaLoader {
             ColladaImporter.load(fileStream, "Model");
             Node model = ColladaImporter.getModel();
 
-            ArrayList names = ColladaImporter.getControllerNames();
-            System.out.println("Found " + names.size() + " controllers");
-            for (int i=0; i<names.size(); i++) {
-                BoneAnimation ac = ColladaImporter.getAnimationController((String)names.get(i));
-                System.out.println("Loading Controller " + names.get(i) + ": " + ac);
-                //model.addController(ac);
-            }
+//            ArrayList names = ColladaImporter.getControllerNames();
+//            AnimationController ac = null;
+//            System.out.println("Skel?: " + ColladaImporter.getSkeletonNames());
+//            //Bone skel = ColladaImporter.getSkeleton(ColladaImporter.getSkeletonNames().get(0));
+//            if (names.size() > 0) {
+//                ac = new AnimationController();
+//                ac.setRepeatType(Controller.RT_WRAP);
+//                ac.setActive(true);
+//                System.out.println("Found " + names.size() + " controllers");
+//                for (int i = 0; i < names.size(); i++) {
+//                    BoneAnimation ba = ColladaImporter.getAnimationController((String) names.get(i));
+//                    ba.setInterpolate(true);
+//                    ba.setInterpolationRate(1.0f/100.0f);
+//                    ac.addAnimation(ba);
+//                    ac.setActiveAnimation(ba);
+//                    System.out.println("Loading Controller " + names.get(i) + ": " + ba);
+//                }
+//                model.addController(ac);
+//                wm.getRenderManager().addToAnimationList(model);
+//            }
+
 
             //model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
-            model.setLocalScale(5.0f);
+            //model.setLocalScale(5.0f);
             transpList.clear();
             //parseModel(0, model, normalMap, transpList);
             //for (int i=0; i<transpList.size(); i++) {
@@ -589,13 +605,19 @@ public class ColladaLoader {
         }
         
         void parseModel(int level, Spatial model, boolean normalMap, ArrayList tList) {
+            for (int i=0; i<level; i++) {
+                System.out.print("\t");
+            }
+
             if (model instanceof Node) {
                 Node n = (Node)model;
+                System.out.println("Node " + n + " with children: " + n.getQuantity());
                 for (int i=0; i<n.getQuantity(); i++) {
                     parseModel(level+1, n.getChild(i), normalMap, tList);
                 }
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
+                System.out.println("Geometry: " + geo);
                 
                 String str = "";
                 if (geo instanceof TriMesh && str != null) {
@@ -614,7 +636,10 @@ public class ColladaLoader {
                 if (geo instanceof TriMesh && bs != null && bs.isEnabled() && bs.isBlendEnabled()) {
                     tList.add(geo);
                 }
+            } else {
+                System.out.println("Unkown: " + model);
             }
+
         }
     }
 }

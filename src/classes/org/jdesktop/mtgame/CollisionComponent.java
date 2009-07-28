@@ -54,6 +54,12 @@ public class CollisionComponent extends EntityComponent {
      * enabled for picking
      */
     private boolean pickable = true;
+
+    /**
+     * A boolean to indicate whether or not this component is currently
+     * enabled for collision
+     */
+    private boolean collidable = true;
     
     /**
      * The default constructor
@@ -91,5 +97,21 @@ public class CollisionComponent extends EntityComponent {
      */
     public boolean isPickable() {
         return (pickable);
+    }
+
+    /**
+     * Set's whether or not this collision component should be considered
+     * for collision queries
+     */
+    public void setCollidable(boolean collidable) {
+        this.collidable = collidable;
+    }
+
+    /**
+     * Retuns whether or not this collision component is considered for collision
+     * queries
+     */
+    public boolean isCollidable() {
+        return (collidable);
     }
 }

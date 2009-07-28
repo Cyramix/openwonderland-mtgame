@@ -81,6 +81,12 @@ public class Entity {
    private WorldManager worldManager = null;
 
    /**
+    * An empty Entity constructor.
+    */
+   public Entity() {
+   }
+
+   /**
     * The default Entity constructor.
     */
    public Entity(String name) {
