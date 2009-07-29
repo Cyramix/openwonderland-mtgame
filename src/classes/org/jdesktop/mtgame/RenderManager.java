@@ -500,6 +500,20 @@ public class RenderManager {
     }
 
     /**
+     * Get the jME Camera from the current screen buffer
+     */
+    public Camera getCurrentScreenCamera() {
+        return (renderer.getCurrentScreenCamera());
+    }
+
+    /**
+     * Get the current skybox
+     */
+    public Skybox getCurrentSkybox() {
+        return (renderer.getCurrentSkybox());
+    }
+
+    /**
      * The jme lock used during graph updates
      * @return
      */

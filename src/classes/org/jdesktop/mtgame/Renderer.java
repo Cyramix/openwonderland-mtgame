@@ -959,6 +959,20 @@ class Renderer extends Thread {
     }
 
     /**
+     * Get the jME Camera from the current screen buffer
+     */
+    Camera getCurrentScreenCamera() {
+        return (currentScreenBuffer.getCameraComponent().getCamera());
+    }
+
+    /**
+     * Get the current skybox
+     */
+    Skybox getCurrentSkybox() {
+        return (currentSkybox);
+    }
+
+    /**
      * Notify the render techniques that this buffer render is done
      */
     void endFrame(RenderBuffer rb) {
