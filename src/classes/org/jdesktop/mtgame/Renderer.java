@@ -389,7 +389,7 @@ class Renderer extends Thread {
     /**
      * The array of increasing distances to use for render component lod's
      */
-    private float[] renderComponentLODLevels = null;
+    private float[] renderComponentLODLevels = new float[0];
 
     /**
      * A class to hold collision component actions

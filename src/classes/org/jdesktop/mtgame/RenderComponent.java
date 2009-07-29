@@ -174,13 +174,9 @@ public class RenderComponent extends EntityComponent {
      * Set the scene root
      */
     public void setSceneRoot(Node node) {
-        if (isLive()) {
-            pendingUpdate = true;
-            getEntity().getWorldManager().getRenderManager().updateSceneRoot(this, node);
-            waitForUpdate();
-        } else {
-            sceneRoot = node;
-        }
+        pendingUpdate = true;
+        WorldManager.getDefaultWorldManager().getRenderManager().updateSceneRoot(this, node);
+        waitForUpdate();
     }
 
     /**
@@ -212,13 +208,9 @@ public class RenderComponent extends EntityComponent {
      * @parameter ap - the parent node to which the sceneRoot of this component will be attached
      */
     public void setAttachPoint(Node ap) {
-        if (isLive()) {
-            pendingUpdate = true;
-            getEntity().getWorldManager().getRenderManager().updateAttachPoint(this, ap);
-            waitForUpdate();
-        } else {
-            attachPoint = ap;
-        }
+        pendingUpdate = true;
+        WorldManager.getDefaultWorldManager().getRenderManager().updateAttachPoint(this, ap);
+        waitForUpdate();
     }
 
     /**
@@ -356,11 +348,9 @@ public class RenderComponent extends EntityComponent {
     public void setLightingEnabled(boolean flag) {
         if (lightingEnabled != flag) {
             lightingEnabled = flag;
-            if (isLive()) {
-                pendingUpdate = true;
-                getEntity().getWorldManager().getRenderManager().updateLighting(this);
-                waitForUpdate();
-            }
+            pendingUpdate = true;
+            WorldManager.getDefaultWorldManager().getRenderManager().updateLighting(this);
+            waitForUpdate();
         }
     }
 
@@ -377,11 +367,9 @@ public class RenderComponent extends EntityComponent {
     public void addLight(LightNode light) {
         synchronized (lights) {
             lights.add(light);
-            if (isLive()) {
-                pendingUpdate = true;
-                getEntity().getWorldManager().getRenderManager().updateLighting(this);
-                waitForUpdate();
-            }
+            pendingUpdate = true;
+            WorldManager.getDefaultWorldManager().getRenderManager().updateLighting(this);
+            waitForUpdate();
         }
     }
 
@@ -391,11 +379,9 @@ public class RenderComponent extends EntityComponent {
     public void removeLight(LightNode light) {
         synchronized (lights) {
             lights.remove(light);
-            if (isLive()) {
-                pendingUpdate = true;
-                getEntity().getWorldManager().getRenderManager().updateLighting(this);
-                waitForUpdate();
-            }
+            pendingUpdate = true;
+            WorldManager.getDefaultWorldManager().getRenderManager().updateLighting(this);
+            waitForUpdate();
         }
     }
 
