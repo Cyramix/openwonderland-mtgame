@@ -36,6 +36,7 @@ import com.jme.scene.Node;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Collection;
 import java.awt.Canvas;
 import java.io.InputStream;
 import java.net.URL;
@@ -54,6 +55,11 @@ public class WorldManager {
      * The collection of all known world managers
      */
     private static final FastMap worldManagers = new FastMap();
+
+    /**
+     * The default world manager
+     */
+    private static WorldManager defaultWorldManager = null;
 
     /**
      * The name of this world
@@ -112,6 +118,7 @@ public class WorldManager {
     public WorldManager(String name) {
         this.name = name;
         worldManagers.put(name, this);
+        defaultWorldManager = this;
         renderManager = new RenderManager(this);
         processorManager = new ProcessorManager(this);
         processorManager.initialize();
@@ -131,7 +138,14 @@ public class WorldManager {
     public static WorldManager getWorldManager(String name) {
         return ((WorldManager)worldManagers.get(name));
     }
-    
+
+    /**
+     * Get the default world manager
+     */
+    public static WorldManager getDefaultWorldManager() {
+        return (defaultWorldManager);
+    }
+
     /**
      * Get the RenderManager.
      */
