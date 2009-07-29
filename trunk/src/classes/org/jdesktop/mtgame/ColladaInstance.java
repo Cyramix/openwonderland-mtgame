@@ -34,6 +34,7 @@ import com.jme.math.Vector3f;
 import com.jme.math.Quaternion;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.ZBufferState;
+import com.jme.scene.state.CullState;
 import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.net.URL;
@@ -117,6 +118,10 @@ public class ColladaInstance implements ConfigInstance {
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         model.setRenderState(buf);
+
+        CullState culls = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
+        culls.setCullFace(CullState.Face.Back);
+        model.setRenderState(culls);
 
         entity = new Entity(name);
         RenderComponent sc = wm.getRenderManager().createRenderComponent(model);
