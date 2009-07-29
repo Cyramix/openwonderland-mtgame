@@ -105,6 +105,11 @@ class ProcessorManager extends Thread {
      * A flag to say whether or not we are waiting for work
      */
     private boolean waiting = false;
+
+    /**
+     * A flag which tells us to run all processors in the render thread
+     */
+    private boolean runSingleThreaded = false;
     
     /**
      * The number of available processors.  
@@ -148,6 +153,11 @@ class ProcessorManager extends Thread {
         setName("Processor Manager Thread");
         worldManager  = wm;
         numProcessors = Runtime.getRuntime().availableProcessors();
+
+        if (System.getProperty("mtgame.runSingleThreaded") != null) {
+            runSingleThreaded = true;
+            System.out.println("MT Game Info: Running Processors Single Threaded");
+        }
         
         // Just double it for now.
         numProcessorThreads = 2*numProcessors;
@@ -750,7 +760,7 @@ class ProcessorManager extends Thread {
      * list.  If yes, then it returns true
      */
     boolean addToTriggered(ProcessorComponent pc) {
-        if (pc.getRunInRenderer()) {
+        if (pc.getRunInRenderer() || runSingleThreaded) {
             worldManager.addTriggeredProcessor(pc);
         } else {
             if (!processorsTriggered.contains(pc)) {
