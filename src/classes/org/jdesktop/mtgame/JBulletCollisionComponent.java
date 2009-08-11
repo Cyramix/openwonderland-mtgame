@@ -102,7 +102,10 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
      * The default constructor
      */
     public JBulletCollisionComponent(CollisionSystem cs, TriMesh tm) {
-        super(cs, null);      
+        super(cs, null);
+        com.jme.math.Vector3f localTrans = tm.getLocalTranslation();
+        com.jme.math.Quaternion localRot = tm.getLocalRotation();
+        Quat4f rot = new Quat4f(localRot.x, localRot.y, localRot.z, localRot.w);
 
         java.nio.IntBuffer indexBuffer = tm.getIndexBuffer();
         java.nio.ByteBuffer indexbbuf = java.nio.ByteBuffer.allocate(indexBuffer.capacity() * 4);
@@ -127,7 +130,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         ltrans.basis.setIdentity();
         
         float tx = 0.0f, ty = 0.0f, tz = 0.0f;
-        com.jme.math.Vector3f localTrans = tm.getLocalTranslation();
+
         tx += localTrans.x;
         ty += localTrans.y;
         tz += localTrans.z;
@@ -140,6 +143,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             parent = parent.getParent();
         }
         worldTransform.origin.set(tx, ty, tz);
+        worldTransform.basis.set(rot);
     }
     
     /**
@@ -149,8 +153,8 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         Node node = getNode();
         Transform transform = new Transform();
         transform.setIdentity();
-        
-        if (node != null) {
+
+        if (node != null && collisionShape == null) {
             BoundingVolume bv = node.getWorldBound();
 
             if (bv instanceof BoundingBox) {
@@ -183,7 +187,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         
         //worldTransform.set(transform);
         transform.origin.set(worldTransform.origin.x, worldTransform.origin.y, worldTransform.origin.z);
-        transform.basis.setIdentity();
+        transform.basis.set(worldTransform.basis);
         
         if (physicsComponent == null) {
             collisionObject = new CollisionObject();
@@ -231,7 +235,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         } else {
             System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv +"  node "+node);
         }
-        
+
         //collisionObject.setCollisionShape(collisionShape);
         collisionObject.setWorldTransform(transform);  
     }

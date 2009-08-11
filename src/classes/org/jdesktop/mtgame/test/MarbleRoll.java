@@ -46,8 +46,11 @@ import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
 import com.jme.scene.shape.Box;
 import com.jme.scene.shape.Quad;
+import com.jme.scene.shape.Cylinder;
+import com.jme.scene.shape.Dome;
 import com.jme.scene.shape.Sphere;
 import com.jme.scene.Geometry;
+import com.jme.scene.TriMesh;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingSphere;
 import com.jme.bounding.BoundingVolume;
@@ -141,6 +144,11 @@ public class MarbleRoll {
     
     private Canvas canvas = null;
     private RenderBuffer rb = null;
+    private Node marble = null;
+
+    JBulletPhysicsSystem physicsSystem = null;
+    JBulletDynamicCollisionSystem collisionSystem = null;
+    Entity marbleEntity = null;
     
     public MarbleRoll(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -151,9 +159,9 @@ public class MarbleRoll {
         createUI(wm);  
         createCameraEntity(wm);   
         createGrid(wm);
-        wm.addEntity(grid);
+        //wm.addEntity(grid);
         createAxis();
-        wm.addEntity(axis);
+        //wm.addEntity(axis);
         createGlobalLight();
         
         createRandomTeapots(wm); 
@@ -310,8 +318,8 @@ public class MarbleRoll {
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Coords", true);
-        JToggleButton gridButton = new JToggleButton("Grid", true);
+        JToggleButton coordButton = new JToggleButton("Run", false);
+        JToggleButton gridButton = new JToggleButton("Reset", false);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
@@ -499,25 +507,19 @@ public class MarbleRoll {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    wm.removeEntity(axis);
-                    System.out.println("Turning Coordinates Off");
+                    physicsSystem.setStarted(coordsOn);
+                    System.out.println("Turning Sim Off");
                 } else {
                     coordsOn = true;
-                    wm.addEntity(axis);
-                    System.out.println("Turning Coordinates On");
+                    physicsSystem.setStarted(coordsOn);
+                    System.out.println("Turning Sim On");
                 }
             }
             
             if (e.getSource() == gridButton) {
-                if (gridOn) {
-                    gridOn = false;
-                    wm.removeEntity(grid);
-                    System.out.println("Turning Grid Off");
-                } else {
-                    gridOn = true;
-                    wm.addEntity(grid);
-                    System.out.println("Turning Grid On");
-                }
+                removeMarble();
+                createMarble();
+                System.out.println("Resetting Marble");
             }
             
             if (e.getSource() == loadItem) {
@@ -554,68 +556,73 @@ public class MarbleRoll {
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
     private void createRandomTeapots(WorldManager wm) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        boolean transparent = false;
-        int numTeapots = 1;
-        Random r = new Random();
-        RenderComponent sc = null;
         JBulletCollisionComponent cc = null;
-        JBulletPhysicsComponent pc = null;
-        Entity e = null;
-        JBulletDynamicCollisionSystem collisionSystem = (JBulletDynamicCollisionSystem) 
+        collisionSystem = (JBulletDynamicCollisionSystem) 
                 wm.getCollisionManager().loadCollisionSystem(JBulletDynamicCollisionSystem.class);   
-        JBulletPhysicsSystem physicsSystem = (JBulletPhysicsSystem) 
+        physicsSystem = (JBulletPhysicsSystem) 
                 wm.getPhysicsManager().loadPhysicsSystem(JBulletPhysicsSystem.class, collisionSystem); 
         
-        
-        // Create the ground plane
-        CollisionShape groundShape = new StaticPlaneShape(new javax.vecmath.Vector3f(0, 1, 1), 0);
-        cc = collisionSystem.createCollisionComponent(groundShape);
-        pc = physicsSystem.createPhysicsComponent(cc);
-        e = new Entity("Ground Plane");
-        e.addComponent(CollisionComponent.class, cc);
-        e.addComponent(PhysicsComponent.class, pc);
-        wm.addEntity(e);
-        
+        createMarble();
 
-        Node marble = createSphereModel(0, 10, 0);
-        e = new Entity("Marble ");
-        sc = wm.getRenderManager().createRenderComponent(marble);
-        cc = collisionSystem.createCollisionComponent(marble);
-        pc = physicsSystem.createPhysicsComponent(cc);
-        pc.setMass(.01f);
-        e.addComponent(CollisionComponent.class, cc);
-        e.addComponent(PhysicsComponent.class, pc);
-        e.addComponent(RenderComponent.class, sc);
-        wm.addEntity(e);
+        //Cylinder trough = new Cylinder("Trough", 25, 25, 1.0f, 25.0f);
+        Dome trough = new Dome("Trough", 25, 25, 10.0f);
 
-        Quad q = new Quad("Floor", 100, 100);
+        Triangle[] tris = new Triangle[trough.getTriangleCount()];
+        BoundingBox bbox = new BoundingBox();
+        bbox.computeFromTris(trough.getMeshAsTriangles(tris), 0, tris.length);
+
         Node floor = new Node();
-        floor.attachChild(q);
+        floor.attachChild(trough);
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
         floor.setRenderState(buf);
+        floor.setModelBound(bbox);
         Quaternion rot = new Quaternion();
-        rot.fromAngleAxis((float)Math.toRadians(-45.0), new Vector3f(1.0f, 0.0f, 0.0f));
-        floor.setLocalRotation(rot);
+        rot.fromAngleAxis((float)Math.toRadians(180.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        trough.setLocalRotation(rot);
+        trough.setLocalTranslation(0.0f, 0.0f, -7.0f);
 
         RenderComponent floorrc = wm.getRenderManager().createRenderComponent(floor);
         Entity floore = new Entity("Floor");
         floore.addComponent(RenderComponent.class, floorrc);
+
+        cc = collisionSystem.createCollisionComponent(trough);
+        floore.addComponent(CollisionComponent.class, cc);
+
         wm.addEntity(floore);
+    }
+
+    private void createMarble() {
+        RenderComponent sc = null;
+        JBulletCollisionComponent cc = null;
+        JBulletPhysicsComponent pc = null;
+
+        marble = createSphereModel(0, 100, 0);
+        marbleEntity = new Entity("Marble ");
+        sc = wm.getRenderManager().createRenderComponent(marble);
+        cc = collisionSystem.createCollisionComponent(marble);
+        pc = physicsSystem.createPhysicsComponent(cc);
+        pc.setMass(1f);
+        marbleEntity.addComponent(CollisionComponent.class, cc);
+        marbleEntity.addComponent(PhysicsComponent.class, pc);
+        marbleEntity.addComponent(RenderComponent.class, sc);
+        wm.addEntity(marbleEntity);
+    }
+
+    private void removeMarble() {
+        wm.removeEntity(marbleEntity);
     }
 
     private Node createSphereModel(float x, float y, float z) {
         Node node = new Node("Marble ");
-        Sphere sphere = new Sphere("Marble", 10, 10, 0.75f);
+        Sphere sphere = new Sphere("Marble", 10, 10, 0.5f);
+
         node.attachChild(sphere);
 
         Triangle[] tris = new Triangle[sphere.getTriangleCount()];
 
-        BoundingSphere bsphere = new BoundingSphere();
+        BoundingBox bsphere = new BoundingBox();
         bsphere.computeFromTris(sphere.getMeshAsTriangles(tris), 0, tris.length);
 
         ColorRGBA color = new ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);
@@ -633,26 +640,5 @@ public class MarbleRoll {
         node.setModelBound(bsphere);
 
         return (node);
-    }
-
-    private Node createMarbleTrough(int rstep, int lstep) {
-        Node trough = new Node();
-        int numVerts = (rstep * lstep);
-        int numTris = (rstep*2) * (lstep);
-        int numIndicies = numTris*3;
-
-
-        FloatBuffer vertBuffer = BufferUtils.createFloatBuffer(numVerts);
-        IntBuffer indBuffer = BufferUtils.createIntBuffer(numIndicies);
-
-        vertBuffer.rewind();
-        indBuffer.rewind();
-        for (int i=0; i<lstep; i++) {
-            int curVIndex = i*(lstep+1);
-            for (int j=0; j<rstep; j++) {
-
-            }
-        }
-        return (trough);
     }
 }
