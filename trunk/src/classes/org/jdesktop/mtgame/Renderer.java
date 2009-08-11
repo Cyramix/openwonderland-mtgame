@@ -623,7 +623,7 @@ class Renderer extends Thread {
     void addOnscreenBuffer(RenderBuffer rb) {
         if (jmeRenderer == null) {
             jmeRenderer = displaySystem.getRenderer();
-            jmeRenderer.getQueue().setTwoPassTransparency(false);
+            jmeRenderer.getQueue().setTwoPassTransparency(true);
         }
         bufferController.addBuffer(rb);
     }
