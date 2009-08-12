@@ -148,6 +148,9 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
                 if (jcc.getNode() != null && jcc.getPhysicsComponent() == null) {
                     jcc.getNode().addGeometricUpdateListener(this);
                 }
+                if (jcc.getTriMesh() != null && jcc.getPhysicsComponent() == null) {
+                    jcc.getTriMesh().addGeometricUpdateListener(this);
+                }
                 dynamicsWorld.addCollisionObject(jcc.getCollisionObject());
             }
             collisionComponents.add(cc);
@@ -166,7 +169,7 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
         synchronized (dynamicsWorld) {
             for (int i=0; i<collisionComponents.size(); i++) {
                 JBulletCollisionComponent jcc = (JBulletCollisionComponent) collisionComponents.get(i);
-                if (jcc.getNode() == s) {
+                if (jcc.getNode() == s || jcc.getTriMesh() == s) {
                     jcc.nodeChanged();
                     break;
                 }

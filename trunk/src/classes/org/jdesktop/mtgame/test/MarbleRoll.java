@@ -31,6 +31,7 @@ package org.jdesktop.mtgame.test;
 
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.processor.JBSelectionProcessor;
+import org.jdesktop.mtgame.processor.RotationProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.CameraNode;
@@ -565,7 +566,8 @@ public class MarbleRoll {
         createMarble();
 
         //Cylinder trough = new Cylinder("Trough", 25, 25, 1.0f, 25.0f);
-        Dome trough = new Dome("Trough", 25, 25, 10.0f);
+        //Dome trough = new Dome("Trough", 25, 25, 10.0f);
+        Quad trough = new Quad("", 100, 100);
 
         Triangle[] tris = new Triangle[trough.getTriangleCount()];
         BoundingBox bbox = new BoundingBox();
@@ -579,17 +581,21 @@ public class MarbleRoll {
         floor.setRenderState(buf);
         floor.setModelBound(bbox);
         Quaternion rot = new Quaternion();
-        rot.fromAngleAxis((float)Math.toRadians(180.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        rot.fromAngleAxis((float)Math.toRadians(-80.0), new Vector3f(1.0f, 0.0f, 0.0f));
         trough.setLocalRotation(rot);
-        trough.setLocalTranslation(0.0f, 0.0f, -7.0f);
+        trough.setLocalTranslation(0.0f, 0.0f, 7.0f);
+        //trough.setLocalScale(1.5f);
 
         RenderComponent floorrc = wm.getRenderManager().createRenderComponent(floor);
         Entity floore = new Entity("Floor");
-        floore.addComponent(RenderComponent.class, floorrc);
 
         cc = collisionSystem.createCollisionComponent(trough);
         floore.addComponent(CollisionComponent.class, cc);
+        floore.addComponent(RenderComponent.class, floorrc);
 
+        MoveProcessor rp = new MoveProcessor("Teapot Rotator", wm,
+                floor, (float) (1.0f * Math.PI / 180.0f), 0.1f, 0.001f);
+        floore.addComponent(RotationProcessor.class, rp);
         wm.addEntity(floore);
     }
 
@@ -598,7 +604,7 @@ public class MarbleRoll {
         JBulletCollisionComponent cc = null;
         JBulletPhysicsComponent pc = null;
 
-        marble = createSphereModel(0, 100, 0);
+        marble = createSphereModel(0, 50, 0);
         marbleEntity = new Entity("Marble ");
         sc = wm.getRenderManager().createRenderComponent(marble);
         cc = collisionSystem.createCollisionComponent(marble);
@@ -616,7 +622,7 @@ public class MarbleRoll {
 
     private Node createSphereModel(float x, float y, float z) {
         Node node = new Node("Marble ");
-        Sphere sphere = new Sphere("Marble", 10, 10, 0.5f);
+        Sphere sphere = new Sphere("Marble", 10, 10, 0.75f);
 
         node.attachChild(sphere);
 
@@ -641,4 +647,109 @@ public class MarbleRoll {
 
         return (node);
     }
+
+    public class MoveProcessor extends ProcessorComponent {
+
+        /**
+         * The WorldManager - used for adding to update list
+         */
+        private WorldManager worldManager = null;
+
+        /**
+         * The current degrees of rotation
+         */
+        private float degrees = 0.0f;
+        private float trans = 0.0f;
+        private float scale = 1.0f;
+
+        /**
+         * The increment to rotate each frame
+         */
+        private float rinc = 0.0f;
+        private float tinc = 0.0f;
+        private float sinc = 0.0f;
+        private float slow = 0.5f;
+        private float shigh = 1.5f;
+        private float tlow = -10.0f;
+        private float thigh = 10.0f;
+
+        /**
+         * The rotation matrix to apply to the target
+         */
+        private Quaternion quaternion = new Quaternion();
+
+        /**
+         * The rotation target
+         */
+        private Node target = null;
+
+        /**
+         * A name
+         */
+        private String name = null;
+
+        /**
+         * The constructor
+         */
+        public MoveProcessor(String name, WorldManager worldManager, Node target, float rinc, float tinc, float sinc) {
+            this.worldManager = worldManager;
+            this.target = target;
+            this.rinc = rinc;
+            this.sinc = sinc;
+            this.tinc = tinc;
+            this.name = name;
+
+            setArmingCondition(new NewFrameCondition(this));
+        }
+
+        public String toString() {
+            return (name);
+        }
+
+        /**
+         * The initialize method
+         */
+        public void initialize() {
+            //setArmingCondition(new NewFrameCondition(this));
+        }
+
+        /**
+         * The Calculate method
+         */
+        public void compute(ProcessorArmingCollection collection) {
+            degrees += rinc;
+            quaternion.fromAngles(0.0f, degrees, 0.0f);
+
+            trans += tinc;
+            if (trans > thigh) {
+                tinc = -tinc;
+                trans = thigh;
+            }
+            if (trans < tlow) {
+                tinc = -tinc;
+                trans = tlow;
+            }
+
+            scale += sinc;
+            if (scale > shigh) {
+                sinc = -sinc;
+                scale = shigh;
+            }
+            if (scale < slow) {
+                sinc = -sinc;
+                scale = slow;
+            }
+        }
+
+        /**
+         * The commit method
+         */
+        public void commit(ProcessorArmingCollection collection) {
+            target.setLocalRotation(quaternion);
+            target.setLocalTranslation(0.0f, trans, 0.0f);
+            //target.setLocalScale(scale);
+            worldManager.addToUpdateList(target);
+        }
+    }
+
 }

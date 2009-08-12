@@ -62,6 +62,11 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
      * This allows us to start and stop the simulation
      */
     private boolean started = false;
+
+    /**
+     * A flag indicating that we should run physics sim in the renderer
+     */
+    private boolean runInRenderer = false;
     
     /**
      * Allow the system to initialize
@@ -69,14 +74,18 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
     synchronized void initialize() {
         JBulletDynamicCollisionSystem cs = (JBulletDynamicCollisionSystem)collisionSystem;
         world = cs.getDynamicsWorld();
-        thread = new Thread(this);
-        thread.setName("JBullet Physics Thread");
+        if (runInRenderer) {
+            worldManager.getRenderManager().addPhysicsSystem(this);
+        } else {
+            thread = new Thread(this);
+            thread.setName("JBullet Physics Thread");
         
-        thread.start();
-        try {
-            wait();
-        } catch (InterruptedException e) {
-            System.out.println(e);
+            thread.start();
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
         }
     }
     
@@ -99,6 +108,10 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
     public void setStarted(boolean s) {
         started = s;
     }
+
+    public void setRunInRenderer(boolean flag) {
+        runInRenderer = flag;
+    }
     
     /**
      * The render loop
@@ -119,11 +132,7 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
             frameStartTime = newStartTime;
             stepTime = (deltaTime/1000000)/1000.0f;
             
-            if (started) {
-                synchronized (world) {
-                    world.stepSimulation(stepTime);
-                }
-            }
+            simStep(stepTime);
            
             // Decide if we need to sleep
             totalTime = System.nanoTime() - frameStartTime;
@@ -138,6 +147,14 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
                 } catch (InterruptedException e) {
                     System.out.println(e);
                 }
+            }
+        }
+    }
+
+    void simStep(float time) {
+        if (started) {
+            synchronized (world) {
+                world.stepSimulation(time);
             }
         }
     }
