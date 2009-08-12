@@ -39,7 +39,6 @@ import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
 import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
 import com.bulletphysics.collision.shapes.SphereShape;
-import com.jmex.terrain.TerrainPage;
 
 import com.jme.scene.Node;
 import com.jme.bounding.BoundingBox;
@@ -47,11 +46,14 @@ import com.jme.bounding.BoundingSphere;
 import com.jme.bounding.BoundingVolume;
 import com.jme.scene.TriMesh;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Logger;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Quat4f;
-import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
+import org.jdesktop.mtgame.JBulletPhysicsSystem.TimeStepEvent;
+import org.jdesktop.mtgame.JBulletPhysicsSystem.TimeStepListener;
 
 /**
 * This is a collision component that implements the jme collision interface
@@ -89,7 +91,12 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
      */
     private com.jme.math.Matrix3f rotation = new com.jme.math.Matrix3f();
     private com.jme.math.Vector3f translation = new com.jme.math.Vector3f();
-    
+
+    /**
+     * The set of listeners for initializ events
+     */
+    private Set<InitializedListener> listenerSet = new HashSet();
+
     /**
      * The default constructor
      */
@@ -204,6 +211,9 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         }
         collisionObject.setWorldTransform(transform);   
         collisionObject.setUserPointer(this);
+
+        // Inform all of the listeners that this component has been initialized
+        fireInitializedEvent();
     }
     
     void nodeChanged() {
@@ -328,5 +338,49 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             jcc.getNode().setLocalTranslation(translation);
             collisionSystem.getWorldManager().addToUpdateList(jcc.getNode());
         }
+    }
+
+    /**
+     * Adds an initialize listener. If the listener already exists, this method
+     * does nothing.
+     *
+     * @param listener The listener to add
+     */
+    public void addInitializedListener(InitializedListener listener) {
+        synchronized (listenerSet) {
+            listenerSet.add(listener);
+        }
+    }
+
+    /**
+     * Removes an initialize listener. If this listener does not exist, this
+     * method does nothing.
+     * @param listener The listener to remove
+     */
+    public void removeInitializedListener(InitializedListener listener) {
+        synchronized (listenerSet) {
+            listenerSet.remove(listener);
+        }
+    }
+
+    /**
+     * Notifies all of the listeners of the initialized event
+     */
+    private void fireInitializedEvent() {
+        synchronized (listenerSet) {
+            for (InitializedListener l : listenerSet) {
+                l.componentInitialized();
+            }
+        }
+    }
+
+    /**
+     * Listener interface for callbacks for collision component initialization.
+     */
+    public interface InitializedListener {
+        /**
+         * Invoked after the component has been initialized.
+         */
+        public void componentInitialized();
     }
 }
