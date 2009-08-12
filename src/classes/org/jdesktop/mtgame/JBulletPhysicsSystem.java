@@ -62,11 +62,6 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
      * This allows us to start and stop the simulation
      */
     private boolean started = false;
-
-    /**
-     * A flag indicating that we should run physics sim in the renderer
-     */
-    private boolean runInRenderer = false;
     
     /**
      * Allow the system to initialize
@@ -74,7 +69,9 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
     synchronized void initialize() {
         JBulletDynamicCollisionSystem cs = (JBulletDynamicCollisionSystem)collisionSystem;
         world = cs.getDynamicsWorld();
-        if (runInRenderer) {
+
+        if (System.getProperty("mtgame.runPhysicsInRenderer") != null) {
+            System.out.println("MT Game Info: Running Physics in Renderer Thread");
             worldManager.getRenderManager().addPhysicsSystem(this);
         } else {
             thread = new Thread(this);
@@ -107,10 +104,6 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
     
     public void setStarted(boolean s) {
         started = s;
-    }
-
-    public void setRunInRenderer(boolean flag) {
-        runInRenderer = flag;
     }
     
     /**
