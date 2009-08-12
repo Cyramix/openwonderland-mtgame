@@ -65,4 +65,10 @@ public class PhysicsSystem {
      */
     void initialize() {
     }
+
+    /**
+     * Iterate through a single sim step
+     */
+    void simStep(float time) {
+    }
 }

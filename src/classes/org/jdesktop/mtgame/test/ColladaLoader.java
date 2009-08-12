@@ -55,7 +55,7 @@ import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
-import com.jme.scene.shape.Teapot;
+import com.jme.scene.shape.Box;
 import com.jme.scene.shape.Sphere;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
@@ -157,8 +157,9 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    private String assetDir = "/Users/runner/Desktop/models/";
-    private String loadfile = assetDir + "atest.dae";
+    private String assetDir = "/Users/runner/Desktop/models/water/";
+    private String loadfile = assetDir + "FallingWater.dae";
+    private boolean showBounds = false;
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -237,9 +238,9 @@ public class ColladaLoader {
         // Create the input listener and process for the camera
         int eventMask = InputManager.KEY_EVENTS | InputManager.MOUSE_EVENTS;
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
-        FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, false, false, null);
+        //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(cameraListener, cameraNode, wm, camera, false, false, null);
 
-        //OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
+        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, camera);
         eventProcessor.setRunInRenderer(true);
         
         AWTInputComponent selectionListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);        
@@ -479,12 +480,16 @@ public class ColladaLoader {
             modelRoot.setRenderState(buf);
             //modelRoot.setLocalScale(1.0f);
 
+            CullState culls = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
+            culls.setCullFace(CullState.Face.Back);
+            //modelRoot.setRenderState(culls);
+
             Quaternion rot = new Quaternion();
             Vector3f axis = new Vector3f(1.0f, 0.0f, 0.0f);
             float angle = -1.57079632679f;
             rot.fromAngleAxis(angle, axis);
             modelRoot.setLocalRotation(rot);
-
+            modelRoot.setLocalScale(0.1f);
             
             //System.out.println("Adding: " + model);
             modelRoot.attachChild(model);
@@ -543,7 +548,7 @@ public class ColladaLoader {
                     // Now load the model
                     ColladaImporter.load(fileStream, "Model");
                     Node model = ColladaImporter.getModel();
-                    parseModel(0, model, false, null);
+                    parseModel(0, model, false, null, null);
                     addModel(model);                 
                 }
             }
@@ -556,6 +561,7 @@ public class ColladaLoader {
         void loadFile(String filename, boolean normalMap) {       
             FileInputStream fileStream = null;
             ArrayList transpList = new ArrayList();
+            ArrayList<Box> boundsList = new ArrayList<Box>();
             
             System.out.println("You chose to open this file: " + filename);
             try {
@@ -592,19 +598,25 @@ public class ColladaLoader {
 
             //model.setLocalTranslation(-10.0f, 0.0f, 0.0f);
             //model.setLocalScale(5.0f);
-            transpList.clear();
-            //parseModel(0, model, normalMap, transpList);
-            //for (int i=0; i<transpList.size(); i++) {
-            //    TriMesh tm = (TriMesh) transpList.get(i);
-            //    Node n = org.jdesktop.mtgame.util.Geometry.explodeIntoSpatials(wm, tm);
-            //    Node p = tm.getParent();
-            //    tm.removeFromParent();;
-            //    p.attachChild(n);
-            //}
+//            transpList.clear();
+//            boundsList.clear();
+//            parseModel(0, model, normalMap, transpList, boundsList);
+//            System.out.println("BoundsList SIZE: " + boundsList.size());
+//            for (int i=0; i<boundsList.size(); i++) {
+//                model.attachChild(boundsList.get(i));
+//            }
+//            System.out.println("TLIST SIZE: " + transpList.size());
+//            for (int i=0; i<transpList.size(); i++) {
+//                TriMesh tm = (TriMesh) transpList.get(i);
+//                Node n = org.jdesktop.mtgame.util.Geometry.explodeIntoSpatials(wm, tm);
+//                Node p = tm.getParent();
+//                tm.removeFromParent();;
+//                p.attachChild(n);
+//            }
             addModel(model);
         }
         
-        void parseModel(int level, Spatial model, boolean normalMap, ArrayList tList) {
+        void parseModel(int level, Spatial model, boolean normalMap, ArrayList tList, ArrayList bList) {
             for (int i=0; i<level; i++) {
                 System.out.print("\t");
             }
@@ -613,11 +625,24 @@ public class ColladaLoader {
                 Node n = (Node)model;
                 System.out.println("Node " + n + " with children: " + n.getQuantity());
                 for (int i=0; i<n.getQuantity(); i++) {
-                    parseModel(level+1, n.getChild(i), normalMap, tList);
+                    parseModel(level+1, n.getChild(i), normalMap, tList, bList);
                 }
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
                 System.out.println("Geometry: " + geo);
+                System.out.println("Bounds: " + geo.getModelBound());
+                if (showBounds && bList != null) {
+                    BoundingVolume b = geo.getModelBound();
+                    if (b instanceof BoundingBox) {
+                        BoundingBox bbox = (BoundingBox)b;
+                        Box box = new Box("Bounds: " + geo, bbox.getCenter(), bbox.xExtent, bbox.yExtent, bbox.zExtent);
+                        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+                        buf.setEnabled(true);
+                        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+                        box.setRenderState(buf);
+                        bList.add(box);
+                    }
+                }
                 
                 String str = "";
                 if (geo instanceof TriMesh && str != null) {

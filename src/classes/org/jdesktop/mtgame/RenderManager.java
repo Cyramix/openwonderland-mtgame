@@ -325,6 +325,13 @@ public class RenderManager {
     }
 
     /**
+     * Add a physics system to run from the renderer
+     */
+    void addPhysicsSystem(PhysicsSystem ps) {
+        renderer.addPhysicsSystem(ps);
+    }
+
+    /**
      * Add a component to our processing list
      */
     void addComponent(EntityComponent c) {

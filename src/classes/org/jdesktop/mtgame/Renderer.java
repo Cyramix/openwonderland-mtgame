@@ -358,6 +358,12 @@ class Renderer extends Thread {
      */
     private FastList<RenderTechnique> renderTechniques = new FastList<RenderTechnique>();
 
+
+    /**
+     * A list of physics systems that wish to be called from the renderer
+     */
+    private FastList<PhysicsSystem> physicsSystems = new FastList<PhysicsSystem>();
+
     /**
      * The current rendering canvas
      */
@@ -828,7 +834,7 @@ class Renderer extends Thread {
                      * locked to the renderer - like the current camera.
                      */
                     runProcessorsTriggered();
-
+                    
                     /**
                      * This allows anyone that needs to do some updating in the render
                      * thread be called
@@ -844,6 +850,7 @@ class Renderer extends Thread {
                     synchronized (jmeSGLock) {
                         processJMEUpdates(totalTime / 1000000000.0f);
                     }
+                    runPhysicsSystems(totalTime / 100000000.0f);
 
                     updateTime = System.nanoTime();
                     // Finally, render the scene
@@ -1416,7 +1423,25 @@ class Renderer extends Thread {
             }
         }
     }
-     
+
+
+    /**
+     * Add a physics system
+     */
+    void addPhysicsSystem(PhysicsSystem ps) {
+        synchronized (physicsSystems) {
+            physicsSystems.add(ps);
+        }
+    }
+
+    private void runPhysicsSystems(float time) {
+        synchronized (physicsSystems) {
+            for (int i=0; i<physicsSystems.size(); i++) {
+                physicsSystems.get(i).simStep(time);
+            }
+        }
+    }
+
     /**
      * Add a component to the list that we process
      * @param c

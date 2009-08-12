@@ -50,6 +50,8 @@ import com.jme.scene.TriMesh;
 import java.util.logging.Logger;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Quat4f;
+import javax.vecmath.Matrix3f;
+import javax.vecmath.Matrix4f;
 
 /**
 * This is a collision component that implements the jme collision interface
@@ -76,6 +78,11 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
      * The world transform - as seen by the physics system
      */
     private Transform worldTransform = new Transform();
+
+    /**
+     * The TriMesh when we are doing mesh collision
+     */
+    private TriMesh triMesh = null;
     
     /**
      * Data for the jme transform
@@ -103,10 +110,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
      */
     public JBulletCollisionComponent(CollisionSystem cs, TriMesh tm) {
         super(cs, null);
-        com.jme.math.Vector3f localTrans = tm.getLocalTranslation();
-        com.jme.math.Quaternion localRot = tm.getLocalRotation();
-        Quat4f rot = new Quat4f(localRot.x, localRot.y, localRot.z, localRot.w);
-
+        triMesh = tm;
         java.nio.IntBuffer indexBuffer = tm.getIndexBuffer();
         java.nio.ByteBuffer indexbbuf = java.nio.ByteBuffer.allocate(indexBuffer.capacity() * 4);
         indexBuffer.rewind();
@@ -126,24 +130,8 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         //TriangleIndexVertexArray tva = new TriangleIndexVertexArray(2,
         //        indexbbuf, 12, 4, vertbbuf, 12);
         collisionShape = new BvhTriangleMeshShape(tva, false);
-        Transform ltrans = new Transform();
-        ltrans.basis.setIdentity();
-        
-        float tx = 0.0f, ty = 0.0f, tz = 0.0f;
-
-        tx += localTrans.x;
-        ty += localTrans.y;
-        tz += localTrans.z;
-        Node parent = tm.getParent();
-        while (parent != null) {
-            localTrans = parent.getLocalTranslation();
-            tx += localTrans.x;
-            ty += localTrans.y;
-            tz += localTrans.z;
-            parent = parent.getParent();
-        }
-        worldTransform.origin.set(tx, ty, tz);
-        worldTransform.basis.set(rot);
+        worldTransform.origin.set(0.0f, 0.0f, 0.0f);
+        worldTransform.basis.setIdentity();
     }
     
     /**
@@ -183,8 +171,17 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             } else {
                 Logger.getLogger(JBulletCollisionComponent.class.getName()).warning("JBullet CollisionComponent BOUNDS NOT SUPPORTED !" + bv +"  node "+node);
             }
+        } else {
+            com.jme.math.Vector3f trans = triMesh.getWorldTranslation();
+            com.jme.math.Quaternion rot = triMesh.getWorldRotation();
+            //com.jme.math.Vector3f scale = triMesh.getWorldScale();
+            Vector3f t = new Vector3f(trans.x, trans.y, trans.z);
+            Matrix4f m = new Matrix4f();
+            transform.getMatrix(m);
+            m.set(new Quat4f(rot.x, rot.y, rot.z, rot.w), t, 1.0f);
+            transform.set(m);
         }
-        
+
         //worldTransform.set(transform);
         transform.origin.set(worldTransform.origin.x, worldTransform.origin.y, worldTransform.origin.z);
         transform.basis.set(worldTransform.basis);
@@ -207,39 +204,63 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         }
         collisionObject.setWorldTransform(transform);   
         collisionObject.setUserPointer(this);
-        
     }
     
     void nodeChanged() {
-        Node node = getNode();
+        JBulletDynamicCollisionSystem cs = (JBulletDynamicCollisionSystem)getCollisionSystem();
+        //cs.getDynamicsWorld().removeCollisionObject(collisionObject);
+        collisionObject.setWorldTransform(computeTransform(getNode(), triMesh));
+        cs.getDynamicsWorld().updateSingleAabb(collisionObject);
+        //cs.getDynamicsWorld().addCollisionObject(collisionObject);
+    }
+
+    private Transform computeTransform(Node n, TriMesh tm) {
         Transform transform = new Transform();
         transform.setIdentity();
 
-        BoundingVolume bv = node.getWorldBound();
-        if (bv instanceof BoundingBox) {
-            BoundingBox bbox = (BoundingBox)bv;
-            //Vector3f extent = new Vector3f(bbox.xExtent, bbox.yExtent, bbox.zExtent);
+        if (n != null) {
+            BoundingVolume bv = n.getWorldBound();
+            if (bv instanceof BoundingBox) {
+                BoundingBox bbox = (BoundingBox) bv;
+                //Vector3f extent = new Vector3f(bbox.xExtent, bbox.yExtent, bbox.zExtent);
 
-            //BoxShape bs = new BoxShape(extent);
-            com.jme.math.Vector3f center = bbox.getCenter();
-            transform.origin.x = center.x;
-            transform.origin.y = center.y;
-            transform.origin.z = center.z;
-            //collisionShape = bs;
-        } else if (bv instanceof BoundingSphere) {
-            BoundingSphere bsphere = (BoundingSphere)bv;
-            com.jme.math.Vector3f center = bsphere.getCenter();
-            transform.origin.x = center.x;
-            transform.origin.y = center.y;
-            transform.origin.z = center.z;
-        } else {
-            System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv +"  node "+node);
+                //BoxShape bs = new BoxShape(extent);
+                com.jme.math.Vector3f center = bbox.getCenter();
+                transform.origin.x = center.x;
+                transform.origin.y = center.y;
+                transform.origin.z = center.z;
+                //collisionShape = bs;
+            } else if (bv instanceof BoundingSphere) {
+                BoundingSphere bsphere = (BoundingSphere) bv;
+                com.jme.math.Vector3f center = bsphere.getCenter();
+                transform.origin.x = center.x;
+                transform.origin.y = center.y;
+                transform.origin.z = center.z;
+            } else {
+                System.out.println("BOUNDS NOT SUPPORTED!!!!!!!!!!!!!!!!!" + bv + "  node " + n);
+            }
         }
 
-        //collisionObject.setCollisionShape(collisionShape);
-        collisionObject.setWorldTransform(transform);  
+        if (tm != null) {
+            com.jme.math.Vector3f trans = tm.getWorldTranslation();
+            com.jme.math.Quaternion rot = tm.getWorldRotation();
+            //com.jme.math.Vector3f scale = tm.getWorldScale();
+            Vector3f t = new Vector3f(trans.x, trans.y, trans.z);
+            Matrix4f m = new Matrix4f();
+            transform.getMatrix(m);
+            m.set(new Quat4f(rot.x, rot.y, rot.z, rot.w), t, 1.0f);
+            transform.set(m);
+        }
+        return (transform);
     }
-    
+
+    /**
+     * Get the TriMesh
+     */
+    public TriMesh getTriMesh() {
+        return (triMesh);
+    }
+
     /**
      * get the Collision shape
      */

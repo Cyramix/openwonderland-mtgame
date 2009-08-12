@@ -214,9 +214,9 @@ public class PassTest implements RenderUpdater {
         createSkybox(wm);
         
         createTerrain(wm);
-        createReflectionTerrain();
+        //createReflectionTerrain();
         
-        wm.addRenderUpdater(this, wm);
+        //wm.addRenderUpdater(this, wm);
         //createWaterPass(wm);
         
         //createRoom();
@@ -1021,7 +1021,7 @@ public class PassTest implements RenderUpdater {
         cc = collisionSystem.createCollisionComponent(groundShape);
         e = new Entity("Ground Plane");
         e.addComponent(CollisionComponent.class, cc);
-        wm.addEntity(e);
+        //wm.addEntity(e);
         
         for (int i=0; i<numTeapots; i++) {
             x = (r.nextFloat()*100.0f) - 50.0f;
