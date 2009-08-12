@@ -271,7 +271,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
     /**
      * get the Collision object
      */
-    CollisionObject getCollisionObject() {
+    public CollisionObject getCollisionObject() {
         return (collisionObject);
     }
     
@@ -292,7 +292,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
     /**
      * Catch the setTransform method
      */
-    public void setWorldTransform(Transform t) {       
+    public void setWorldTransform(Transform t) {
         synchronized (rotation) {
             worldTransform.set(t);
             translation.x = worldTransform.origin.x;

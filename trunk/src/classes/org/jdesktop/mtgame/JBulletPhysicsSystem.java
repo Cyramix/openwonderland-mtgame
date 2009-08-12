@@ -30,6 +30,8 @@
 package org.jdesktop.mtgame;
 
 import com.bulletphysics.dynamics.DynamicsWorld;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This interface is implemented by anyone who wishes to implement a 
@@ -62,7 +64,17 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
      * This allows us to start and stop the simulation
      */
     private boolean started = false;
-    
+
+    /**
+     * The set of listeners for time step events
+     */
+    private Set<TimeStepListener> listenerSet = new HashSet();
+
+    /**
+     * The current time step of the simulation
+     */
+    private int timeStep = 0;
+
     /**
      * Allow the system to initialize
      */
@@ -124,9 +136,9 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
             deltaTime = newStartTime - frameStartTime;
             frameStartTime = newStartTime;
             stepTime = (deltaTime/1000000)/1000.0f;
-            
+
             simStep(stepTime);
-           
+
             // Decide if we need to sleep
             totalTime = System.nanoTime() - frameStartTime;
             if (totalTime < desiredFrameTime) {
@@ -144,11 +156,78 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
         }
     }
 
+    /**
+     * Adds a new timestep listener. If the listener already exists, this method
+     * does nothing.
+     * @param listener The listener to add
+     */
+    public void addTimeStepListener(TimeStepListener listener) {
+        synchronized (listenerSet) {
+            listenerSet.add(listener);
+        }
+    }
+
+    /**
+     * Removes a timestep listener. If this listener does not exist, this method
+     * does nothing.
+     * @param listener The listener to remove
+     */
+    public void removeTimeStepListener(TimeStepListener listener) {
+        synchronized (listenerSet) {
+            listenerSet.remove(listener);
+        }
+    }
+
+    /**
+     * Notifies all of the listeners of the time step event
+     */
+    private void fireTimeStepEvent(TimeStepEvent tse) {
+        synchronized (listenerSet) {
+            for (TimeStepListener l : listenerSet) {
+                l.timeStepActionPerformed(tse);
+            }
+        }
+    }
+
+    /**
+     * An event class to store the current timestep information
+     */
+    public class TimeStepEvent {
+        public DynamicsWorld world = null;
+        public long timeStep = 0;
+        public float startTime = 0.0f;
+
+        public TimeStepEvent(DynamicsWorld world, long timeStep, float startTime) {
+            this.world = world;
+            this.timeStep = timeStep;
+            this.startTime = startTime;
+        }
+    }
+
+    /**
+     * Listener interface for callbacks during each time step
+     */
+    public interface TimeStepListener {
+        /**
+         * Invoked before the simulation is stepped, given the world dynamics
+         * object, the current time step, and the frame start time
+         * @param tse The time step event
+         */
+        public void timeStepActionPerformed(TimeStepEvent tse);
+    }
+
     void simStep(float time) {
         if (started) {
+            // Call listeners to update state on the simulation thread.
+            TimeStepEvent tse = new TimeStepEvent(world, timeStep, time);
+            fireTimeStepEvent(tse);
+
             synchronized (world) {
                 world.stepSimulation(time);
             }
+
+            // Increment the time step
+            timeStep++;
         }
     }
 }
