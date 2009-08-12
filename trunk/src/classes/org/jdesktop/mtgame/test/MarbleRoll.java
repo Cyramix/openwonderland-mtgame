@@ -152,6 +152,7 @@ public class MarbleRoll {
     Entity marbleEntity = null;
     
     public MarbleRoll(String[] args) {
+        System.setProperty("mtgame.runPhysicsInRenderer", "true");
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
