@@ -131,7 +131,9 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
             if (jcc.getPhysicsComponent() != null) {
                 dynamicsWorld.removeRigidBody((RigidBody) jcc.getCollisionObject());
             } else {
-                cc.getNode().removeGeometricUpdateListener(this);
+                if (cc.getNode()!=null) {
+                    cc.getNode().removeGeometricUpdateListener(this);
+                }
                 dynamicsWorld.removeCollisionObject(jcc.getCollisionObject());
             }
         }
@@ -152,6 +154,7 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
                     jcc.getTriMesh().addGeometricUpdateListener(this);
                 }
                 dynamicsWorld.addCollisionObject(jcc.getCollisionObject());
+                dynamicsWorld.updateSingleAabb(jcc.getCollisionObject());
             }
             collisionComponents.add(cc);
         }
