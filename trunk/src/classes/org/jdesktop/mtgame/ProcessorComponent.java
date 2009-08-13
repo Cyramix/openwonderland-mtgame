@@ -121,16 +121,18 @@ public abstract class ProcessorComponent extends EntityComponent {
     * Add a processor to the chain of execution.
     */
    public void addToChain(ProcessorComponent proc) {
-       ProcessorComponent currentPC = this;
-       ProcessorComponent nextPC = nextInChain;
-       ProcessorComponent tmpPC = null;
+       synchronized (this) {
+           ProcessorComponent currentPC = this;
+           ProcessorComponent nextPC = nextInChain;
+           ProcessorComponent tmpPC = null;
 
-       while (nextPC != null) {
-           tmpPC = currentPC;
-           currentPC = nextPC;
-           nextPC = tmpPC.nextInChain;
+           while (nextPC != null) {
+               tmpPC = currentPC;
+               currentPC = nextPC;
+               nextPC = tmpPC.nextInChain;
+           }
+           currentPC.nextInChain = proc;
        }
-       currentPC.nextInChain = proc;
    }
 
    /**

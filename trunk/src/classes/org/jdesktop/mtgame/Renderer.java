@@ -1398,6 +1398,10 @@ class Renderer extends Thread {
             }
             
             // Process the chain
+            if (pc == pc.getNextInChain()) {
+                System.out.println("MT Game Warning: Processor found twice in chain.");
+                continue;
+            }
             pc = pc.getNextInChain();
             while (pc != null) {
                 pc.compute(pc.getCurrentTriggerCollection());
@@ -1419,6 +1423,10 @@ class Renderer extends Thread {
                     }
                 }
                 pc.clearTriggerCollection();
+                if (pc == pc.getNextInChain()) {
+                    System.out.println("MT Game Warning: Processor found twice in chain.");
+                    break;
+                }
                 pc = pc.getNextInChain();
             }
         }

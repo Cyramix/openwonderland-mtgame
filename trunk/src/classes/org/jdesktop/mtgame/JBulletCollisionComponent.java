@@ -149,7 +149,7 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         Transform transform = new Transform();
         transform.setIdentity();
 
-        if (node != null && collisionShape == null) {
+        if (node != null && collisionShape == null) {          
             BoundingVolume bv = node.getWorldBound();
 
             if (bv instanceof BoundingBox) {
@@ -184,9 +184,8 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
             //com.jme.math.Vector3f scale = triMesh.getWorldScale();
             Vector3f t = new Vector3f(trans.x, trans.y, trans.z);
             Matrix4f m = new Matrix4f();
-            transform.getMatrix(m);
             m.set(new Quat4f(rot.x, rot.y, rot.z, rot.w), t, 1.0f);
-            transform.set(m);
+            worldTransform.set(m);
         }
 
         //worldTransform.set(transform);
@@ -218,10 +217,8 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
     
     void nodeChanged() {
         JBulletDynamicCollisionSystem cs = (JBulletDynamicCollisionSystem)getCollisionSystem();
-        //cs.getDynamicsWorld().removeCollisionObject(collisionObject);
         collisionObject.setWorldTransform(computeTransform(getNode(), triMesh));
         cs.getDynamicsWorld().updateSingleAabb(collisionObject);
-        //cs.getDynamicsWorld().addCollisionObject(collisionObject);
     }
 
     private Transform computeTransform(Node n, TriMesh tm) {
@@ -254,10 +251,8 @@ public class JBulletCollisionComponent extends CollisionComponent implements Mot
         if (tm != null) {
             com.jme.math.Vector3f trans = tm.getWorldTranslation();
             com.jme.math.Quaternion rot = tm.getWorldRotation();
-            //com.jme.math.Vector3f scale = tm.getWorldScale();
             Vector3f t = new Vector3f(trans.x, trans.y, trans.z);
             Matrix4f m = new Matrix4f();
-            transform.getMatrix(m);
             m.set(new Quat4f(rot.x, rot.y, rot.z, rot.w), t, 1.0f);
             transform.set(m);
         }
