@@ -214,9 +214,9 @@ public class PassTest implements RenderUpdater {
         createSkybox(wm);
         
         createTerrain(wm);
-        //createReflectionTerrain();
+        createReflectionTerrain();
         
-        //wm.addRenderUpdater(this, wm);
+        wm.addRenderUpdater(this, wm);
         //createWaterPass(wm);
         
         //createRoom();
@@ -240,10 +240,10 @@ public class PassTest implements RenderUpdater {
         AWTInputComponent cameraListener = (AWTInputComponent)wm.getInputManager().createInputComponent(canvas, eventMask);
         //FPSCameraProcessor eventProcessor = new FPSCameraProcessor(eventListener, cameraNode, wm, camera);
         
-        PathCameraProcessor eventProcessor = new PathCameraProcessor(cameraListener, cameraNode, wm, 
-                camera, positions, rots, times);
-        //OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, 
-        //        camera);
+        //PathCameraProcessor eventProcessor = new PathCameraProcessor(cameraListener, cameraNode, wm,
+         //       camera, positions, rots, times);
+        OrbitCameraProcessor eventProcessor = new OrbitCameraProcessor(cameraListener, cameraNode, wm, 
+                camera);
         eventProcessor.setRunInRenderer(true);
             
         WaterProcessor wp = new WaterProcessor();
@@ -633,12 +633,12 @@ public class PassTest implements RenderUpdater {
 
     private void createWaterPass(WorldManager wm) {
         
-        waterEffectRenderPass = new WaterRenderPass(jmeCam, 6, false, true);
+        waterEffectRenderPass = new WaterRenderPass(jmeCam, 4, true, true);
         waterEffectRenderPass.setWaterPlane(new Plane(new Vector3f(0.0f, 1.0f,
                 0.0f), 0.0f));
-        waterEffectRenderPass.setClipBias(-1.0f);
-        waterEffectRenderPass.setReflectionThrottle(0.0f);
-        waterEffectRenderPass.setRefractionThrottle(0.0f);
+        waterEffectRenderPass.setClipBias(0.0f);
+        //waterEffectRenderPass.setReflectionThrottle(0.0f);
+        //waterEffectRenderPass.setRefractionThrottle(0.0f);
 
         waterQuad = new Quad("waterQuad", 1, 1);
         FloatBuffer normBuf = waterQuad.getNormalBuffer();

@@ -61,6 +61,8 @@ import javolution.util.FastList;
 import java.lang.Exception;
 import org.jdesktop.mtgame.shader.Shader;
 import com.jme.math.Matrix4f;
+import com.jme.renderer.jogl.JOGLRenderer;
+import com.jme.renderer.jogl.JOGLContextCapabilities;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -282,6 +284,11 @@ class Renderer extends Thread {
      * This flag tells the renderer whether or not to run
      */
     private boolean running = true;
+
+    /**
+     * This flag is used when the renderer is quiting
+     */
+    private boolean finished = false;
     
     /**
      * The commit process list - to be processed as we can at the
@@ -581,7 +588,7 @@ class Renderer extends Thread {
 
         MyImplementor impl = new MyImplementor(this, rb, (Canvas)canvas, width, height);
         canvas.setImplementor(impl);
-         
+
         return ((GLCanvas)canvas);
     }
 
@@ -737,6 +744,22 @@ class Renderer extends Thread {
     
     void setRunning(boolean flag) {
         running = flag;
+    }
+
+    void quit() {
+        finished = false;
+        done = true;
+        while (!finished) {
+            try {
+                Thread.sleep(333, 0);
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
+        }
+    }
+
+    JOGLContextCapabilities getContextCaps() {
+        return (((JOGLRenderer)jmeRenderer).getContextCaps());
     }
     
     boolean getRunning() {
@@ -932,6 +955,7 @@ class Renderer extends Thread {
                 }
             }
         }
+        finished = true;
     }
 
     /**

@@ -35,11 +35,13 @@ import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
 import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
+import org.jdesktop.mtgame.shader.Shader;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
+import com.jme.scene.state.TextureState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
@@ -48,11 +50,16 @@ import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
+import com.jme.scene.state.GLSLShaderObjectsState;
 import com.jme.scene.shape.Teapot;
 import com.jme.scene.shape.Box;
 import com.jme.scene.shape.Sphere;
+import com.jmex.effects.particles.ParticleFactory;
+import com.jme.util.TextureManager;
+import com.jme.image.Texture;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
+import com.jme.bounding.BoundingSphere;
 import com.jme.bounding.BoundingVolume;
 import com.jme.scene.Line;
 import com.jme.math.*;
@@ -78,6 +85,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import com.jmex.model.collada.ColladaImporter;
+import com.jmex.effects.particles.ParticleMesh;
+import com.jmex.effects.particles.ParticleController;
 
 import java.util.Random;
 
@@ -87,7 +96,7 @@ import java.util.Random;
  * 
  * @author Doug Twilleager
  */
-public class WorldBuilder {
+public class NoiseTest implements RenderUpdater {
     /**
      * The WorldManager for this world
      */
@@ -140,7 +149,7 @@ public class WorldBuilder {
     private Canvas canvas = null;
     private RenderBuffer rb = null;
     
-    public WorldBuilder(String[] args) {
+    public NoiseTest(String[] args) {
         wm = new WorldManager("TestWorld");
         
         processArgs(args);
@@ -163,7 +172,8 @@ public class WorldBuilder {
         createAxis();
         wm.addEntity(axis);
          
-        createRandomTeapots(wm);
+        createTeapot(wm);
+        createParticles(wm);
         
     }
     
@@ -274,7 +284,7 @@ public class WorldBuilder {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        WorldBuilder worldBuilder = new WorldBuilder(args);
+        NoiseTest worldBuilder = new NoiseTest(args);
         
     }
     
@@ -295,14 +305,14 @@ public class WorldBuilder {
      * Create all of the Swing windows - and the 3D window
      */
     private void createUI(WorldManager wm) {             
-        SwingFrame frame = new SwingFrame();
+        SwingFrame frame = new SwingFrame(wm);
         // center the frame
         frame.setLocationRelativeTo(null);
         // show frame
         frame.setVisible(true);
     }
     
-    class SwingFrame extends JFrame implements FrameRateListener, ActionListener, BufferUpdater {
+    class SwingFrame extends JFrame implements FrameRateListener, ActionListener {
 
         JPanel contentPane;
         JPanel menuPanel = new JPanel();
@@ -319,12 +329,12 @@ public class WorldBuilder {
 
 
         // Construct the frame
-        public SwingFrame() {
+        public SwingFrame(WorldManager wm) {
             addWindowListener(new WindowAdapter() {
 
                 public void windowClosing(WindowEvent e) {
-                    wm.getRenderManager().quit();
-                    dispose();                    
+                    dispose();
+                    // TODO: Real cleanup
                     System.exit(0);
                 }
             });
@@ -385,7 +395,6 @@ public class WorldBuilder {
             // The Rendering Canvas
             rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.ONSCREEN, width, height);
             wm.getRenderManager().addRenderBuffer(rb);
-            rb.setBufferUpdater(this);
             canvas = ((OnscreenRenderBuffer)rb).getCanvas();
             canvas.setVisible(true);
             canvas.setBounds(0, 0, width, height);
@@ -411,11 +420,6 @@ public class WorldBuilder {
             contentPane.add(statusPanel, BorderLayout.SOUTH);
 
             pack();
-        }
-
-        public void init(RenderBuffer rb) {
-            int maxU = wm.getRenderManager().getContextCaps().GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB;
-            //System.out.println("================== System supports " + maxU + " vertex uniforms");
         }
         
         /**
@@ -593,44 +597,99 @@ public class WorldBuilder {
     /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
-    private void createRandomTeapots(WorldManager wm) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        boolean transparent = false;
-        int numTeapots = 200;
-        Random r = new Random();
+    private void createTeapot(WorldManager wm) {
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
         Entity e = null;
-        JMECollisionSystem collisionSystem = (JMECollisionSystem) 
-                wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
-        
-        for (int i=0; i<numTeapots; i++) {
-            x = (r.nextFloat()*100.0f) - 50.0f;
-            y = (r.nextFloat()*100.0f) - 50.0f;
-            z = (r.nextFloat()*100.0f) - 50.0f;
-            transparent = r.nextBoolean();
-            Node teapot = createTeapotModel(x, y, z, transparent);
-            
-            e = new Entity("Teapot " + i);
-            sc = wm.getRenderManager().createRenderComponent(teapot);
-            cc = collisionSystem.createCollisionComponent(teapot);
-            e.addComponent(RenderComponent.class, sc);
-            e.addComponent(CollisionComponent.class, cc);
+        JMECollisionSystem collisionSystem = (JMECollisionSystem) wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
 
-            
-            ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
-            RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
-                teapot, (float) (6.0f * Math.PI / 180.0f));       
-            pcc.addProcessor(rp);
-            e.addComponent(ProcessorCollectionComponent.class, pcc);
-            wm.addEntity(e);
-                        
-        }
+
+        Node teapot = createTeapotModel(0.0f, 0.0f, 0.0f);
+
+        e = new Entity("Teapot ");
+        sc = wm.getRenderManager().createRenderComponent(teapot);
+        cc = collisionSystem.createCollisionComponent(teapot);
+        e.addComponent(RenderComponent.class, sc);
+        e.addComponent(CollisionComponent.class, cc);
+
+
+        ProcessorCollectionComponent pcc = new ProcessorCollectionComponent();
+        RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm,
+                teapot, (float) (6.0f * Math.PI / 180.0f));
+        pcc.addProcessor(rp);
+        //e.addComponent(ProcessorCollectionComponent.class, pcc);
+        wm.addEntity(e);
+
+    }
+
+    private void createParticles(WorldManager wm) {
+        RenderComponent sc = null;
+        Entity e = null;
+        Node rootNode = new Node();
+
+        BlendState as1 = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
+        as1.setBlendEnabled(true);
+        as1.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+        as1.setDestinationFunction(BlendState.DestinationFunction.One);
+        as1.setTestEnabled(true);
+        as1.setTestFunction(BlendState.TestFunction.GreaterThan);
+        as1.setEnabled(true);
+        as1.setEnabled(true);
+
+        TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
+        ts.setTexture(
+                TextureManager.loadTexture(
+                NoiseTest.class.getClassLoader().getResource(
+                "jmetest/data/texture/flaresmall.jpg"),
+                Texture.MinificationFilter.Trilinear,
+                Texture.MagnificationFilter.Bilinear));
+        ts.setEnabled(true);
+
+        ParticleMesh pMesh = ParticleFactory.buildParticles("particles", 300);
+        pMesh.setEmissionDirection(new Vector3f(0, 1, 0));
+        pMesh.setInitialVelocity(.006f);
+        pMesh.setStartSize(2.5f);
+        pMesh.setEndSize(.5f);
+        pMesh.setMinimumLifeTime(1200f);
+        pMesh.setMaximumLifeTime(1400f);
+        pMesh.setStartColor(new ColorRGBA(1, 0, 0, 1));
+        pMesh.setEndColor(new ColorRGBA(0, 1, 0, 0));
+        pMesh.setMaximumAngle(360f * FastMath.DEG_TO_RAD);
+        pMesh.getParticleController().setControlFlow(false);
+        pMesh.setParticlesInWorldCoords(true);
+        pMesh.warmUp(60);
+
+        rootNode.setRenderState(ts);
+        rootNode.setRenderState(as1);
+        ZBufferState zstate = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+        zstate.setEnabled(false);
+        pMesh.setRenderState(zstate);
+        pMesh.setModelBound(new BoundingSphere());
+        pMesh.updateModelBound();
+
+        rootNode.attachChild(pMesh);
+        //pMesh.setOriginOffset(new Vector3f(1.0f, 0.0f, 0.0f));
+        pMesh.setLocalTranslation(10.0f, 0.0f, 0.0f);
+
+        e = new Entity("Particles ");
+        sc = wm.getRenderManager().createRenderComponent(rootNode);
+        sc.setLightingEnabled(false);
+
+        ParticleProcessor rp = new ParticleProcessor(wm, pMesh, (float) (6.0f * Math.PI / 180.0f), new Vector3f(10.0f, 0.0f, 0.0f));
+        e.addComponent(RotationProcessor.class, rp);
+
+        e.addComponent(RenderComponent.class, sc);
+        wm.addEntity(e);
+
+        wm.addRenderUpdater(this, rootNode);
+    }
+
+    public void update(Object p) {
+        wm.addToUpdateList((Node)p);
+        wm.addRenderUpdater(this, p);
     }
     
-    private Node createTeapotModel(float x, float y, float z, boolean transparent) {
+    private Node createTeapotModel(float x, float y, float z) {
         Node node = new Node();
         Teapot teapot = new Teapot();
         teapot.updateGeometryData();
@@ -646,22 +705,6 @@ public class WorldBuilder {
         ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
         buf.setEnabled(true);
         buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
-        
-        if (transparent) {
-            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
-            as.setEnabled(true);
-            as.setBlendEnabled(true);
-            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
-            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
-            node.setRenderState(as);
-            
-            CullState cs = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
-            cs.setEnabled(true);
-            cs.setCullFace(CullState.Face.Back);
-            node.setRenderState(cs);
-            
-            color.set(0.0f, 1.0f, 1.0f, 0.75f);
-        }
 
         MaterialState matState = (MaterialState) wm.getRenderManager().createRendererState(RenderState.StateType.Material);
         matState.setDiffuse(color);
@@ -669,8 +712,131 @@ public class WorldBuilder {
         node.setRenderState(matState);
         node.setRenderState(buf);
         node.setLocalTranslation(x, y, z);
-        node.setModelBound(bbox); 
+        node.setLocalScale(2.0f);
+        node.setModelBound(bbox);
+
+        MarbleMap shader = new MarbleMap(wm);
+        shader.applyToGeometry(teapot);
         
         return (node);
+    }
+
+
+    public class MarbleMap implements RenderUpdater {
+        GLSLShaderObjectsState shaderState = null;
+        WorldManager worldManager = null;
+
+        /**
+         * The vertex and fragment shader
+         */
+        protected static final String vShader =
+                "uniform float Scale;" +
+                "varying vec3  MCposition;" +
+                "void main(void)" +
+                "{" +
+                    "MCposition      = vec3(gl_Vertex) * Scale;" +
+                    "gl_Position     = ftransform();" +
+                "}";
+
+        private static final String fShader =
+                "varying vec3  MCposition;" +
+                "uniform vec3 Color1;" +
+                "uniform vec3 Color2;" +
+                "void main(void) { " +
+                    "vec4 noisevec   = noise4(MCposition);" +
+
+                    "float intensity = abs(noisevec[0] - 0.25) +" +
+                                      "abs(noisevec[1] - 0.125) +" +
+                                      "abs(noisevec[2] - 0.0625) +" +
+                                      "abs(noisevec[3] - 0.03125);" +
+                    "intensity    = clamp(intensity, 0.0, 1.0);" +
+                    "vec3 color    = mix(Color1, Color2, intensity);" +
+                    "gl_FragColor  = vec4(color, 1.0);" +
+                "}";
+
+        public MarbleMap(WorldManager wm) {
+            worldManager = wm;
+        }
+
+        /**
+         * This applies this shader to the given geometry
+         */
+        public void applyToGeometry(Geometry geo) {
+            shaderState = (GLSLShaderObjectsState) worldManager.getRenderManager().
+                createRendererState(RenderState.StateType.GLSLShaderObjects);
+            shaderState.setUniform("Scale", 1.2f);
+            shaderState.setUniform("Color1", 0.8f, 0.7f, 0.0f);
+            shaderState.setUniform("Color2", 0.6f, 0.1f, 0.0f);
+            geo.setRenderState(shaderState);
+            worldManager.addRenderUpdater(this, this);
+        }
+        /**
+         * This loads the shader
+         */
+        public void update(Object o) {
+            shaderState.load(vShader, fShader);
+        }
+    }
+
+    public class ParticleProcessor extends ProcessorComponent {
+
+        /**
+         * The WorldManager - used for adding to update list
+         */
+        private WorldManager worldManager = null;
+        /**
+         * The current degrees of rotation
+         */
+        private float degrees = 0.0f;
+        /**
+         * The increment to rotate each frame
+         */
+        private float increment = 0.0f;
+        /**
+         * The rotation matrix to apply to the target
+         */
+        private Quaternion quaternion = new Quaternion();
+        /**
+         * The rotation target
+         */
+        private Node target = null;
+        private Vector3f position = new Vector3f();
+        private Vector3f transPos = new Vector3f();
+
+        /**
+         * The constructor
+         */
+        public ParticleProcessor(WorldManager worldManager, Node target, float increment, Vector3f pos) {
+            this.worldManager = worldManager;
+            this.target = target;
+            this.increment = increment;
+            this.position.set(pos.x, pos.y, pos.z);
+            setArmingCondition(new NewFrameCondition(this));
+        }
+
+
+        /**
+         * The initialize method
+         */
+        public void initialize() {
+            //setArmingCondition(new NewFrameCondition(this));
+        }
+
+        /**
+         * The Calculate method
+         */
+        public void compute(ProcessorArmingCollection collection) {
+            degrees += increment;
+            quaternion.fromAngles(0.0f, degrees, 0.0f);
+            quaternion.mult(position, transPos);
+        }
+
+        /**
+         * The commit method
+         */
+        public void commit(ProcessorArmingCollection collection) {
+            target.setLocalTranslation(transPos.x, transPos.y, transPos.z);
+            worldManager.addToUpdateList(target);
+        }
     }
 }

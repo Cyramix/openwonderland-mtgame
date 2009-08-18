@@ -41,6 +41,7 @@ import com.jme.scene.Skybox;
 import com.jme.renderer.pass.Pass;
 import org.jdesktop.mtgame.shader.Shader;
 import java.util.ArrayList;
+import com.jme.renderer.jogl.JOGLContextCapabilities;
 
 /**
  * The RenderManager creates and controls the renderer threads.  It also acts as
@@ -251,7 +252,21 @@ public class RenderManager {
     public void setRunning(boolean flag) {
         renderer.setRunning(flag);
     }
-    
+
+    /**
+     * This call causes the renderer to cleanly exit.  It cannot
+     * be called from a render callback.
+     */
+    public void quit() {
+        renderer.quit();
+    }
+
+    /**
+     * Get the JOGL Context Capabilities
+     */
+    public JOGLContextCapabilities getContextCaps() {
+        return (renderer.getContextCaps());
+    }
     /**
      * Get whether or not the renderer is running
      */
