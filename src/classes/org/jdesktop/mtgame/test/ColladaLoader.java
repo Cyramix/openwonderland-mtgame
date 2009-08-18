@@ -157,8 +157,8 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    private String assetDir = "/Users/runner/Desktop/models/water/";
-    private String loadfile = assetDir + "FallingWater.dae";
+    private String assetDir = "/Users/runner/Desktop/models/water/models/";
+    private String loadfile = assetDir + "model.dae";
     private boolean showBounds = false;
     
     public ColladaLoader(String[] args) {
@@ -482,7 +482,7 @@ public class ColladaLoader {
 
             CullState culls = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
             culls.setCullFace(CullState.Face.Back);
-            //modelRoot.setRenderState(culls);
+            modelRoot.setRenderState(culls);
 
             Quaternion rot = new Quaternion();
             Vector3f axis = new Vector3f(1.0f, 0.0f, 0.0f);
@@ -497,6 +497,7 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
+            sc.setLightingEnabled(false);
             JMECollisionSystem cs = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
             JMECollisionComponent cc = cs.createCollisionComponent(model);
             e.addComponent(RenderComponent.class, sc);

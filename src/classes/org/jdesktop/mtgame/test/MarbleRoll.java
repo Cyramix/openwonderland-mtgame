@@ -582,21 +582,22 @@ public class MarbleRoll {
         floor.setRenderState(buf);
         floor.setModelBound(bbox);
         Quaternion rot = new Quaternion();
-        rot.fromAngleAxis((float)Math.toRadians(-80.0), new Vector3f(1.0f, 0.0f, 0.0f));
+        rot.fromAngleAxis((float)Math.toRadians(180.0), new Vector3f(0.0f, 0.7f, -0.7f));
         trough.setLocalRotation(rot);
-        trough.setLocalTranslation(0.0f, 0.0f, 7.0f);
+        trough.setLocalTranslation(0.0f, 0.0f, 0.0f);
         //trough.setLocalScale(1.5f);
 
         RenderComponent floorrc = wm.getRenderManager().createRenderComponent(floor);
         Entity floore = new Entity("Floor");
 
+        floor.updateWorldData(0);
         cc = collisionSystem.createCollisionComponent(trough);
         floore.addComponent(CollisionComponent.class, cc);
         floore.addComponent(RenderComponent.class, floorrc);
 
         MoveProcessor rp = new MoveProcessor("Teapot Rotator", wm,
                 floor, (float) (1.0f * Math.PI / 180.0f), 0.1f, 0.001f);
-        floore.addComponent(RotationProcessor.class, rp);
+        //floore.addComponent(RotationProcessor.class, rp);
         wm.addEntity(floore);
     }
 
