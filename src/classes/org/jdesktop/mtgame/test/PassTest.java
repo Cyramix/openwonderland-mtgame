@@ -637,8 +637,8 @@ public class PassTest implements RenderUpdater {
         waterEffectRenderPass.setWaterPlane(new Plane(new Vector3f(0.0f, 1.0f,
                 0.0f), 0.0f));
         waterEffectRenderPass.setClipBias(0.0f);
-        //waterEffectRenderPass.setReflectionThrottle(0.0f);
-        //waterEffectRenderPass.setRefractionThrottle(0.0f);
+        waterEffectRenderPass.setReflectionThrottle(0.0f);
+        waterEffectRenderPass.setRefractionThrottle(0.0f);
 
         waterQuad = new Quad("waterQuad", 1, 1);
         FloatBuffer normBuf = waterQuad.getNormalBuffer();
@@ -746,7 +746,9 @@ public class PassTest implements RenderUpdater {
         splattingPassNode.lockTransforms();
         splattingPassNode.lockShadows();
 
-        reflectionTerrain = splattingPassNode;
+        //reflectionTerrain = splattingPassNode;
+        page.setRenderState(ts1);
+        reflectionTerrain = page;
 
         initSpatial(reflectionTerrain);
     }
