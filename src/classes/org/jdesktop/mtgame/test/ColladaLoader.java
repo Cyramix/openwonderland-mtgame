@@ -48,6 +48,7 @@ import com.jme.scene.SharedMesh;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
+import com.jme.light.DirectionalLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
@@ -157,8 +158,8 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    private String assetDir = "/Users/runner/Desktop/models/water/models/";
-    private String loadfile = assetDir + "model.dae";
+    private String assetDir = "/Users/runner/Desktop/perf/";
+    private String loadfile = assetDir + "EssexCampusv1-0.dae";
     private boolean showBounds = false;
     
     public ColladaLoader(String[] args) {
@@ -184,13 +185,13 @@ public class ColladaLoader {
         float radius = 50.0f;
         float x = (float)(radius*Math.cos(Math.PI/6));
         float z = (float)(radius*Math.sin(Math.PI/6));
-        createLight(x, radius, z);
+        createDirLight(x, radius, z);
         x = (float)(radius*Math.cos(5*Math.PI/6));
         z = (float)(radius*Math.sin(5*Math.PI/6));
-        createLight(x, radius, z);
+        createDirLight(x, radius, z);
         x = (float)(radius*Math.cos(3*Math.PI/2));
         z = (float)(radius*Math.sin(3*Math.PI/2));
-        createLight(x, radius, z);
+        createDirLight(x, radius, z);
     }
 
     private void createLight(float x, float y, float z) {
@@ -221,6 +222,19 @@ public class ColladaLoader {
         //e.addComponent(RotationProcessor.class, rp);
         e.addComponent(RenderComponent.class, lsp);
         wm.addEntity(e);
+    }
+
+    private void createDirLight(float x, float y, float z) {
+        lightNode = new LightNode();
+        DirectionalLight light = new DirectionalLight();
+        light.setDiffuse(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(x, y, z);
+        light.setDirection(new Vector3f(-x, -y, -z));
+        wm.getRenderManager().addLight(lightNode);
     }
 
     private void createCameraEntity(WorldManager wm) {
@@ -489,7 +503,7 @@ public class ColladaLoader {
             float angle = -1.57079632679f;
             rot.fromAngleAxis(angle, axis);
             modelRoot.setLocalRotation(rot);
-            modelRoot.setLocalScale(0.1f);
+            //modelRoot.setLocalScale(0.1f);
             
             //System.out.println("Adding: " + model);
             modelRoot.attachChild(model);
@@ -497,7 +511,7 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
-            sc.setLightingEnabled(false);
+            //sc.setLightingEnabled(false);
             JMECollisionSystem cs = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
             JMECollisionComponent cc = cs.createCollisionComponent(model);
             e.addComponent(RenderComponent.class, sc);

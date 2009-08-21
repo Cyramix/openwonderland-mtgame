@@ -49,6 +49,7 @@ import com.jme.scene.TriMesh;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
+import com.jme.light.DirectionalLight;
 import com.jme.light.Light;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
@@ -218,13 +219,13 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
         float lheight = 30.0f;
         float x = (float)(radius*Math.cos(Math.PI/6));
         float z = (float)(radius*Math.sin(Math.PI/6));
-        lights[0] = createLight(x, lheight, z);
+        lights[0] = createDirLight(x, lheight, z);
         x = (float)(radius*Math.cos(5*Math.PI/6));
         z = (float)(radius*Math.sin(5*Math.PI/6));
-        lights[1] = createLight(x, lheight, z);
+        lights[1] = createDirLight(x, lheight, z);
         x = (float)(radius*Math.cos(3*Math.PI/2));
         z = (float)(radius*Math.sin(3*Math.PI/2));
-        lights[2] = createLight(x, lheight, z);
+        lights[2] = createDirLight(x, lheight, z);
 
         LightProcessor lp = new LightProcessor(wm, lights, 20.0f, 0.6f, 0.0f, 0.7f);
         Entity e = new Entity("Light Processor");
@@ -263,6 +264,20 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
         e.addComponent(RenderComponent.class, lsp);
         wm.addEntity(e);
 
+        return (light);
+    }
+
+    private Light createDirLight(float x, float y, float z) {
+        lightNode = new LightNode();
+        DirectionalLight light = new DirectionalLight();
+        light.setDiffuse(new ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f));
+        light.setAmbient(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+        light.setSpecular(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+        light.setEnabled(true);
+        lightNode.setLight(light);
+        lightNode.setLocalTranslation(x, y, z);
+        light.setDirection(new Vector3f(-x, -y, -z));
+        wm.getRenderManager().addLight(lightNode);
         return (light);
     }
 

@@ -54,9 +54,9 @@ public class DiffuseMapAlpha extends Shader {
         "        gl_Position = ftransform();" +
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
 
-        "        lightDirection[0] = gl_LightSource[0].position.xyz - vVertex;" +
-        "        lightDirection[1] = gl_LightSource[1].position.xyz - vVertex;" +
-        "        lightDirection[2] = gl_LightSource[2].position.xyz - vVertex;" +
+        "        lightDirection[0] = gl_LightSource[0].position.xyz;" +
+        "        lightDirection[1] = gl_LightSource[1].position.xyz;" +
+        "        lightDirection[2] = gl_LightSource[2].position.xyz;" +
         "        viewDirection = -vVertex;" +
         "}";
 
