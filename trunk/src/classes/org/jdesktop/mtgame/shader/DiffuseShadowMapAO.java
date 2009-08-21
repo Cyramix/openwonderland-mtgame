@@ -56,9 +56,9 @@ public class DiffuseShadowMapAO extends Shader {
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
         "        shadowCoordinate = gl_TextureMatrix[2] * inverseView * (gl_ModelViewMatrix * gl_Vertex);" +
         "" +
-        "        lightDirection[0] = normalize(gl_LightSource[0].position.xyz - vVertex);" +
-        "        lightDirection[1] = normalize(gl_LightSource[1].position.xyz - vVertex);" +
-        "        lightDirection[2] = normalize(gl_LightSource[2].position.xyz - vVertex);" +
+        "        lightDirection[0] = normalize(gl_LightSource[0].position.xyz);" +
+        "        lightDirection[1] = normalize(gl_LightSource[1].position.xyz);" +
+        "        lightDirection[2] = normalize(gl_LightSource[2].position.xyz);" +
         "        viewDirection = -vVertex;" +
         "        gl_Position = ftransform();" +
         "}";

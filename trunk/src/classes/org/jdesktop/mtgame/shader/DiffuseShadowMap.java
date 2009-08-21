@@ -57,9 +57,9 @@ public class DiffuseShadowMap extends Shader {
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
         "        shadowCoordinate = gl_TextureMatrix[1] * inverseView * (gl_ModelViewMatrix * gl_Vertex);" +
 
-        "        lightDirection[0] = gl_LightSource[0].position.xyz - vVertex;" +
-        "        lightDirection[1] = gl_LightSource[1].position.xyz - vVertex;" +
-        "        lightDirection[2] = gl_LightSource[2].position.xyz - vVertex;" +
+        "        lightDirection[0] = gl_LightSource[0].position.xyz;" +
+        "        lightDirection[1] = gl_LightSource[1].position.xyz;" +
+        "        lightDirection[2] = gl_LightSource[2].position.xyz;" +
         "        viewDirection = -vVertex;" +
         "}";
 

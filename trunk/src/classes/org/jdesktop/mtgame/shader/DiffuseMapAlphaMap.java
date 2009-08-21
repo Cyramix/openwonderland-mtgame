@@ -53,7 +53,7 @@ public class DiffuseMapAlphaMap extends Shader {
         "        gl_Position = ftransform();" +
         "        EyeDir = vec3(gl_ModelViewMatrix * gl_Vertex);" +   
         "        gl_TexCoord[0] = gl_MultiTexCoord0;" +
-        "        LightDir = normalize(gl_LightSource[0].position.xyz - EyeDir);" +
+        "        LightDir = normalize(gl_LightSource[0].position.xyz);" +
         "}";
     
     private static final String fShader = 

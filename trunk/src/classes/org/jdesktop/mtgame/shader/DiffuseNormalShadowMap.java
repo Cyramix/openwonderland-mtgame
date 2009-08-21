@@ -62,17 +62,17 @@ public class DiffuseNormalShadowMap extends Shader {
         "        viewDirection.y = dot(-vVertex, b);" +
         "        viewDirection.z = dot(-vVertex, n);" +
 
-        "        vec3 tmpVec = normalize(gl_LightSource[0].position.xyz - vVertex);" +
+        "        vec3 tmpVec = normalize(gl_LightSource[0].position.xyz);" +
         "        lightDirection[0].x = dot(tmpVec, t);" +
         "        lightDirection[0].y = dot(tmpVec, b);" +
         "        lightDirection[0].z = dot(tmpVec, n);" +
 
-        "        tmpVec = normalize(gl_LightSource[1].position.xyz - vVertex);" +
+        "        tmpVec = normalize(gl_LightSource[1].position.xyz);" +
         "        lightDirection[1].x = dot(tmpVec, t);" +
         "        lightDirection[1].y = dot(tmpVec, b);" +
         "        lightDirection[1].z = dot(tmpVec, n);" +
 
-        "        tmpVec = normalize(gl_LightSource[2].position.xyz - vVertex);" +
+        "        tmpVec = normalize(gl_LightSource[2].position.xyz);" +
         "        lightDirection[2].x = dot(tmpVec, t);" +
         "        lightDirection[2].y = dot(tmpVec, b);" +
         "        lightDirection[2].z = dot(tmpVec, n);" +
