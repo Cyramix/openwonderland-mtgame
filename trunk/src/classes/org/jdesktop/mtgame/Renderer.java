@@ -1319,6 +1319,11 @@ class Renderer extends Thread {
                 }
                 pc.clearTriggerCollection();
 
+                if (pc == pc.getNextInChain()) {
+                    System.out.println("MT Game Warning: Processor found twice in chain.");
+                    continue;
+                }
+
                 // Process the chain
                 pc = pc.getNextInChain();
                 while (pc != null) {
@@ -1340,6 +1345,10 @@ class Renderer extends Thread {
                         }
                     }
                     pc.clearTriggerCollection();
+                    if (pc == pc.getNextInChain()) {
+                        System.out.println("MT Game Warning: Processor found twice in chain.");
+                        break;
+                    }
                     pc = pc.getNextInChain();
                 }
 
@@ -1395,7 +1404,7 @@ class Renderer extends Thread {
             procs = (ProcessorComponent[]) processorsTriggered.toArray(procs);
             processorsTriggered.clear();
         }
-        
+
         for (int i = 0; i < procs.length; i++) {
             pc = procs[i];
             pc.compute(pc.getCurrentTriggerCollection());
