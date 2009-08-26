@@ -405,6 +405,13 @@ public class RenderManager {
     public void setBufferController(BufferController bc) {
         renderer.setBufferController(bc);
     }
+
+    /**
+     * Get the BufferController
+     */
+    public BufferController getBufferController() {
+        return (renderer.getBufferController());
+    }
     
     /**
      * Add a listener to the list of listening for scene changes

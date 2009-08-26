@@ -2114,6 +2114,13 @@ class Renderer extends Thread {
     void setBufferController(BufferController bc) {
         bufferController = bc;
     }
+
+    /**
+     * Set the BufferController
+     */
+    BufferController getBufferController() {
+        return (bufferController);
+    }
     
     /**
      * Turn on key input tracking
