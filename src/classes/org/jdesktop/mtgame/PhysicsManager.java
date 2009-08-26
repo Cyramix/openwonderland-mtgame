@@ -83,4 +83,11 @@ public class PhysicsManager {
         
         return (ps);
     }
+
+    void quit() {
+        JBulletPhysicsSystem jbp = (JBulletPhysicsSystem)physicsSystems.get(JBulletPhysicsSystem.class);
+        if (jbp != null) {
+            jbp.quit();
+        }
+    }
 }

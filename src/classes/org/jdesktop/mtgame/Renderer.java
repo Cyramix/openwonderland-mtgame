@@ -758,6 +758,10 @@ class Renderer extends Thread {
         }
     }
 
+    boolean getDone() {
+        return (done);
+    }
+
     JOGLContextCapabilities getContextCaps() {
         return (((JOGLRenderer)jmeRenderer).getContextCaps());
     }
@@ -1091,7 +1095,7 @@ class Renderer extends Thread {
                 renderUpdateList.add(ruop);
             }
             if (wait) {
-                while (!ruop.done) {
+                while (!ruop.done  && !done) {
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException e) {

@@ -156,6 +156,10 @@ public class JBulletPhysicsSystem extends PhysicsSystem implements Runnable {
         }
     }
 
+    void quit() {
+        done = true;
+    }
+
     /**
      * Adds a new timestep listener. If the listener already exists, this method
      * does nothing.

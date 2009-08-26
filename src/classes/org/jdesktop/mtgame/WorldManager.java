@@ -285,7 +285,7 @@ public class WorldManager {
         // Don't return until the appropriate subsystem has marked
         // the component as non-live
         if (Thread.currentThread() != renderManager.getRenderer()) {
-            while (c.isLive()) {
+            while (c.isLive() && !renderManager.getDone()) {
                 try {
                     Thread.currentThread().sleep(0, 10);
                 } catch (java.lang.InterruptedException ie) {
@@ -322,6 +322,15 @@ public class WorldManager {
      */
     public void setProcessorsRunning(boolean flag) {
         processorManager.setRunning(flag);
+    }
+
+    /**
+     * This tells the renderer and the process manager to quit
+     */
+    public void shutdown() {
+        physicsManager.quit();
+        processorManager.quit();
+        renderManager.quit();
     }
     
     /**

@@ -112,6 +112,9 @@ class ProcessorThread extends Thread {
         while (!done) {            
             // This synchonized method will block until there's something to do.
             pc = getNextProcessorComponent();
+            if (pc == null && done) {
+                break;
+            }
             
             // Now compute this process and all of it's chains.
             try {
@@ -132,6 +135,11 @@ class ProcessorThread extends Thread {
                 pc = pc.getNextInChain();
             }
         }
+    }
+
+    synchronized void quit() {
+        done = true;
+        notify();
     }
     
     /**
@@ -167,18 +175,20 @@ class ProcessorThread extends Thread {
     synchronized ProcessorComponent getNextProcessorComponent() {
         ProcessorComponent pc = null;
            
-        if (queue.isEmpty()) {
+        if (queue.isEmpty() && !done) {
             waiting = true;
             processorManager.notifyDone(this);
-            while (queue.isEmpty()) {
+            while (queue.isEmpty() && !done) {
                 try {
                     wait();
                 } catch (InterruptedException e) {
                     System.out.println(e);
                 }
             }
-        }         
-        pc = queue.removeFirst();
+        }
+        if (!done) {
+            pc = queue.removeFirst();
+        }
         return (pc);
     } 
 
