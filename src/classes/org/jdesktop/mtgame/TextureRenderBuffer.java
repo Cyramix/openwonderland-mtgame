@@ -276,7 +276,7 @@ public class TextureRenderBuffer extends RenderBuffer {
         GL gl = GLU.getCurrentGL();
 
         JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
-        gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
+        gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_BGR, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
         //System.out.println("GetErroe: " + gl.glGetError());
         return (textureReadBuffer);
     }
