@@ -261,6 +261,10 @@ public class RenderManager {
         renderer.quit();
     }
 
+    boolean getDone() {
+        return (renderer.getDone());
+    }
+
     /**
      * Get the JOGL Context Capabilities
      */

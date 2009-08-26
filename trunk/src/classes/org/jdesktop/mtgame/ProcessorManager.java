@@ -313,7 +313,15 @@ class ProcessorManager extends Thread {
             // Now, let the renderer complete the commit phase
             worldManager.runCommitList(runList);
             armProcessors(runList);
-        } 
+        }
+
+        for (int i=0; i<processorThreads.length; i++) {
+            processorThreads[i].quit();
+        }
+    }
+
+    void quit() {
+        done = true;
     }
     
     /**
