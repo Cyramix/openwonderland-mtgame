@@ -473,6 +473,20 @@ public class WorldManager {
     public void applyConfig(Spatial s) {
         configManager.applyConfig(s);
     }
+
+    /**
+     * Get the base url for all texture and data loads
+     */
+    public String getConfigBaseURL() {
+        return(configManager.getBaseURL());
+    }
+    
+    /**
+     * Set the base url for all texture and data loads
+     */
+    public void setConfigBaseURL(String url) {
+        configManager.setBaseURL(url);
+    }
     
     /**
      * Pass along an awt event trigger to the process controller

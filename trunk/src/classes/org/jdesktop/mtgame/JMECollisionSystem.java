@@ -42,6 +42,9 @@ import com.jme.scene.TriMesh;
 import com.jme.renderer.AbstractCamera;
 
 import com.jme.intersection.CollisionResults;
+import com.jme.intersection.TriangleCollisionResults;
+import com.jme.intersection.BoundingCollisionResults;
+import com.jme.intersection.CollisionData;
 import com.jme.math.Ray;
 import com.jme.intersection.PickResults;
 import com.jme.intersection.PickData;
@@ -68,6 +71,9 @@ public class JMECollisionSystem extends CollisionSystem {
      */
     Matrix4f camInverse = null;
     Matrix4f camMatrix = new Matrix4f();
+
+    TriangleCollisionResults tcr = new TriangleCollisionResults();
+    BoundingCollisionResults bcr = new BoundingCollisionResults();
                 
     /**
      * This creates a default collision component object.  The default collision
@@ -504,5 +510,62 @@ public class JMECollisionSystem extends CollisionSystem {
                 }
             }
         }
+    }
+
+    public CollisionInfo findAllCollisions(Spatial sp, boolean geometryCollide) {
+        CollisionInfo collisionInfo = null;
+        CollisionResults collisionResults = null;
+        int j = 0;
+
+        // create the correct pick results
+        if (geometryCollide) {
+            collisionResults = tcr;
+        } else {
+            collisionResults = bcr;
+        }
+        collisionResults.clear();
+
+        findCollisions(sp, collisionResults);
+
+        // Create out pick info
+        collisionInfo = new CollisionInfo(geometryCollide);
+
+        // Now add data from the pickResults
+        for (int i=0; i<collisionResults.getNumber(); i++) {
+            CollisionData collisionData = collisionResults.getCollisionData(i);
+
+            if (geometryCollide && collisionData.getSourceTris().size() == 0) {
+                continue;
+            }
+
+            CollisionDetails collisionDetails = getCollisionDetails(collisionData.getSourceMesh(), collisionInfo, collisionData);
+            collisionInfo.addCollisionDetails(collisionDetails);
+        }
+
+        return (collisionInfo);
+    }
+
+        /**
+     * Find the entity which contains this geometry
+     */
+    private CollisionDetails getCollisionDetails(Geometry g, CollisionInfo collisionInfo, CollisionData collisionData) {
+        JMECollisionComponent cc = null;
+        Entity entity = null;
+        JMECollisionDetails collisionDetails = null;
+
+        // First, find the topmost parent
+        Node parent = g.getParent();
+        Node node = parent;
+        cc = (JMECollisionComponent) spatialMap.get(node);
+        while (cc == null && parent != null) {
+            node = parent;
+            parent = parent.getParent();
+            cc = (JMECollisionComponent) spatialMap.get(node);
+        }
+        entity = cc.getEntity();
+
+        collisionDetails = new JMECollisionDetails(this, entity, node, cc, collisionInfo,
+                collisionData);
+        return (collisionDetails);
     }
 }

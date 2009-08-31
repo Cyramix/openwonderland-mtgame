@@ -80,6 +80,11 @@ public class ConfigManager implements ResourceLocator {
      * The hashmap of configuation data.  The key is the name of the Spatial
      */
     private HashMap configMap = new HashMap();
+
+    /**
+     * The base directory
+     */
+    private String baseDir = null;
     
     /**
      * The base directory for textures
@@ -147,7 +152,7 @@ public class ConfigManager implements ResourceLocator {
      * Set the texture directory
      */
     void setTextureDirectory(String dir) {
-        textureDir = dir;
+        textureDir = baseDir + dir;
     }
 
     /**
@@ -161,7 +166,7 @@ public class ConfigManager implements ResourceLocator {
      * Set the texture directory
      */
     void setDataDirectory(String dir) {
-        dataDir = dir;
+        dataDir = baseDir + dir;
     }
 
     /**
@@ -169,6 +174,20 @@ public class ConfigManager implements ResourceLocator {
      */
     public String getDataDirectory() {
         return (dataDir);
+    }
+
+    /**
+     * Set the texture directory
+     */
+    void setBaseURL(String dir) {
+        baseDir = dir;
+    }
+
+    /**
+     * Get the data directory
+     */
+    public String getBaseURL() {
+        return (baseDir);
     }
 
     /**
@@ -258,6 +277,9 @@ public class ConfigManager implements ResourceLocator {
             } else if (token.startsWith("TextureDir")) {
                 token = token.substring(10).trim();
                 setTextureDirectory(token);
+            } else if (token.startsWith("BaseURL")) {
+                token = token.substring(7).trim();
+                setBaseURL(token);
             } else if (token.startsWith("ConfigFile")) {
                 token = token.substring(10).trim();
                 loadConfigFile(token);
