@@ -39,6 +39,7 @@ import com.jme.scene.TriMesh;
 import com.jme.scene.shape.Quad;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.BlendState;
+import com.jme.scene.state.CullState;
 import com.jme.scene.state.TextureState;
 import com.jme.scene.state.ZBufferState;
 import com.jme.image.Texture;
@@ -585,10 +586,15 @@ public class ConfigManager implements ResourceLocator {
         if (name.contains("Alpha")) {
             BlendState as = (BlendState) worldManager.getRenderManager().createRendererState(RenderState.StateType.Blend);
             as.setEnabled(true);
+            as.setBlendEnabled(false);
             as.setReference(0.5f);
             as.setTestFunction(BlendState.TestFunction.GreaterThan);
             as.setTestEnabled(true);
             s.setRenderState(as);
+
+            CullState cs = (CullState)worldManager.getRenderManager().createRendererState(RenderState.StateType.Cull);
+            cs.setCullFace(CullState.Face.None);
+            s.setRenderState(cs);
         }
 
         return (shader);

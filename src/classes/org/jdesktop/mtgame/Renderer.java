@@ -959,6 +959,8 @@ class Renderer extends Thread {
                 }
             }
         }
+        // Clear out some updates
+        processInternalUpdates();
         finished = true;
     }
 
@@ -1087,6 +1089,10 @@ class Renderer extends Thread {
      * Add a RenderUpdater to the list of objects to update in the render thread.
      */
     void addRenderUpdater(RenderUpdater ru, Object obj, boolean wait) {
+        if (finished) {
+            return;
+        }
+
         if (wait && Thread.currentThread() == this) {
             ru.update(obj);
         } else {
