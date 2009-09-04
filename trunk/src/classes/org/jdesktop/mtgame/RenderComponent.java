@@ -252,13 +252,9 @@ public class RenderComponent extends EntityComponent {
      * Set the othographic projection flag
      */
     public void setOrtho(boolean flag) {
-        if (isLive()) {
-            pendingUpdate = true;
-            getEntity().getWorldManager().getRenderManager().updateOrtho(this, flag);
-            waitForUpdate();
-        } else {
-            ortho = flag;
-        }
+        pendingUpdate = true;
+        WorldManager.getDefaultWorldManager().getRenderManager().updateOrtho(this, flag);
+        waitForUpdate();
     }
 
     /**
