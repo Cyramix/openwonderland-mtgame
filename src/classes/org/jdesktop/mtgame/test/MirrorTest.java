@@ -33,18 +33,22 @@ import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
 import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
 import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
-import org.jdesktop.mtgame.processor.PostEventProcessor;
+import org.jdesktop.mtgame.processor.AlphaProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
+import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.light.LightNode;
+import com.jme.util.TextureManager;
 import com.jme.scene.state.TextureState;
-import com.jme.image.Texture2D;
+import com.jme.image.Texture;
+import java.net.URL;
+import java.net.MalformedURLException;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
@@ -142,6 +146,10 @@ public class MirrorTest {
         
     private Canvas canvas = null;
     private RenderBuffer rb = null;
+
+    private Node quadsRoot = null;
+    QuadEntity quadsEntityRoot = null;
+    String urlpath = "file:/Users/runner/NetBeansProjects/jme-20/trunk/src/";
     
     public MirrorTest(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -158,6 +166,7 @@ public class MirrorTest {
         createGlobalLight();
         createRandomTeapots(wm);
         createOrthoObjects();
+        createQuadObjects();
        
     }
               
@@ -503,18 +512,14 @@ public class MirrorTest {
             if (e.getSource() == coordButton) {
                 if (coordsOn) {
                     coordsOn = false;
-                    orthoRC.getSceneRoot().setLocalTranslation(0.0f, 0.0f, 0.0f);
-                    quadGeo.resize(50, 50);
                     wm.removeEntity(axis);        
                     System.out.println("Turning Coordinates Off");
                 } else {
                     coordsOn = true;
-                    orthoRC.getSceneRoot().setLocalTranslation(width/2, height/2, 0.0f);
-                    quadGeo.resize(width/2, height/2);
                     wm.addEntity(axis);
                     System.out.println("Turning Coordinates On");
                 }
-                orthoRC.setOrtho(coordsOn);
+                processOrtho(coordsOn);
             }
             
             if (e.getSource() == gridButton) {
@@ -558,7 +563,21 @@ public class MirrorTest {
             }
         }
     }
-    
+
+    void processOrtho(boolean on) {
+        parseNode(quadsEntityRoot, on);
+        quadsEntityRoot.getComponent(RenderComponent.class).setOrtho(on);
+    }
+
+    void parseNode(QuadEntity e, boolean on) {
+        e.processOrtho(on);
+
+        for (int i = 0; i < e.numEntities(); i++) {
+            parseNode((QuadEntity) e.getEntity(i), on);
+        }
+
+    }
+
     /**
      * Create 50 randomly placed teapots, with roughly half of them transparent
      */
@@ -567,7 +586,7 @@ public class MirrorTest {
         float y = 0.0f;
         float z = 0.0f;
         boolean transparent = false;
-        int numTeapots = 5;
+        int numTeapots = 50;
         Random r = new Random();
         RenderComponent sc = null;
         JMECollisionComponent cc = null;
@@ -591,8 +610,8 @@ public class MirrorTest {
             
             RotationProcessor rp = new RotationProcessor("Teapot Rotator", wm, 
                 teapot, (float) (6.0f * Math.PI / 180.0f));
-            e.addComponent(ProcessorComponent.class, rp);
-                        wm.addEntity(e);
+                e.addComponent(ProcessorComponent.class, rp);
+            wm.addEntity(e);
                         
         }
     }
@@ -606,6 +625,7 @@ public class MirrorTest {
         orthoQuad.setLocalTranslation(0.0f, 75.0f, -100.0f);
         
         RenderBuffer rb = wm.getRenderManager().createRenderBuffer(RenderBuffer.Target.TEXTURE_2D, width, height);
+        ((TextureRenderBuffer)rb).setIncludeOrtho(false);
         CameraNode cn = new CameraNode("MyCamera", null);
         Node cameraSG = new Node();
         cameraSG.attachChild(cn);
@@ -676,14 +696,154 @@ public class MirrorTest {
         
         node.setRenderState(matState);
         node.setRenderState(buf);
-        node.setLocalTranslation(x, y, z);
-        node.setModelBound(bbox); 
+            node.setLocalTranslation(x, y, z);
+        node.setModelBound(bbox);
         
         return (node);
     }
 
     public void update(Object object) {
         RenderBuffer rb = (RenderBuffer) object;
+
+    }
+
+    private void createQuadObjects() {
+        quadsRoot = new Node();
+        RenderComponent quadsRC = null;
+        Quad quad = null;
+        Node quadNode = null;
+
+        CollisionManager cm = wm.getCollisionManager();
+        JMECollisionSystem jcs = (JMECollisionSystem)cm.loadCollisionSystem(JMECollisionSystem.class);
+
+        // Now the parent quad
+        quadsEntityRoot = new QuadEntity(null, "Parent", new Vector3f(100.0f, 100.0f, 0.0f), 200, 200, 2,
+                new Vector3f(), 100, 100, new ColorRGBA(0.8f, 0.8f, 0.8f, 0.7f), true, true);
+
+        QuadEntity qe = new QuadEntity(quadsEntityRoot, "Child 1", new Vector3f(20.0f, 20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(20.0f, 20.0f, 1.0f), 20, 20, new ColorRGBA(1.0f, 0.0f, 0.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 2", new Vector3f(20.0f, -20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(20.0f, -20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 1.0f, 0.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 3", new Vector3f(-20.0f, -20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(-20.0f, -20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 0.0f, 1.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        qe = new QuadEntity(quadsEntityRoot, "Child 4", new Vector3f(-20.0f, 20.0f, 0.0f), 40, 40, 1,
+                new Vector3f(-20.0f, 20.0f, 1.0f), 20, 20, new ColorRGBA(0.0f, 1.0f, 1.0f, 0.7f), false, false);
+        quadsEntityRoot.addEntity(qe);
+
+        JMECollisionComponent jcc = jcs.createCollisionComponent(quadsEntityRoot.getComponent(RenderComponent.class).getSceneRoot());
+        quadsEntityRoot.addComponent(JMECollisionComponent.class, jcc);
+        wm.addEntity(quadsEntityRoot);
+    }
+
+
+
+    class QuadEntity extends Entity implements RenderUpdater {
+        Vector3f orthoTrans = new Vector3f();
+        int oWidth = 0;
+        int oHeight = 0;
+        int oZOrder = -1;
+        Vector3f perspTrans = new Vector3f();
+        int pWidth = 0;
+        int pHeight = 0;
+        boolean ortho = false;
+        Quad quad = null;
+        Teapot teapot = null;
+        ColorRGBA color = null;
+
+        public QuadEntity(Entity parent, String name, Vector3f oTrans, int oWidth, int oHeight,
+                int oZorder, Vector3f pTrans, int pWidth, int pHeight, ColorRGBA color,
+                boolean addTexture, boolean alphaProcessor) {
+            super(name);
+            orthoTrans.set(oTrans);
+            perspTrans.set(pTrans);
+            this.oWidth = oWidth;
+            this.oHeight = oHeight;
+            this.pWidth = pWidth;
+            this.pHeight = pHeight;
+            this.oZOrder = oZorder;
+            this.color = color;
+            Quad quad = null;
+
+            Node node = new Node();
+            node.setLocalTranslation(perspTrans);
+            ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+            buf.setEnabled(true);
+            buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+            node.setRenderState(buf);
+
+            BlendState as = (BlendState) wm.getRenderManager().createRendererState(RenderState.StateType.Blend);
+            as.setEnabled(true);
+            as.setBlendEnabled(true);
+            as.setSourceFunction(BlendState.SourceFunction.SourceAlpha);
+            as.setDestinationFunction(BlendState.DestinationFunction.OneMinusSourceAlpha);
+            node.setRenderState(as);
+
+            node.setZOrder(oZOrder, false);
+            quad = createQuad(color, oZOrder, addTexture);
+            node.attachChild(quad);
+            RenderComponent rc = wm.getRenderManager().createRenderComponent(node);
+            rc.setLightingEnabled(false);
+            if (parent != null) {
+                RenderComponent parentRc = parent.getComponent(RenderComponent.class);
+                rc.setAttachPoint(parentRc.getSceneRoot());
+            }
+            addComponent(RenderComponent.class, rc);
+
+            if (alphaProcessor) {
+                AlphaProcessor proc = new AlphaProcessor("", wm, quad, 0.01f);
+                addComponent(AlphaProcessor.class, proc);
+            }
+        }
+
+        private Quad createQuad(ColorRGBA color, int oZOrder, boolean addTexture) {
+            URL url = null;
+            quad = new Quad("Ortho " + color, pWidth, pHeight);
+            quad.setModelBound(new BoundingBox(new Vector3f(), pWidth, pHeight, 1.0f));
+            quad.setDefaultColor(color);
+            quad.setZOrder(oZOrder, false);
+
+            if (addTexture) {
+                TextureState ts = (TextureState) wm.getRenderManager().createRendererState(RenderState.StateType.Texture);
+                try {
+                    url = new URL(urlpath + "jmetest/data/texture/wall.jpg");
+                } catch (MalformedURLException e) {
+                    System.out.println(e);
+                }
+                Texture t0 = TextureManager.loadTexture(url,
+                        Texture.MinificationFilter.Trilinear,
+                        Texture.MagnificationFilter.Bilinear);
+                t0.setWrap(Texture.WrapMode.Repeat);
+                ts.setTexture(t0);
+                quad.setRenderState(ts);
+            }
+
+            return (quad);
+        }
+
+        void processOrtho(boolean on) {
+            ortho = on;
+            wm.addRenderUpdater(this, null);
+
+        }
+
+        public void update(Object o) {
+            RenderComponent rc = getComponent(RenderComponent.class);
+            if (ortho) {
+                rc.getSceneRoot().setLocalTranslation(orthoTrans);
+                quad.resize(oWidth, oHeight);
+                rc.getSceneRoot().setCullHint(Spatial.CullHint.Never);
+            } else {
+                rc.getSceneRoot().setLocalTranslation(perspTrans);
+                quad.resize(pWidth, pHeight);
+                rc.getSceneRoot().setCullHint(Spatial.CullHint.Inherit);
+            }
+        }
 
     }
 
