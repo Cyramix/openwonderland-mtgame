@@ -87,6 +87,12 @@ public class TextureRenderBuffer extends RenderBuffer {
     private ArrayList renderList = new ArrayList();
 
     /**
+     * A boolean that indicates whether or not ortho objects should
+     * be rendered.
+     */
+    private boolean includeOrtho = true;
+
+    /**
      * The constructor
      */
     public TextureRenderBuffer(Target target, int width, int height, int order) {
@@ -113,6 +119,19 @@ public class TextureRenderBuffer extends RenderBuffer {
         return (texture);
     }
 
+    /**
+     * Set the flag to control whether or not ortho objects are driven.
+     */
+    public void setIncludeOrtho(boolean flag) {
+        includeOrtho = flag;
+    }
+
+    /**
+     * Get the flag to control whether or not ortho objects are driven.
+     */
+    public boolean getIncludeOrtho() {
+        return (includeOrtho);
+    }
 
     /**
      * This gets called to make this render buffer current for rendering
@@ -252,7 +271,16 @@ public class TextureRenderBuffer extends RenderBuffer {
     }
 
     private void renderList(Renderer renderer, FastList<Spatial> list) {
-        renderList.addAll(list);
+        if (includeOrtho) {
+            renderList.addAll(list);
+        } else {
+            for (int i=0; i<list.size(); i++) {
+                Spatial s = list.get(i);
+                if (s.getRenderQueueMode() != Renderer.QUEUE_ORTHO) {
+                    renderList.add(s);
+                }
+            }
+        }
     }
 
     /**

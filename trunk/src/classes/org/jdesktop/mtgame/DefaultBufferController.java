@@ -125,7 +125,11 @@ public class DefaultBufferController implements BufferController {
                 index++;
                 currentRb = renderBufferList.get(index);
             }
-            renderBufferList.add(index - 1, rb);
+            if (index == 0) {
+                renderBufferList.add(index, rb);
+            } else {
+                renderBufferList.add(index - 1, rb);
+            }
         }
     }
 
