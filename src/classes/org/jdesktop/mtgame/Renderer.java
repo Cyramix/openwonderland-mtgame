@@ -1118,6 +1118,11 @@ class Renderer extends Thread {
     void updateOrtho(RenderComponent rc, boolean flag) {
         synchronized (entityLock) {
             synchronized (orthos) {
+                if (finished) {
+                    rc.clearUpdateFlag();
+                    return;
+                }
+
                 if (Thread.currentThread() == this) {
                     rc.updateOrtho(worldManager, flag, true);
                 } else {
@@ -1136,6 +1141,11 @@ class Renderer extends Thread {
     void updateSceneRoot(RenderComponent rc, Node scene) {
         synchronized (entityLock) {
             synchronized (sceneRoots) {
+                if (finished) {
+                    rc.clearUpdateFlag();
+                    return;
+                }
+
                 if (Thread.currentThread() == this) {
                     rc.updateSceneRoot(worldManager, scene);
                 } else {
@@ -1154,6 +1164,11 @@ class Renderer extends Thread {
     void updateAttachPoint(RenderComponent rc, Node attachPoint) {
         synchronized (entityLock) {
             synchronized (attachPoints) {
+                if (finished) {
+                    rc.clearUpdateFlag();
+                    return;
+                }
+
                 if (Thread.currentThread() == this) {
                     rc.updateAttachPoint(worldManager, attachPoint, true);
                 } else {
@@ -1172,6 +1187,11 @@ class Renderer extends Thread {
     void updateLighting(RenderComponent rc) {
         synchronized (entityLock) {
             synchronized (componentLighting) {
+                if (finished) {
+                    rc.clearUpdateFlag();
+                    return;
+                }
+
                 if (Thread.currentThread() == this) {
                     rc.updateLightState(worldManager, true);
                 } else {

@@ -305,6 +305,10 @@ public class RenderComponent extends EntityComponent {
         setRenderQueue(s, ortho, bs);
     }
 
+    void clearUpdateFlag() {
+        pendingUpdate = false;
+    }
+
     /**
      * This mehod checks for transpaency attributes
      */
