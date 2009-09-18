@@ -1553,7 +1553,6 @@ class Renderer extends Thread {
                    
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
-                processSceneGraph((RenderComponent) c, true);
                 RenderComponentOp rcop = new RenderComponentOp((RenderComponent) c, true);
                 scenes.add(rcop);
                 scenesChanged = true;
@@ -1600,7 +1599,6 @@ class Renderer extends Thread {
             
             // An entity is one of the following - for now.
             if (c instanceof RenderComponent) {
-                processSceneGraph((RenderComponent) c, false);
                 RenderComponentOp rcop = new RenderComponentOp((RenderComponent) c, false);
                 scenes.add(rcop);
                 scenesChanged = true;
@@ -1971,12 +1969,14 @@ class Renderer extends Thread {
         for (int i = 0; i < scenes.size(); i++) {
             RenderComponentOp rcop = (RenderComponentOp) scenes.get(i);
             if (rcop.add) {
+                processSceneGraph((RenderComponent) rcop.rc, true);
                 rcop.rc.getSceneRoot().setLive(true);
                 rcop.rc.setLive(true);
                 addToRenderTechnique(rcop.rc);
                 renderScenes.add(rcop.rc);
                 addToUpdateList(rcop.rc.getSceneRoot());
             } else {
+                processSceneGraph((RenderComponent) rcop.rc, false);
                 renderScenes.remove(rcop.rc);            
                 removeFromRenderTechnique(rcop.rc);
                 rcop.rc.getSceneRoot().setLive(false);
