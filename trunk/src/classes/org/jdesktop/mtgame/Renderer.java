@@ -607,7 +607,11 @@ class Renderer extends Thread {
             bufferController.addBuffer(rb);
         }
     }
-    
+
+    void removeRenderBuffer(RenderBuffer rb) {
+        bufferController.removeBuffer(rb);
+    }
+
     /**
      * This is internal initialization done once.
      */
@@ -747,7 +751,6 @@ class Renderer extends Thread {
     }
 
     void quit() {
-        finished = false;
         done = true;
         while (!finished) {
             try {

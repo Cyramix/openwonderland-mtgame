@@ -126,6 +126,11 @@ public abstract class RenderBuffer {
     protected Vector3f lastDir = null;
     protected Vector3f lastUp = null;
     protected Vector3f lastLeft = null;
+
+    /**
+     * This enables the render buffer
+     */
+    private boolean enabled = true;
     
     /**
      * The constructor
@@ -370,6 +375,20 @@ public abstract class RenderBuffer {
      */
     public int getWidth() {
         return (width);
+    }
+
+    /**
+     * Set the enable for this buffer
+     */
+    public void setEnable(boolean flag) {
+        enabled = flag;
+    }
+
+    /**
+     * Get the width
+     */
+    public boolean getEnable() {
+        return (enabled);
     }
       
     /**

@@ -97,7 +97,7 @@ public class Entity {
     * Add a component to the entity
     */
    public void addComponent(Class key, EntityComponent component) {
-       synchronized (this) {
+       synchronized (componentMap) {
            componentMap.put(key, component);
            component.setEntity(this);
            if (worldManager != null) {
@@ -112,7 +112,7 @@ public class Entity {
    public <T extends EntityComponent> T getComponent(Class<T> key) {
        EntityComponent ec = null;
        
-       synchronized (this) {
+       synchronized (componentMap) {
            ec = componentMap.get(key);
        }
        return (T)ec;
@@ -133,7 +133,7 @@ public class Entity {
    public Iterable<EntityComponent> getComponents() {
        Iterable<EntityComponent> comps = null;
        
-       synchronized (this) {
+       synchronized (componentMap) {
            comps = (Iterable<EntityComponent>)componentMap.values();
        }
        return (comps);
@@ -143,7 +143,7 @@ public class Entity {
     * Remove a component from the entity
     */
    public void removeComponent(Class key) {
-       synchronized (this) {
+       synchronized (componentMap) {
            EntityComponent c = (EntityComponent) componentMap.remove(key);
            if (c != null) {
                c.setEntity(null);
@@ -173,7 +173,7 @@ public class Entity {
     * Add a SubEntity to this entity.  It is managed by the parent Entity.
     */
    public void addEntity(Entity entity) {
-       synchronized (this) {
+       synchronized (subEntities) {
            entity.setParent(this);
            entity.setWorldManager(worldManager);
            subEntities.add(entity);
@@ -195,7 +195,7 @@ public class Entity {
            worldManager.removeEntity(entity);
        }
 
-       synchronized (this) {
+       synchronized (subEntities) {
            subEntities.remove(entity);
            entity.setParent(null);
            entity.setWorldManager(null);

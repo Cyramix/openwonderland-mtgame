@@ -138,7 +138,7 @@ public class DefaultBufferController implements BufferController {
      */
     public void removeBuffer(RenderBuffer rb) {
         synchronized (bufferList) {
-            bufferList.add(rb);
+            bufferList.remove(rb);
             buffersChanged = true;
         }
     }
@@ -163,7 +163,9 @@ public class DefaultBufferController implements BufferController {
     public void renderScene(DisplaySystem ds, Renderer jmeRenderer, org.jdesktop.mtgame.Renderer mtRenderer) {
         for (int i=0; i<renderBufferList.size(); i++) {
             RenderBuffer rb = renderBufferList.get(i);
-            renderBuffer(ds, jmeRenderer, mtRenderer, rb);
+            if (rb.getEnable()) {
+                renderBuffer(ds, jmeRenderer, mtRenderer, rb);
+            }
         }
     }
     

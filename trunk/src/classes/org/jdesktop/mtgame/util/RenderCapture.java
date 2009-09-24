@@ -117,6 +117,14 @@ public class RenderCapture implements BufferUpdater {
         createRenderBuffer(wm);
     }
 
+    public void setEnable(boolean flag) {
+        rb.setEnable(flag);
+    }
+
+    public boolean getEnable() {
+        return (rb.getEnable());
+    }
+
     public void init(RenderBuffer rb) {
         Entity e = new Entity("Mirror ");
         createCamera(worldManager, e);

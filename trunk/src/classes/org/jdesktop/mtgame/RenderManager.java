@@ -166,10 +166,17 @@ public class RenderManager {
     }
     
     /**
-     * Create a render buffer with the characteristics given.
+     * Add a render buffer
      */
     public void addRenderBuffer(RenderBuffer rb) {
         renderer.addRenderBuffer(rb);
+    }
+
+    /**
+     * Remove a render buffer 
+     */
+    public void removeRenderBuffer(RenderBuffer rb) {
+        renderer.removeRenderBuffer(rb);
     }
 
     /**
