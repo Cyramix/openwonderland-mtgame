@@ -45,6 +45,7 @@ import com.jme.scene.Spatial;
 import com.jme.scene.CameraNode;
 import com.jme.scene.TriMesh;
 import com.jme.scene.SharedMesh;
+import com.jme.image.Texture;
 import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
@@ -52,7 +53,7 @@ import com.jme.light.DirectionalLight;
 import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
-import com.jme.scene.state.MaterialState;
+import com.jme.scene.state.TextureState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
@@ -158,8 +159,8 @@ public class ColladaLoader {
     private RenderBuffer rb = null;
     
     private SwingFrame frame = null;
-    private String assetDir = "/Users/runner/Desktop/perf/";
-    private String loadfile = assetDir + "EssexCampusv1-0.dae";
+    private String assetDir = "/Users/runner/Desktop/models/servers/";
+    private String loadfile = assetDir + "SUNPOD_complete.dae";
     private boolean showBounds = false;
     
     public ColladaLoader(String[] args) {
@@ -172,26 +173,26 @@ public class ColladaLoader {
         createLights();
         createCameraEntity(wm);   
         createGrid(wm);
-        //wm.addEntity(grid);
+        wm.addEntity(grid);
         createAxis();
-        //wm.addEntity(axis);
-        //frame.loadFile(loadfile, true);
-        frame.loadFile(loadfile, false);
+        wm.addEntity(axis);
+        //frame.loadFile(loadfile, true, new Vector3f());
         //createRandomTeapots(wm);
         
     }
 
     private void createLights() {
-        float radius = 50.0f;
+        float radius = 20.0f;
+        float y = 20.0f;
         float x = (float)(radius*Math.cos(Math.PI/6));
         float z = (float)(radius*Math.sin(Math.PI/6));
-        createDirLight(x, radius, z);
+        createDirLight(x, y, z);
         x = (float)(radius*Math.cos(5*Math.PI/6));
         z = (float)(radius*Math.sin(5*Math.PI/6));
-        createDirLight(x, radius, z);
+        createDirLight(x, y, z);
         x = (float)(radius*Math.cos(3*Math.PI/2));
         z = (float)(radius*Math.sin(3*Math.PI/2));
-        createDirLight(x, radius, z);
+        createDirLight(x, y, z);
     }
 
     private void createLight(float x, float y, float z) {
@@ -235,6 +236,22 @@ public class ColladaLoader {
         lightNode.setLocalTranslation(x, y, z);
         light.setDirection(new Vector3f(-x, -y, -z));
         wm.getRenderManager().addLight(lightNode);
+
+        Sphere sp = new Sphere("", 10, 10, 1.0f);
+        Node n = new Node("");
+        n.setLocalTranslation(x, y, z);
+        ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
+        buf.setEnabled(true);
+        buf.setFunction(ZBufferState.TestFunction.LessThanOrEqualTo);
+        n.setRenderState(buf);
+        n.attachChild(sp);
+        RenderComponent lsp = wm.getRenderManager().createRenderComponent(n);
+        lsp.setLightingEnabled(false);
+
+        Entity e = new Entity("Light Rotator");
+        //e.addComponent(RotationProcessor.class, rp);
+        e.addComponent(RenderComponent.class, lsp);
+        wm.addEntity(e);
     }
 
     private void createCameraEntity(WorldManager wm) {
@@ -389,7 +406,7 @@ public class ColladaLoader {
         JMenuItem createTeapotItem = null;
         String textureSubdir = "file:" + assetDir + "./";
         String textureSubdirName = assetDir + "./";
-
+        Entity currentEntity = null;
 
 
         // Construct the frame
@@ -485,7 +502,7 @@ public class ColladaLoader {
         /**
          * Add a model to be visualized
          */
-        private void addModel(Node model) {
+        private void addModel(Node model, Vector3f trans) {
             Node modelRoot = new Node("Model");
                     
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
@@ -503,7 +520,8 @@ public class ColladaLoader {
             float angle = -1.57079632679f;
             rot.fromAngleAxis(angle, axis);
             modelRoot.setLocalRotation(rot);
-            //modelRoot.setLocalScale(0.1f);
+            modelRoot.setLocalScale(1.0f);
+            modelRoot.setLocalTranslation(trans.x, trans.y, trans.z);
             
             //System.out.println("Adding: " + model);
             modelRoot.attachChild(model);
@@ -511,11 +529,12 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
-            //sc.setLightingEnabled(false);
+            sc.setLightingEnabled(false);
             JMECollisionSystem cs = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
             JMECollisionComponent cc = cs.createCollisionComponent(model);
             e.addComponent(RenderComponent.class, sc);
             e.addComponent(JMECollisionComponent.class, cc);
+            currentEntity = e;
             wm.addEntity(e);              
         }
     
@@ -559,12 +578,18 @@ public class ColladaLoader {
                     } catch (FileNotFoundException ex) {
                         System.out.println(ex);
                     }
-                    
+
+                    if (currentEntity != null) {
+                        wm.removeEntity(currentEntity);
+                    }
+
+                    assetDir = chooser.getSelectedFile().getParent() + "/";
+                    textureSubdir = "file:" + assetDir + "./";
+                    textureSubdirName = assetDir + "./";
                     // Now load the model
                     ColladaImporter.load(fileStream, "Model");
                     Node model = ColladaImporter.getModel();
-                    parseModel(0, model, false, null, null);
-                    addModel(model);                 
+                    addModel(model, new Vector3f());
                 }
             }
             
@@ -573,7 +598,7 @@ public class ColladaLoader {
             }
         }
         
-        void loadFile(String filename, boolean normalMap) {       
+        void loadFile(String filename, boolean normalMap, Vector3f trans) {
             FileInputStream fileStream = null;
             ArrayList transpList = new ArrayList();
             ArrayList<Box> boundsList = new ArrayList<Box>();
@@ -628,7 +653,52 @@ public class ColladaLoader {
 //                tm.removeFromParent();;
 //                p.attachChild(n);
 //            }
-            addModel(model);
+            //addNormals(model, null);
+            //parseModel(0, model);
+            addModel(model, trans);
+            
+        }
+
+        void addNormals(Spatial s, Node normals) {
+            if (s instanceof Node) {
+                Node n = (Node)s;
+                Node nn = new Node();
+                for (int i=0; i<n.getQuantity(); i++) {
+                    Spatial child = n.getChild(i);
+                    addNormals(child, nn);
+                }
+                n.attachChild(nn);
+            } else if (s instanceof Geometry) {
+                Geometry geo = (Geometry)s;
+
+                CullState cs = (CullState)geo.getRenderState(RenderState.StateType.Cull);
+                if (cs != null) {
+                    System.out.println("Cull State for " + geo + " is: " + cs.getCullFace());
+                } else {
+                    System.out.println("No Cull State for " + geo);
+                }
+                Vector3f[] lineData = new Vector3f[geo.getVertexCount()*2];
+                int normalIndex = 0;
+                FloatBuffer nBuffer = geo.getNormalBuffer();
+                FloatBuffer vBuffer = geo.getVertexBuffer();
+                vBuffer.rewind();
+                nBuffer.rewind();
+                float nScale = 50.0f;
+                for (int i = 0; i < geo.getVertexCount(); i++) {
+                    lineData[normalIndex] = new Vector3f();
+                    lineData[normalIndex].x = vBuffer.get();
+                    lineData[normalIndex].y = vBuffer.get();
+                    lineData[normalIndex].z = vBuffer.get();
+                    lineData[normalIndex + 1] = new Vector3f();
+                    lineData[normalIndex + 1].x = lineData[normalIndex].x + nScale * nBuffer.get();
+                    lineData[normalIndex + 1].y = lineData[normalIndex].y + nScale * nBuffer.get();
+                    lineData[normalIndex + 1].z = lineData[normalIndex].z + nScale * nBuffer.get();
+                    normalIndex += 2;
+                }
+                Line normalGeometry = new Line("Normal Geometry", lineData, null, null, null);
+                normalGeometry.setDefaultColor(ColorRGBA.red);
+                normals.attachChild(normalGeometry);
+            }
         }
         
         void parseModel(int level, Spatial model, boolean normalMap, ArrayList tList, ArrayList bList) {
@@ -680,6 +750,30 @@ public class ColladaLoader {
                 System.out.println("Unkown: " + model);
             }
 
+        }
+
+        void parseModel(int level, Spatial model) {
+            for (int i = 0; i < level; i++) {
+                System.out.print("\t");
+            }
+
+            if (model instanceof Node) {
+                Node n = (Node) model;
+                System.out.println("Node " + n + " with children: " + n.getQuantity());
+                for (int i = 0; i < n.getQuantity(); i++) {
+                    parseModel(level + 1, n.getChild(i));
+                }
+            } else if (model instanceof Geometry) {
+                Geometry geo = (Geometry)model;
+                System.out.println("Geometry " + model);
+                TextureState ts = (TextureState)geo.getRenderState(RenderState.StateType.Texture);
+                for (int i=0; i<ts.getNumberOfFixedUnits(); i++) {
+                    Texture t = ts.getTexture(i);
+                    if (t != null) {
+                        System.out.println("Texture Unit " + i + ": " + t);
+                    }
+                }
+            }
         }
     }
 }
