@@ -313,6 +313,14 @@ public class GraphOptimizer {
             newVertexBuf.put(verts, 0, length);
 
             float[] norm = normals.get(i);
+            for(int ni=0; ni<verts.length; ni+=3) {
+                v3f.set(norm[ni], norm[ni+1], norm[ni+2]);
+                trans.multNormal(v3f);
+                v3f.normalizeLocal();
+                norm[ni] = v3f.x;
+                norm[ni+1] = v3f.y;
+                norm[ni+2] = v3f.z;
+            }
             newNormalsBuf.put(norm, 0, length);
 
             int[] newInd = indicies.get(i);
