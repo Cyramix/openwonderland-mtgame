@@ -883,6 +883,7 @@ class Renderer extends Thread {
                     runPhysicsSystems(totalTime / 100000000.0f);
 
                     updateTime = System.nanoTime();
+                    //System.out.println("Update Time: " + (updateTime - frameStartTime)/1000000);
                     // Finally, render the scene
                     bufferController.renderScene(displaySystem, jmeRenderer, this);
                     bufferController.endFrame(jmeRenderer);
@@ -1174,6 +1175,17 @@ class Renderer extends Thread {
 
                 if (Thread.currentThread() == this) {
                     rc.updateAttachPoint(worldManager, attachPoint, true);
+                    if (attachPoint == null) {
+                        if (rc.isLive() && !renderScenes.contains(rc)) {
+                            addToRenderTechnique(rc);
+                            renderScenes.add(rc);
+                        }
+                    } else {
+                        if (rc.isLive() && renderScenes.contains(rc)) {
+                            removeFromRenderTechnique(rc);
+                            renderScenes.remove(rc);
+                        }
+                    }
                 } else {
                     AttachPointOp oop = new AttachPointOp(rc, attachPoint);
                     attachPoints.add(oop);
@@ -1632,6 +1644,18 @@ class Renderer extends Thread {
             parent = parent.getParent();
         }
         addToUpdateList(sceneRoot);
+
+        if (attachPoint == null) {
+            if (rc.isLive() && !renderScenes.contains(rc)) {
+                addToRenderTechnique(rc);
+                renderScenes.add(rc);
+            }
+        } else {
+            if (rc.isLive() && renderScenes.contains(rc)) {
+                removeFromRenderTechnique(rc);
+                renderScenes.remove(rc);
+            }
+        }
     }
 
     /**
@@ -1975,13 +1999,17 @@ class Renderer extends Thread {
                 processSceneGraph((RenderComponent) rcop.rc, true);
                 rcop.rc.getSceneRoot().setLive(true);
                 rcop.rc.setLive(true);
-                addToRenderTechnique(rcop.rc);
-                renderScenes.add(rcop.rc);
+                if (rcop.rc.getAttachPoint() == null) {
+                    addToRenderTechnique(rcop.rc);
+                    renderScenes.add(rcop.rc);
+                }
                 addToUpdateList(rcop.rc.getSceneRoot());
             } else {
                 processSceneGraph((RenderComponent) rcop.rc, false);
-                renderScenes.remove(rcop.rc);            
-                removeFromRenderTechnique(rcop.rc);
+                if (rcop.rc.getAttachPoint() == null) {
+                    renderScenes.remove(rcop.rc);
+                    removeFromRenderTechnique(rcop.rc);
+                }
                 rcop.rc.getSceneRoot().setLive(false);
                 rcop.rc.setLive(false);
             }

@@ -39,6 +39,7 @@ import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.processor.FPSCameraProcessor;
 import org.jdesktop.mtgame.shader.DiffuseNormalMap;
 import org.jdesktop.mtgame.shader.DiffuseMap;
+import org.jdesktop.mtgame.util.GraphOptimizer;
 import org.jdesktop.mtgame.*;
 import com.jme.scene.Node;
 import com.jme.scene.Spatial;
@@ -54,6 +55,7 @@ import com.jme.renderer.ColorRGBA;
 import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
 import com.jme.scene.state.TextureState;
+import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
 import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
@@ -68,12 +70,13 @@ import com.jme.animation.BoneAnimation;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JToggleButton;
+import javax.swing.JRadioButton;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.FlowLayout;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -162,6 +165,12 @@ public class ColladaLoader {
     private String assetDir = "/Users/runner/Desktop/models/servers/";
     private String loadfile = assetDir + "SUNPOD_complete.dae";
     private boolean showBounds = false;
+    private boolean useAlphaTest = false;
+    private boolean doRotate = false;
+    private boolean doScale = false;
+    private boolean lighting = false;
+    private boolean doCull = false;
+    private boolean optimize = false;
     
     public ColladaLoader(String[] args) {
         wm = new WorldManager("TestWorld");
@@ -251,7 +260,7 @@ public class ColladaLoader {
         Entity e = new Entity("Light Rotator");
         //e.addComponent(RotationProcessor.class, rp);
         e.addComponent(RenderComponent.class, lsp);
-        wm.addEntity(e);
+        //wm.addEntity(e);
     }
 
     private void createCameraEntity(WorldManager wm) {
@@ -399,8 +408,14 @@ public class ColladaLoader {
         JPanel statusPanel = new JPanel();
         JLabel fpsLabel = new JLabel("FPS: ");
         
-        JToggleButton coordButton = new JToggleButton("Coords", true);
-        JToggleButton gridButton = new JToggleButton("Grid", true);
+        JRadioButton coordButton = new JRadioButton("Coords", true);
+        JRadioButton gridButton = new JRadioButton("Grid", true);
+        JRadioButton alphaButton = new JRadioButton("AlphaTest", false);
+        JRadioButton rotateButton = new JRadioButton("SU Rotate", false);
+        JRadioButton scaleButton = new JRadioButton("SU Scale", false);
+        JRadioButton lightButton = new JRadioButton("Lighting", false);
+        JRadioButton cullButton = new JRadioButton("Cull", false);
+        JRadioButton optButton = new JRadioButton("Optimize", true);
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
@@ -453,13 +468,31 @@ public class ColladaLoader {
             contentPane.add(canvasPanel, BorderLayout.CENTER);
             
             // The options panel
-            optionsPanel.setLayout(new GridBagLayout());
+            optionsPanel.setLayout(new GridLayout(20, 1));
             
             coordButton.addActionListener(this);
             optionsPanel.add(coordButton);
           
             gridButton.addActionListener(this);
             optionsPanel.add(gridButton);
+
+            alphaButton.addActionListener(this);
+            optionsPanel.add(alphaButton);
+
+            rotateButton.addActionListener(this);
+            optionsPanel.add(rotateButton);
+
+            scaleButton.addActionListener(this);
+            optionsPanel.add(scaleButton);
+
+            lightButton.addActionListener(this);
+            optionsPanel.add(lightButton);
+
+            cullButton.addActionListener(this);
+            optionsPanel.add(cullButton);
+
+            optButton.addActionListener(this);
+            optionsPanel.add(optButton);
             
             contentPane.add(optionsPanel, BorderLayout.WEST);
             
@@ -504,6 +537,11 @@ public class ColladaLoader {
          */
         private void addModel(Node model, Vector3f trans) {
             Node modelRoot = new Node("Model");
+
+            GraphOptimizer go = new GraphOptimizer();
+            if (optimize) {
+                go.removeSharedMeshes(model);
+            }
                     
             ZBufferState buf = (ZBufferState) wm.getRenderManager().createRendererState(RenderState.StateType.ZBuffer);
             buf.setEnabled(true);
@@ -512,15 +550,24 @@ public class ColladaLoader {
             //modelRoot.setLocalScale(1.0f);
 
             CullState culls = (CullState) wm.getRenderManager().createRendererState(RenderState.StateType.Cull);
-            culls.setCullFace(CullState.Face.Back);
+            if (doCull) {
+                culls.setCullFace(CullState.Face.Back);
+            } else {
+                culls.setCullFace(CullState.Face.None);
+            }
             modelRoot.setRenderState(culls);
 
             Quaternion rot = new Quaternion();
             Vector3f axis = new Vector3f(1.0f, 0.0f, 0.0f);
             float angle = -1.57079632679f;
             rot.fromAngleAxis(angle, axis);
-            modelRoot.setLocalRotation(rot);
-            modelRoot.setLocalScale(1.0f);
+            if (doRotate) {
+                modelRoot.setLocalRotation(rot);
+            }
+
+            if (doScale) {
+                modelRoot.setLocalScale(0.1f);
+            }
             modelRoot.setLocalTranslation(trans.x, trans.y, trans.z);
             
             //System.out.println("Adding: " + model);
@@ -529,7 +576,10 @@ public class ColladaLoader {
             
             Entity e = new Entity("Model");
             RenderComponent sc = wm.getRenderManager().createRenderComponent(modelRoot);
-            sc.setLightingEnabled(false);
+
+            if (!lighting) {
+                sc.setLightingEnabled(false);
+            }
             JMECollisionSystem cs = (JMECollisionSystem)wm.getCollisionManager().loadCollisionSystem(JMECollisionSystem.class);
             JMECollisionComponent cc = cs.createCollisionComponent(model);
             e.addComponent(RenderComponent.class, sc);
@@ -543,29 +593,55 @@ public class ColladaLoader {
          */
         public void actionPerformed(ActionEvent e) {
             if (e.getSource() == coordButton) {
-                if (coordsOn) {
-                    coordsOn = false;
-                    wm.removeEntity(axis);
-                    System.out.println("Turning Coordinates Off");
-                } else {
-                    coordsOn = true;
-                    wm.addEntity(axis);
-                    System.out.println("Turning Coordinates On");
+                boolean val = coordButton.isSelected();
+                if (val != coordsOn) {
+                    if (coordsOn) {
+                        coordsOn = false;
+                        wm.removeEntity(axis);
+                    } else {
+                        coordsOn = true;
+                        wm.addEntity(axis);
+                    }
                 }
             }
             
             if (e.getSource() == gridButton) {
-                if (gridOn) {
-                    gridOn = false;
-                    wm.removeEntity(grid);
-                    System.out.println("Turning Grid Off");
-                } else {
-                    gridOn = true;
-                    wm.addEntity(grid);
-                    System.out.println("Turning Grid On");
+                boolean val = gridButton.isSelected();
+                if (val != gridOn) {
+                    if (gridOn) {
+                        gridOn = false;
+                        wm.removeEntity(grid);
+                    } else {
+                        gridOn = true;
+                        wm.addEntity(grid);
+                    }
                 }
             }
-            
+
+            if (e.getSource() == alphaButton) {
+                useAlphaTest = alphaButton.isSelected();
+            }
+
+            if (e.getSource() == rotateButton) {
+                doRotate = rotateButton.isSelected();
+            }
+
+            if (e.getSource() == scaleButton) {
+                doScale = scaleButton.isSelected();
+            }
+
+            if (e.getSource() == lightButton) {
+                lighting = lightButton.isSelected();
+            }
+
+            if (e.getSource() == cullButton) {
+                doCull = cullButton.isSelected();
+            }
+
+            if (e.getSource() == optButton) {
+                optimize = optButton.isSelected();
+            }
+
             if (e.getSource() == loadItem) {
                 FileInputStream fileStream = null;
                 JFileChooser chooser = new JFileChooser();
@@ -587,8 +663,14 @@ public class ColladaLoader {
                     textureSubdir = "file:" + assetDir + "./";
                     textureSubdirName = assetDir + "./";
                     // Now load the model
+                    if (useAlphaTest) {
+                        System.setProperty("Collada.useAlphaTest", "true");
+                    } else {
+                        System.setProperty("Collada.useAlphaTest", "false");
+                    }
                     ColladaImporter.load(fileStream, "Model");
                     Node model = ColladaImporter.getModel();
+                    //parseModel(0, model);
                     addModel(model, new Vector3f());
                 }
             }
@@ -753,26 +835,35 @@ public class ColladaLoader {
         }
 
         void parseModel(int level, Spatial model) {
-            for (int i = 0; i < level; i++) {
-                System.out.print("\t");
-            }
+//            for (int i = 0; i < level; i++) {
+//                System.out.print("\t");
+//            }
 
             if (model instanceof Node) {
                 Node n = (Node) model;
-                System.out.println("Node " + n + " with children: " + n.getQuantity());
+                //System.out.println("Node " + n + " with children: " + n.getQuantity());
                 for (int i = 0; i < n.getQuantity(); i++) {
                     parseModel(level + 1, n.getChild(i));
                 }
             } else if (model instanceof Geometry) {
                 Geometry geo = (Geometry)model;
-                System.out.println("Geometry " + model);
-                TextureState ts = (TextureState)geo.getRenderState(RenderState.StateType.Texture);
-                for (int i=0; i<ts.getNumberOfFixedUnits(); i++) {
-                    Texture t = ts.getTexture(i);
-                    if (t != null) {
-                        System.out.println("Texture Unit " + i + ": " + t);
-                    }
+                BlendState bs = (BlendState)geo.getRenderState(RenderState.StateType.Blend);
+                if (bs != null) {
+                    bs.setEnabled(true);
+                    bs.setBlendEnabled(false);
+                    bs.setReference(0.5f);
+                    bs.setTestFunction(BlendState.TestFunction.GreaterThan);
+                    bs.setTestEnabled(true);
+                    //s.setRenderState(as);
                 }
+                //System.out.println("Geometry " + model);
+//                TextureState ts = (TextureState)geo.getRenderState(RenderState.StateType.Texture);
+//                for (int i=0; i<ts.getNumberOfFixedUnits(); i++) {
+//                    Texture t = ts.getTexture(i);
+//                    if (t != null) {
+//                        System.out.println("Texture Unit " + i + ": " + t);
+//                    }
+//                }
             }
         }
     }

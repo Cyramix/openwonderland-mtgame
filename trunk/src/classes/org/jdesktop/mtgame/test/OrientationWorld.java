@@ -195,6 +195,7 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
 
         try {
             FileInputStream fs = new FileInputStream(assetDir + "OrientationWorld.mtg");
+            wm.setConfigBaseURL("file:/Users/runner/Desktop/models/");
             wm.loadConfiguration(fs, this);
         } catch (java.io.FileNotFoundException ex) {
             System.out.println(ex);
@@ -208,7 +209,7 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
     }
 
     public void configLoaded(ConfigInstance ci) {
-        System.out.println("------------- > Loaded: " + ci.getSceneGraph());
+        //System.out.println("------------- > Loaded: " + ci.getSceneGraph());
         //addModel(ci.getSceneGraph());
     }
 
@@ -587,8 +588,8 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
         JMenuItem loadItem = null;
         JMenuItem exitItem = null;
         JMenuItem createTeapotItem = null;
-        String textureSubdir = "file:" + assetDir + "textures/";
-        String textureSubdirName = assetDir + "textures/";
+        String textureSubdir = "file:" + assetDir + "";
+        String textureSubdirName = assetDir + "";
         int normalIndex = 0;
 
         // Construct the frame
@@ -660,7 +661,7 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
 
             pack();
             
-            //ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
+            ResourceLocatorTool.addResourceLocator(ResourceLocatorTool.TYPE_TEXTURE, this);
         }
 
         public void update(BufferedImage image) {
@@ -753,6 +754,7 @@ public class OrientationWorld implements WorldManager.ConfigLoadListener {
                     coordsOn = true;
                     System.out.println("Turning Coordinates On");
                 }
+                renderCapture.setEnable(coordsOn);
             }
             
             if (e.getSource() == gridButton) {
