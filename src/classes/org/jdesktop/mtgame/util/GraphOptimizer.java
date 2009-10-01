@@ -181,17 +181,18 @@ public class GraphOptimizer {
     }
 
     private void combineMeshes(Node root, RenderStateSet stateSet, LinkedList<SharedMesh> meshes) {
-        TriMesh firstMesh = meshes.get(0).getTarget();
-        if (firstMesh.getMode()!=TriMesh.Mode.Triangles) {
+        TriMesh firstMeshT = meshes.get(0).getTarget();
+        TriMesh firstMesh = meshes.get(0);
+        if (firstMeshT.getMode()!=TriMesh.Mode.Triangles) {
             // Only handle Trianlges (not strips or fans)
             return;
         }
 
-        boolean hasTangent = (firstMesh.getTangentBuffer()!=null);
-        boolean hasFog = (firstMesh.getFogBuffer()!=null);
-        boolean hasColor = (firstMesh.getColorBuffer()!=null);
-        int texUnitCount = firstMesh.getNumberOfUnits();
-        boolean hasTexCoords = (firstMesh.getTextureCoords().size()>0 && firstMesh.getTextureCoords().get(0)!=null);
+        boolean hasTangent = (firstMeshT.getTangentBuffer()!=null);
+        boolean hasFog = (firstMeshT.getFogBuffer()!=null);
+        boolean hasColor = (firstMeshT.getColorBuffer()!=null);
+        int texUnitCount = firstMeshT.getNumberOfUnits();
+        boolean hasTexCoords = (firstMeshT.getTextureCoords().size()>0 && firstMeshT.getTextureCoords().get(0)!=null);
 
         if (hasTangent) {
             Logger.getAnonymousLogger().warning("Unable to optimize SharedMesh, it uses Tangents. Please file a bug and include an example model");
@@ -373,7 +374,7 @@ public class GraphOptimizer {
             newMesh.setColorBuffer(newColorBuf);
 
         if (hasTexCoords) {
-            TexCoords tc = new TexCoords(newTexCoordsBuf, firstMesh.getTextureCoords(0).perVert);
+            TexCoords tc = new TexCoords(newTexCoordsBuf, firstMeshT.getTextureCoords(0).perVert);
             newMesh.setTextureCoords(tc, 0);
 //        for(int j=0; j<newTexCoords.size(); j++) {
 //            TexCoords tc = new TexCoords(newTexCoords.get(j));
