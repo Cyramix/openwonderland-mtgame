@@ -57,6 +57,7 @@ public class RenderManager {
      * TODO: Only 1 screen supported for now
      */
     private Renderer renderer = null;
+    private boolean headless = false;
     
     /**
      * The entity process controller - used for new frame triggers
@@ -567,6 +568,15 @@ public class RenderManager {
 
     boolean isRenderThread() {
         return renderer.isRenderThread();
+    }
+
+    /**
+     * Hack for WL 0.5 test harness. This is not public api
+     * @param headless
+     */
+    private void setWlTestHarness(boolean wlTestHarness) {
+        this.headless = wlTestHarness;
+        renderer.setWlTestHarness(wlTestHarness);
     }
 
 }

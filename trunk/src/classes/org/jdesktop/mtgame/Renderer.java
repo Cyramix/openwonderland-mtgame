@@ -404,6 +404,8 @@ class Renderer extends Thread {
      */
     private float[] renderComponentLODLevels = new float[0];
 
+    private boolean wlTestHarness = false;
+
     /**
      * A class to hold collision component actions
      */
@@ -641,6 +643,8 @@ class Renderer extends Thread {
         if (jmeRenderer == null) {
             jmeRenderer = displaySystem.getRenderer();
             jmeRenderer.getQueue().setTwoPassTransparency(true);
+            jmeRenderer.setHeadless(wlTestHarness);
+            System.err.println("CREATED RENDERER, isHeadless "+wlTestHarness);
         }
         bufferController.addBuffer(rb);
     }
@@ -885,7 +889,9 @@ class Renderer extends Thread {
                     updateTime = System.nanoTime();
                     //System.out.println("Update Time: " + (updateTime - frameStartTime)/1000000);
                     // Finally, render the scene
-                    bufferController.renderScene(displaySystem, jmeRenderer, this);
+                    if (!wlTestHarness) {
+                        bufferController.renderScene(displaySystem, jmeRenderer, this);
+                    }
                     bufferController.endFrame(jmeRenderer);
                     frameRenderTime = System.nanoTime();
                     //System.out.println("Render Time: " + (frameRenderTime - updateTime)/1000000);
@@ -2372,4 +2378,19 @@ class Renderer extends Thread {
             }
         }
     }
+
+    /**
+     * @return the headless
+     */
+    public boolean isWlTestHarness() {
+        return wlTestHarness;
+    }
+
+    /**
+     * @param headless the headless to set
+     */
+    public void setWlTestHarness(boolean wlTestHarness) {
+        this.wlTestHarness = wlTestHarness;
+    }
+
 }
