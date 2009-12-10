@@ -187,6 +187,13 @@ public class JBulletDynamicCollisionSystem extends CollisionSystem implements Ge
         return (dynamicsWorld);
     }
         
+     /**
+     * Rest the solver -- for deterministic behaviour
+     */
+    public void resetSolver() {
+        solver.reset();
+    }
+
     /**
      * TODO: Need to implement this
      */
