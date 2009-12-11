@@ -644,7 +644,6 @@ class Renderer extends Thread {
             jmeRenderer = displaySystem.getRenderer();
             jmeRenderer.getQueue().setTwoPassTransparency(true);
             jmeRenderer.setHeadless(wlTestHarness);
-            System.err.println("CREATED RENDERER, isHeadless "+wlTestHarness);
         }
         bufferController.addBuffer(rb);
     }
