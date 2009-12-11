@@ -298,7 +298,6 @@ import java.util.logging.Logger;
             TransformMatrix tm = new TransformMatrix(mesh.getWorldRotation(), mesh.getWorldTranslation());
             tm.setScale(mesh.getWorldScale());
             transform.add(tm);
-            System.err.println("Mesh Transform "+mesh.getName()+" "+mesh.getWorldRotation());
 
             mesh.removeFromParent();
         }
