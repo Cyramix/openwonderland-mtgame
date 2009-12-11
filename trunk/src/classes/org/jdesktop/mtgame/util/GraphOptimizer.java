@@ -18,6 +18,7 @@
 
 package org.jdesktop.mtgame.util;
 
+import com.jme.math.Quaternion;
 import com.jme.math.TransformMatrix;
 import com.jme.math.Vector3f;
 import com.jme.scene.Geometry;
@@ -44,7 +45,7 @@ import java.util.logging.Logger;
  *
  * @author paulby
  */
-public class GraphOptimizer {
+ public class GraphOptimizer {
 
     private HashMap<RenderStateSet, LinkedList<SharedMesh>> sharedMeshes = new HashMap();
     private final boolean print = false;
@@ -59,6 +60,17 @@ public class GraphOptimizer {
      */
     public void removeSharedMeshes(Node model) {
         sharedMeshes.clear();
+
+        // Make a note of the models transforms and then set them to identity.
+        // Once the graph has been updated the transform will be reset to
+        // it's original value. This prevents this transform being baked into
+        // the meshes.
+        Vector3f tmpTranslation = model.getLocalTranslation();
+        Vector3f tmpScale = model.getLocalScale();
+        Quaternion tmpRot = model.getLocalRotation();
+        model.setLocalRotation(new Quaternion());
+        model.setLocalTranslation(Vector3f.ZERO);
+        model.setLocalScale(Vector3f.UNIT_XYZ);
 
         // Update all the world transforms
         model.updateGeometricState(0, true);
@@ -79,6 +91,10 @@ public class GraphOptimizer {
 //        System.err.println("Final Metrics "+metrics.getReport());
 
         sharedMeshes.clear();
+
+        model.setLocalRotation(tmpRot);
+        model.setLocalTranslation(tmpTranslation);
+        model.setLocalScale(tmpScale);
     }
     
     /**
@@ -116,17 +132,24 @@ public class GraphOptimizer {
             System.err.print(n.getClass().getName()+"  ");
         }
         if (n instanceof SharedMesh) {
-            RenderStateSet stateSet = gatherRenderStates(n);
-            LinkedList meshList = sharedMeshes.get(stateSet);
-            if (meshList==null) {
-                meshList = new LinkedList();
-                sharedMeshes.put(stateSet, meshList);
-            }
-            meshList.add((SharedMesh)n);
-            metrics.sharedMeshCount++;
-            if (print) {
-                System.err.print(" "+n.getWorldTranslation());
-            }
+            // TODO example of ommiting a mesh from the optimization for cases
+            // where the user wants to manipulate the transform of a mesh
+//            if (n.getName().equals("mesh5-geometry-material_0_16")) {
+//                // Skip
+//                System.err.println("SKIP MESH");
+//            } else {
+                RenderStateSet stateSet = gatherRenderStates(n);
+                LinkedList meshList = sharedMeshes.get(stateSet);
+                if (meshList==null) {
+                    meshList = new LinkedList();
+                    sharedMeshes.put(stateSet, meshList);
+                }
+                meshList.add((SharedMesh)n);
+                metrics.sharedMeshCount++;
+                if (print) {
+                    System.err.print(" "+n.getWorldTranslation());
+                }
+//            }
         } else if (n instanceof Geometry) {
             metrics.geometryCount++;
         }
@@ -275,6 +298,7 @@ public class GraphOptimizer {
             TransformMatrix tm = new TransformMatrix(mesh.getWorldRotation(), mesh.getWorldTranslation());
             tm.setScale(mesh.getWorldScale());
             transform.add(tm);
+            System.err.println("Mesh Transform "+mesh.getName()+" "+mesh.getWorldRotation());
 
             mesh.removeFromParent();
         }
