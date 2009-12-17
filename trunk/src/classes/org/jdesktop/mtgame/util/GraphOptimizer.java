@@ -28,6 +28,7 @@ import com.jme.scene.Spatial;
 import com.jme.scene.TexCoords;
 import com.jme.scene.TriMesh;
 import com.jme.scene.state.RenderState;
+import com.jme.scene.state.TextureState;
 import com.jme.util.geom.BufferUtils;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -215,7 +216,7 @@ import java.util.logging.Logger;
         boolean hasFog = (firstMeshT.getFogBuffer()!=null);
         boolean hasColor = (firstMeshT.getColorBuffer()!=null);
         int texUnitCount = firstMeshT.getNumberOfUnits();
-        boolean hasTexCoords = (firstMeshT.getTextureCoords().size()>0 && firstMeshT.getTextureCoords().get(0)!=null);
+        boolean hasTexCoords = stateSet.containsState(TextureState.class);
 
         if (hasTangent) {
             Logger.getAnonymousLogger().warning("Unable to optimize SharedMesh, it uses Tangents. Please file a bug and include an example model");
@@ -276,7 +277,7 @@ import java.util.logging.Logger;
                     tc.coords.get(tcf);
                     texCoords.add(tcf);
                     tcSize += tcf.length;
-                } 
+                }
             }
 
 //            for(int unit=0; unit<texUnitCount; unit++) {
@@ -444,6 +445,33 @@ import java.util.logging.Logger;
             for(RenderState state : stateSet) {
                 s.setRenderState(state);
             }
+        }
+
+//        public void print(Spatial leaf) {
+//            System.err.println(leaf);
+//            for(RenderState s : stateSet) {
+//                System.err.println("  "+s);
+//            }
+//        }
+
+        /**
+         * Returns true if this set contains a state of the specified class.
+         * Specifically checks if stateClass.isAssignableFrom(...) is true for
+         * all states in the set.
+         * @param stateClass
+         * @return
+         */
+        public boolean containsState(Class<? extends RenderState> stateClass) {
+            boolean ret = false;
+
+            for(RenderState s : stateSet) {
+                if (stateClass.isAssignableFrom(s.getClass())) {
+                    ret = true;
+                    break;
+                }
+            }
+
+            return ret;
         }
     }
 
