@@ -1,4 +1,33 @@
 /*
+ * Copyright (c) 2010, Open Wonderland Foundation. All rights reserved.
+ *
+ *    Redistribution and use in source and binary forms, with or without
+ *    modification, are permitted provided that the following conditions
+ *    are met:
+ *
+ *  . Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  . Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  . Neither the name of Sun Microsystems, Inc., nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
  * Copyright (c) 2009, Sun Microsystems, Inc. All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -34,6 +63,10 @@ import com.jme.scene.state.BlendState;
 import com.jme.scene.state.LightState;
 import com.jme.scene.state.RenderState;
 import com.jme.light.LightNode;
+import com.jme.util.export.JMEExporter;
+import com.jme.util.export.JMEImporter;
+import com.jme.util.export.Savable;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -43,6 +76,11 @@ import java.util.ArrayList;
  * @author Doug Twilleager
  */
 public class RenderComponent extends EntityComponent {
+    /**
+     * The key in UserData for the Entity associated with a spatial
+     */
+    static final String ENTITY_KEY = "org.jdesktop.mtgame.RenderComponent.Entity";
+
     /**
      * The base node for the JME Scene Graph
      */
@@ -141,6 +179,8 @@ public class RenderComponent extends EntityComponent {
 
     public void setEntity(Entity entity) {
         super.setEntity(entity);
+
+        getSceneRoot().setUserData(ENTITY_KEY, new EntityRef(entity));
     }
 
     /**
@@ -193,6 +233,7 @@ public class RenderComponent extends EntityComponent {
         sceneRoot.setLive(false);
         sceneRoot = newRoot;
         newRoot.setLive(true);
+        newRoot.setUserData(ENTITY_KEY, new EntityRef(getEntity()));
         updateAttachPoint(wm, attachPoint, false);
         updateOrtho(wm, ortho, false);
         updateLightState(wm, false);
@@ -438,5 +479,37 @@ public class RenderComponent extends EntityComponent {
             light = (LightNode) lights.get(i);
         }
         return (light);
+    }
+
+    /**
+     * A piece of user data in a spatial that associates that spatial with
+     * its owning entity. This reference is added to the root spatial of
+     * a render component, so that statistics about that entity can be tracked
+     * by the renderer.
+     */
+    static class EntityRef implements Savable {
+        private final Entity entity;
+
+        EntityRef(Entity entity) {
+            this.entity = entity;
+        }
+
+        Entity getEntity() {
+            return entity;
+        }
+
+        public Class getClassTag() {
+            return EntityRef.class;
+        }
+
+        public void write(JMEExporter jmee) throws IOException {
+            // do nothing - this data is transient
+        }
+
+        public void read(JMEImporter jmei) throws IOException {
+            // do nothing - this data is transient
+        }
+
+
     }
 }
