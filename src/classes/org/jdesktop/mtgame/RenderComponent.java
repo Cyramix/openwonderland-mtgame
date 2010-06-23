@@ -445,6 +445,7 @@ public class RenderComponent extends EntityComponent {
         }
         lightState.setEnabled(lightingEnabled);
         sceneRoot.setRenderState(lightState);
+        sceneRoot.setLightCombineMode(Spatial.LightCombineMode.Replace);
 
         if (clearUpdate) {
             pendingUpdate = false;
