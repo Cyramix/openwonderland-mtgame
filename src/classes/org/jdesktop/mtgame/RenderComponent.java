@@ -92,6 +92,12 @@ public class RenderComponent extends EntityComponent {
     private Node attachPoint = null;
 
     /**
+     * A non-collidable dummy node to insert between this node and its
+     * parent attach point.
+     */
+    private Node attachRoot = null;
+
+    /**
      * A flag to indicate whether or not this render component should
      * use an orthographic projection
      */
@@ -266,13 +272,28 @@ public class RenderComponent extends EntityComponent {
                 current = parent;
                 parent = parent.getParent();
             }
-            attachPoint.detachChild(sceneRoot);
+
+            if (attachRoot != null) {
+                attachPoint.detachChild(attachRoot);
+                attachRoot.detachChild(sceneRoot);
+                attachRoot = null;
+            }
+
             wm.addToUpdateList(current);
         }
 
         // Now, see if we need to notify new attachment
         if (newAttachPoint != null) {
-            newAttachPoint.attachChild(sceneRoot);
+            // OWL issue #103: add in a dummy node here that will act as a
+            // break for things like picking down the tree. If a child is
+            // pickable, it will have a separate collision component, which
+            // will be queried separately during collision and pick checks.
+            attachRoot = new Node("Attach point");
+            attachRoot.setIsCollidable(false);
+            attachRoot.setLightCombineMode(Spatial.LightCombineMode.Off);
+            attachRoot.attachChild(sceneRoot);
+
+            newAttachPoint.attachChild(attachRoot);
             wm.addToUpdateList(newAttachPoint);
         }
 
