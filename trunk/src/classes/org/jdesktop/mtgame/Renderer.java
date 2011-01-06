@@ -1,4 +1,33 @@
 /*
+ * Copyright (c) 2010, Open Wonderland Foundation. All rights reserved.
+ *
+ *    Redistribution and use in source and binary forms, with or without
+ *    modification, are permitted provided that the following conditions
+ *    are met:
+ *
+ *  . Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  . Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  . Neither the name of Sun Microsystems, Inc., nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
  * Copyright (c) 2009, Sun Microsystems, Inc. All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -29,40 +58,42 @@
 
 package org.jdesktop.mtgame;
 
-import java.util.ArrayList;
-import java.awt.Canvas;
-import java.awt.event.*;
-
+import com.jme.light.LightNode;
+import com.jme.math.Matrix4f;
+import com.jme.math.Vector3f;
+import com.jme.renderer.AbstractCamera;
+import com.jme.renderer.Camera;
+import com.jme.renderer.ColorRGBA;
+import com.jme.renderer.jogl.JOGLContextCapabilities;
+import com.jme.renderer.jogl.JOGLRenderer;
+import com.jme.renderer.pass.Pass;
 import com.jme.scene.Node;
 import com.jme.scene.Skybox;
 import com.jme.scene.Spatial;
-import com.jme.scene.Geometry;
-import com.jme.scene.shape.Quad;
-import com.jme.scene.Spatial.CullHint;
-import com.jme.math.Vector3f;
-import com.jme.light.LightNode;
-import com.jme.system.*;
-import com.jme.renderer.*;
-import com.jme.renderer.pass.Pass;
-import com.jme.scene.state.*;
+import com.jme.scene.state.BlendState;
+import com.jme.scene.state.RenderState;
+import com.jme.system.DisplaySystem;
+import com.jme.system.JmeException;
 import com.jme.system.canvas.JMECanvas;
 import com.jme.system.canvas.SimpleCanvasImpl;
-import javax.media.opengl.GLCanvas;
-import javax.media.opengl.GLContext;
-import javax.media.opengl.GL;
-import javax.media.opengl.Threading;
+import com.jme.system.lwjgl.LWJGLSystemProvider;
 import com.jmex.awt.jogl.JOGLAWTCanvasConstructor;
 import com.jmex.awt.lwjgl.LWJGLAWTCanvasConstructor;
-import com.jme.system.lwjgl.LWJGLSystemProvider;
-import com.jme.system.lwjgl.LWJGLDisplaySystem;
+import java.awt.Canvas;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelListener;
 import java.lang.reflect.Method;
-import javolution.util.FastMap;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.media.opengl.GLCanvas;
+import javax.media.opengl.GLContext;
+import javax.media.opengl.Threading;
 import javolution.util.FastList;
-import java.lang.Exception;
+import javolution.util.FastMap;
 import org.jdesktop.mtgame.shader.Shader;
-import com.jme.math.Matrix4f;
-import com.jme.renderer.jogl.JOGLRenderer;
-import com.jme.renderer.jogl.JOGLContextCapabilities;
 
 /**
  * This is the main rendering thread for a screen.  All jME calls must be 
@@ -71,6 +102,12 @@ import com.jme.renderer.jogl.JOGLContextCapabilities;
  * @author Doug Twilleager
  */
 class Renderer extends Thread {
+    /**
+     * A logger
+     */
+    private static final Logger LOGGER =
+            Logger.getLogger(Renderer.class.getName());
+
     /**
      * The RenderManager for this renderer
      */
@@ -1259,9 +1296,16 @@ class Renderer extends Thread {
         synchronized (updateList) {
             if (updateList.size() != 0) {
                 for (int i = 0; i < updateList.size(); i++) {
-                    Spatial s = (Spatial) updateList.get(i);
-                    s.updateGeometricState(referenceTime, true);
-                    s.updateRenderState();
+                    Spatial s = null;
+
+                    try {
+                        s = (Spatial) updateList.get(i);
+                        s.updateGeometricState(referenceTime, true);
+                        s.updateRenderState();
+                    } catch (Throwable t) {
+                        LOGGER.log(Level.WARNING, "Error updating object " +
+                                   (s==null?"unknown":s.getName()), t);
+                    }
                 }
                 updateList.clear();
                 notifyNodeChangedListeners();
