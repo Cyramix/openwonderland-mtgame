@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Open Wonderland Foundation. All rights reserved.
+ * Copyright (c) 2010 - 2011, Open Wonderland Foundation. All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
  *    modification, are permitted provided that the following conditions
@@ -11,7 +11,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  . Neither the name of Sun Microsystems, Inc., nor the names of its
+ *  . Neither the name of Open Wonderland Foundation, nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
@@ -60,6 +60,9 @@ package org.jdesktop.mtgame;
 
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.jdesktop.mtgame.WorldManager.WaitForLiveness;
 
 /**
  * The Entity object is the base object for all things in the game.  It uses
@@ -78,25 +81,15 @@ public class Entity {
     * The component map contains all features of the entity.  The map is 
     * indexed by a string.  The default strings are declared above.
     */
-   private HashMap<Class, EntityComponent> componentMap = new HashMap();
-
-   /**
-    * The partition within the current space which this entity resides
-    * TODO: Should this be an object?
-    */
-   private int partition = 0;
+   private final Map<Class, EntityComponent> componentMap =
+           new HashMap<Class, EntityComponent>();
 
    /**
     * The Sub-entities for this Entity.  It is just a list of entities
     * with a link back to their parent.
     */
-   private ArrayList subEntities = new ArrayList();
+   private final List<Entity> subEntities = new ArrayList<Entity>();
    
-   /**
-    * The list of spaces that I belong in
-    */
-   private ArrayList spaces = new ArrayList();
-
    /**
     * If this is a subEntity, it has a link to it's parent.
     * The default is null - no parent.
@@ -179,13 +172,27 @@ public class Entity {
     * Remove a component from the entity
     */
    public void removeComponent(Class key) {
+       WaitForLiveness waiter = null;
+
        synchronized (componentMap) {
            EntityComponent c = (EntityComponent) componentMap.remove(key);
            if (c != null) {
                c.setEntity(null);
                if (worldManager != null) {
-                   worldManager.removeComponent(c);
+                   waiter = worldManager.removeComponent(c);
                }
+           }
+       }
+       
+       // OWL issue #163: if we removed the component from the world manager, 
+       // wait for it to be marked as not live by the renderer. Note
+       // that we are not holding any locks, since this method will potentially
+       // block for a while
+       if (waiter != null) {
+           try {
+               waiter.waitFor();
+           } catch (InterruptedException ex) {
+               // ignore
            }
        }
    }
@@ -261,16 +268,20 @@ public class Entity {
     * Get the number of sub entities
     */
    public int numEntities() {
-       return (subEntities.size());
+       synchronized (subEntities) {
+           return (subEntities.size());
+       }
    }
    
    /**
     * Get the sub entity at the given index
     */
    public Entity getEntity(int index) {
-       return ((Entity)subEntities.get(index));
+       synchronized (subEntities) {
+           return ((Entity)subEntities.get(index));
+       }
    }
-   
+
    /**
     * Get the entities name
     * @return The name
