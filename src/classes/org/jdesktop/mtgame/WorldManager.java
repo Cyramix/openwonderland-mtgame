@@ -1,4 +1,33 @@
 /*
+ * Copyright (c) 2010 - 2011, Open Wonderland Foundation. All rights reserved.
+ *
+ *    Redistribution and use in source and binary forms, with or without
+ *    modification, are permitted provided that the following conditions
+ *    are met:
+ *
+ *  . Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  . Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  . Neither the name of Open Wonderland Foundation, nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
  * Copyright (c) 2009, Sun Microsystems, Inc. All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -32,11 +61,9 @@ package org.jdesktop.mtgame;
 import com.jme.scene.Spatial;
 import com.jme.renderer.pass.Pass;
 
-import com.jme.scene.Node;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Collection;
 import java.awt.Canvas;
 import java.io.InputStream;
 import java.net.URL;
@@ -214,6 +241,8 @@ public class WorldManager {
             Iterator comps = e.getComponents().iterator();
             while (comps.hasNext()) {
                 c = (EntityComponent) comps.next();
+                // OWL issue #163: do not wait for the component if we are
+                // removing the entire entity
                 removeComponent(c);
             }
 
@@ -244,8 +273,10 @@ public class WorldManager {
     /**
      * This adds a component, which is being added to an entity which is
      * already being processed
+     * @return a task which can be used to wait for the component
+     * to be marked live.
      */
-    void addComponent(EntityComponent c) {
+    WaitForLiveness addComponent(EntityComponent c) {
         if (RenderComponent.class.isInstance(c) ||
             CollisionComponent.class.isInstance(c) ||
             JMECollisionComponent.class.isInstance(c) ||
@@ -260,13 +291,19 @@ public class WorldManager {
             ProcessorCollectionComponent.class.isInstance(c)) {
             processorManager.addComponent(c);
         }
+
+        // Return a future that will wait until the component is marked
+        // as live. Callers may choose to wait on this condition or ignore it
+        return new WaitForLiveness(c, true);
     }
     
     /**
      * This adds a component, which is being added to an entity which is
      * already being processed
+     * @return a task which can be used to wait for the component
+     * to be marked no longer live.
      */
-    void removeComponent(EntityComponent c) {
+    WaitForLiveness removeComponent(EntityComponent c) {
         if (RenderComponent.class.isInstance(c) ||
             CollisionComponent.class.isInstance(c) ||
             JMECollisionComponent.class.isInstance(c) ||
@@ -282,16 +319,39 @@ public class WorldManager {
             processorManager.removeComponent(c);
         }
 
-        // Don't return until the appropriate subsystem has marked
-        // the component as non-live
-        if (Thread.currentThread() != renderManager.getRenderer()) {
-            while (c.isLive() && !renderManager.getDone()) {
-                try {
-                    Thread.currentThread().sleep(0, 10);
-                } catch (java.lang.InterruptedException ie) {
-                    // Just wrap around
-                }
+        // Return a future that will wait until the component is marked
+        // as no longer live. Callers may choose to wait on this condition
+        // or ignore it
+        return new WaitForLiveness(c, false);
+    }
+
+    class WaitForLiveness {
+        private final boolean condition;
+        private final EntityComponent c;
+
+        public WaitForLiveness(EntityComponent c, boolean condition) {
+            this.c = c;
+            this.condition = condition;
+        }
+
+        public boolean waitFor() throws InterruptedException {
+            // if we are already on the render thread, don't do anything
+            // since blocking will prevent the item from ever being set
+            // live
+            if (Thread.currentThread() == renderManager.getRenderer()) {
+                return condition;
             }
+
+            // if we are not on the renderer thread, wait until liveness
+            // matches condition or the renderer exits
+            while (!renderManager.getDone() && c.isLive() != condition) {
+                // TODO: busy (ish) wait seems like a bad idea -- unless
+                // this happens very quickly, we should do a wait/notify
+                // instead
+                Thread.sleep(0, 10);
+            }
+
+            return c.isLive();
         }
     }
 
