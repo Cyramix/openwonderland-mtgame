@@ -1670,42 +1670,6 @@ class Renderer extends Thread {
             }
         }
     }
-    
-    /**
-     * Attach a render component with an attach point to the appropriate place
-     * Add the highest parent to the update list.
-     */
-    void processAttachPoint(RenderComponent rc, boolean addComponent) {
-        Node sceneRoot = rc.getSceneRoot();
-        Node attachPoint = rc.getAttachPoint();
-
-        if (addComponent) {
-            attachPoint.attachChild(sceneRoot);
-        } else {
-            attachPoint.detachChild(sceneRoot);
-        }
-        
-        // Get the highest parent
-        sceneRoot = attachPoint;
-        Node parent = sceneRoot.getParent();
-        while (parent != null) {
-            sceneRoot = parent;
-            parent = parent.getParent();
-        }
-        addToUpdateList(sceneRoot);
-
-        if (attachPoint == null) {
-            if (rc.isLive() && !renderScenes.contains(rc)) {
-                addToRenderTechnique(rc);
-                renderScenes.add(rc);
-            }
-        } else {
-            if (rc.isLive() && renderScenes.contains(rc)) {
-                removeFromRenderTechnique(rc);
-                renderScenes.remove(rc);
-            }
-        }
-    }
 
     /**
      * Add a geometry lod to track.
@@ -2370,7 +2334,10 @@ class Renderer extends Thread {
             } else {
                 processGraphRemove(sg);
                 if (sc.getAttachPoint() != null) {
-                    processAttachPoint(sc, false);
+                    // OWL issue #148: use the RenderComponent's method
+                    // for removing itself from its attachpoint, which
+                    // properly handles detaching
+                    sc.updateAttachPoint(worldManager, null, false);
                 }
             }
         }
