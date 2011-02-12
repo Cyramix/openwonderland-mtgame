@@ -1216,18 +1216,7 @@ class Renderer extends Thread {
                 }
 
                 if (Thread.currentThread() == this) {
-                    rc.updateAttachPoint(worldManager, attachPoint, true);
-                    if (attachPoint == null) {
-                        if (rc.isLive() && !renderScenes.contains(rc)) {
-                            addToRenderTechnique(rc);
-                            renderScenes.add(rc);
-                        }
-                    } else {
-                        if (rc.isLive() && renderScenes.contains(rc)) {
-                            removeFromRenderTechnique(rc);
-                            renderScenes.remove(rc);
-                        }
-                    }
+                    processAttachPointChanged(rc, attachPoint);
                 } else {
                     AttachPointOp oop = new AttachPointOp(rc, attachPoint);
                     attachPoints.add(oop);
@@ -2261,9 +2250,30 @@ class Renderer extends Thread {
         synchronized (attachPoints) {
             for (int i=0; i<attachPoints.size(); i++) {
                 AttachPointOp oop = attachPoints.get(i);
-                oop.rc.updateAttachPoint(worldManager, oop.attachPoint, true);
+                processAttachPointChanged(oop.rc, oop.attachPoint);
             }
             attachPoints.clear();
+        }
+    }
+
+    /**
+     * Process a single attachPoint change
+     */
+    void processAttachPointChanged(RenderComponent rc, Node attachPoint) {
+        rc.updateAttachPoint(worldManager, attachPoint, true);
+
+        // preserve the invariant that RenderComponents from children
+        // should not be in the list of renderScenes
+        if (attachPoint == null) {
+            if (rc.isLive() && !renderScenes.contains(rc)) {
+                addToRenderTechnique(rc);
+                renderScenes.add(rc);
+            }
+        } else {
+            if (rc.isLive() && renderScenes.contains(rc)) {
+                removeFromRenderTechnique(rc);
+                renderScenes.remove(rc);
+            }
         }
     }
 
@@ -2337,7 +2347,7 @@ class Renderer extends Thread {
                     // OWL issue #148: use the RenderComponent's method
                     // for removing itself from its attachpoint, which
                     // properly handles detaching
-                    sc.updateAttachPoint(worldManager, null, false);
+                    sc.detachAttachPoint(worldManager);
                 }
             }
         }

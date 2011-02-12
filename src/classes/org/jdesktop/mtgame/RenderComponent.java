@@ -264,23 +264,8 @@ public class RenderComponent extends EntityComponent {
      * Do the processing of a changed attach point
      */
     void updateAttachPoint(WorldManager wm, Node newAttachPoint, boolean clearUpdate) {
-        if (attachPoint != null) {
-            // Detach and put the highest parent on the update list
-            Node current = attachPoint;
-            Node parent = current.getParent();
-            while (parent != null) {
-                current = parent;
-                parent = parent.getParent();
-            }
-
-            if (attachRoot != null) {
-                attachPoint.detachChild(attachRoot);
-                attachRoot.detachChild(sceneRoot);
-                attachRoot = null;
-            }
-
-            wm.addToUpdateList(current);
-        }
+        // first detach the current attach point
+        detachAttachPoint(wm);
 
         // Now, see if we need to notify new attachment
         if (newAttachPoint != null) {
@@ -300,6 +285,30 @@ public class RenderComponent extends EntityComponent {
         attachPoint = newAttachPoint;
         if (clearUpdate) {
             pendingUpdate = false;
+        }
+    }
+
+    /**
+     * Detach the current attach point without changing the value of
+     * the attach Point variable or clearing the update flag.
+     */
+    void detachAttachPoint(WorldManager wm) {
+        if (attachPoint != null) {
+            // Detach and put the highest parent on the update list
+            Node current = attachPoint;
+            Node parent = current.getParent();
+            while (parent != null) {
+                current = parent;
+                parent = parent.getParent();
+            }
+
+            if (attachRoot != null) {
+                attachPoint.detachChild(attachRoot);
+                attachRoot.detachChild(sceneRoot);
+                attachRoot = null;
+            }
+
+            wm.addToUpdateList(current);
         }
     }
 
