@@ -606,7 +606,7 @@ class Renderer extends Thread {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             }
         }
     } 
@@ -671,7 +671,7 @@ class Renderer extends Thread {
         //lwjglDisplay = (LWJGLDisplaySystem) displaySystem;
         //joglDisplay = (JOGLDisplaySystem) displaySystem;
         } catch (JmeException e) {
-            System.out.println(e);
+            LOGGER.log(Level.WARNING, null, e);
         }
         initialized = true;
     }
@@ -690,7 +690,7 @@ class Renderer extends Thread {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             }
         }
     }
@@ -796,7 +796,7 @@ class Renderer extends Thread {
             try {
                 Thread.sleep(333, 0);
             } catch (InterruptedException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             }
         }
     }
@@ -879,7 +879,7 @@ class Renderer extends Thread {
                 try {
                     Thread.sleep(333, 0);
                 } catch (InterruptedException e) {
-                    System.out.println(e);
+                    LOGGER.log(Level.WARNING, null, e);
                 }             
             }
             
@@ -987,7 +987,7 @@ class Renderer extends Thread {
                     //System.out.println("Sleeping for " + numMillis + ", " + numNanos);
                     Thread.sleep(numMillis, numNanos);
                 } catch (InterruptedException e) {
-                    System.out.println(e);
+                    LOGGER.log(Level.WARNING, null, e);
                 }
             }
 
@@ -1151,7 +1151,7 @@ class Renderer extends Thread {
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException e) {
-                        System.out.println(e);
+                        LOGGER.log(Level.WARNING, null, e);
                     }
                 }
             }
@@ -1266,12 +1266,15 @@ class Renderer extends Thread {
         for (int i = 0; i < rus.length; i++) {
             try {
                 rus[i].updater.update(rus[i].arg);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer update: " + e, e);
+            } finally {
+                // OWL issue #170: make sure to mark the updater as done,
+                // even if there was an error, to prevent locking up
+                // the whole system
                 if (rus[i].wait) {
                     rus[i].done = true;
                 }
-            } catch (Exception e) {
-                System.out.println("MTGame: Exception Caught in renderer update: " + e);
-                e.printStackTrace();
             }
         }
 
@@ -1388,22 +1391,20 @@ class Renderer extends Thread {
                     try {
                         pc.commit(pc.getCurrentTriggerCollection());
                     } catch (Exception e) {
-                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                     }
                     acquireSwingLock();
                 } else {
                     try {
                         pc.commit(pc.getCurrentTriggerCollection());
                     } catch (Exception e) {
-                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                     }
                 }
                 pc.clearTriggerCollection();
 
                 if (pc == pc.getNextInChain()) {
-                    System.out.println("MT Game Warning: Processor found twice in chain.");
+                    LOGGER.warning("MT Game Warning: Processor found twice in chain.");
                     continue;
                 }
 
@@ -1415,21 +1416,19 @@ class Renderer extends Thread {
                         try {
                             pc.commit(pc.getCurrentTriggerCollection());
                         } catch (Exception e) {
-                            System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                            e.printStackTrace();
+                            LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                         }
                         acquireSwingLock();
                     } else {
                         try {
                             pc.commit(pc.getCurrentTriggerCollection());
                         } catch (Exception e) {
-                            System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                            e.printStackTrace();
+                            LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                         }
                     }
                     pc.clearTriggerCollection();
                     if (pc == pc.getNextInChain()) {
-                        System.out.println("MT Game Warning: Processor found twice in chain.");
+                        LOGGER.warning("MT Game Warning: Processor found twice in chain.");
                         break;
                     }
                     pc = pc.getNextInChain();
@@ -1459,7 +1458,7 @@ class Renderer extends Thread {
             try {
                 wait();
             } catch (InterruptedException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             }
         }     
     }
@@ -1496,16 +1495,14 @@ class Renderer extends Thread {
                 try {
                     pc.commit(pc.getCurrentTriggerCollection());
                 } catch (Exception e) {
-                    System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                    e.printStackTrace();
+                    LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                 }
                 acquireSwingLock();
             } else {
                 try {
                     pc.commit(pc.getCurrentTriggerCollection());
                 } catch (Exception e) {
-                    System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                    e.printStackTrace();
+                    LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                 }
             }
             pc.clearTriggerCollection();
@@ -1515,7 +1512,7 @@ class Renderer extends Thread {
             
             // Process the chain
             if (pc == pc.getNextInChain()) {
-                System.out.println("MT Game Warning: Processor found twice in chain.");
+                LOGGER.warning("MT Game Warning: Processor found twice in chain.");
                 continue;
             }
             pc = pc.getNextInChain();
@@ -1526,21 +1523,19 @@ class Renderer extends Thread {
                     try {
                         pc.commit(pc.getCurrentTriggerCollection());
                     } catch (Exception e) {
-                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                     }
                     acquireSwingLock();
                 } else {
                     try {
                         pc.commit(pc.getCurrentTriggerCollection());
                     } catch (Exception e) {
-                        System.out.println("MTGame: Exception Caught in renderer commit: " + e);
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
                     }
                 }
                 pc.clearTriggerCollection();
                 if (pc == pc.getNextInChain()) {
-                    System.out.println("MT Game Warning: Processor found twice in chain.");
+                    LOGGER.warning("MT Game Warning: Processor found twice in chain.");
                     break;
                 }
                 pc = pc.getNextInChain();
@@ -2040,11 +2035,11 @@ class Renderer extends Thread {
             try {
                 rt = (RenderTechnique)Class.forName(rc.getRenderTechniqueName()).newInstance();
             } catch (InstantiationException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             } catch (ClassNotFoundException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             } catch (IllegalAccessException e) {
-                System.out.println(e);
+                LOGGER.log(Level.WARNING, null, e);
             }
 
             if (rt != null) {
@@ -2072,7 +2067,7 @@ class Renderer extends Thread {
         }
 
         if (i == renderTechniques.size()) {
-            System.out.println("ERROR: RenderTechnique Not Found");
+            LOGGER.warning("ERROR: RenderTechnique Not Found");
         }
     }
 
