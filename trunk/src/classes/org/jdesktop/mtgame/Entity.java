@@ -62,6 +62,8 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import org.jdesktop.mtgame.WorldManager.WaitForLiveness;
 
 /**
@@ -95,7 +97,13 @@ public class Entity {
     * The default is null - no parent.
     */
    private Entity parent = null;
-   
+
+   /**
+    * The tree listeners for this entity
+    */
+   private final Set<EntityTreeListener> treeListeners =
+           new CopyOnWriteArraySet<EntityTreeListener>();
+
    /**
     * The entity manager for this entity.  If it is null, the system
     * doesn't have this entity
@@ -133,6 +141,8 @@ public class Entity {
                worldManager.addComponent(component);
            }
        }
+
+       fireEntityComponentChange(this, component, true);
    }
    
    /**
@@ -173,9 +183,10 @@ public class Entity {
     */
    public void removeComponent(Class key) {
        WaitForLiveness waiter = null;
+       EntityComponent c;
 
        synchronized (componentMap) {
-           EntityComponent c = (EntityComponent) componentMap.remove(key);
+           c = (EntityComponent) componentMap.remove(key);
            if (c != null) {
                c.setEntity(null);
                if (worldManager != null) {
@@ -195,13 +206,20 @@ public class Entity {
                // ignore
            }
        }
-   }
+
+       if (c != null) {
+            fireEntityComponentChange(this, c, true);
+       }
+    }
 
    /**
     * Set the parent of an Entity
     */
    void setParent(Entity entity) {
        parent = entity;
+
+       // notify listeners of the change
+       fireEntityParentChange(this, parent);
    }
 
    
@@ -289,8 +307,83 @@ public class Entity {
    public String getName() {
        return (name);
    }
-   
+
+   /**
+    * Add a tree listener
+    * @param listener the tree listener to add
+    */
+   public void addEntityTreeListener(EntityTreeListener listener) {
+       treeListeners.add(listener);
+   }
+
+   /**
+    * Remove a tree listener
+    * @param listener the listener to remove
+    */
+   public void removeEntityTreeListener(EntityTreeListener listener) {
+       treeListeners.remove(listener);
+   }
+
+   /**
+    * Notify tree listeners of a change to this entity's parent
+    * @param entity the entity that changed
+    * @param parent the new entity parent
+    */
+   protected void fireEntityParentChange(Entity entity, Entity parent) {
+       // notify listeners
+       for (EntityTreeListener listener : treeListeners) {
+           listener.parentChanged(entity, parent);
+       }
+
+       // notify children
+       for (Entity child : subEntities) {
+           child.fireEntityParentChange(entity, parent);
+       }
+   }
+
+   /**
+    * Notify tree listeners of a change to this entity's parent
+    * @param entity the entity that changed
+    * @param parent the new entity parent
+    */
+   protected void fireEntityComponentChange(Entity entity,
+           EntityComponent component, boolean added)
+   {
+       // notify listeners
+       for (EntityTreeListener listener : treeListeners) {
+           listener.componentChanged(entity, component, added);
+       }
+
+       // notify children
+       for (Entity child : subEntities) {
+           child.fireEntityComponentChange(entity, component, added);
+       }
+   }
+
    public String toString() {
        return(name+" "+super.toString());
+   }
+
+   /**
+    * Interface will be notified when parenting changes anywhere in the
+    * entity tree
+    */
+   public interface EntityTreeListener {
+       /**
+        * Notification that the given entity's parent has changed
+        * @param entity the entity whose parent changed
+        * @param parent the new parent entity (may be null)
+        */
+       public void parentChanged(Entity entity, Entity parent);
+
+       /**
+        * Notification that a component has been added or removed
+        * @param entity the entity where the component changed
+        * @param component the component that was added or removed
+        * @param added true if the component was added, or false if it was
+        * removed
+        */
+       public void componentChanged(Entity entity, EntityComponent component,
+                                    boolean added);
    }
 }
