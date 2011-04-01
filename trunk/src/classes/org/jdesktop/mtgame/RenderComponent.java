@@ -273,9 +273,7 @@ public class RenderComponent extends EntityComponent {
             // break for things like picking down the tree. If a child is
             // pickable, it will have a separate collision component, which
             // will be queried separately during collision and pick checks.
-            attachRoot = new Node("Attach point");
-            attachRoot.setIsCollidable(false);
-            attachRoot.setLightCombineMode(Spatial.LightCombineMode.Off);
+            attachRoot = new AttachPointNode("Attach point");
             attachRoot.attachChild(sceneRoot);
 
             newAttachPoint.attachChild(attachRoot);
@@ -540,7 +538,19 @@ public class RenderComponent extends EntityComponent {
         public void read(JMEImporter jmei) throws IOException {
             // do nothing - this data is transient
         }
+    }
 
+    /**
+     * A class that represents an attachment point. This can be used to
+     * determine when a node is part of a different entity when walking the
+     * tree.
+     */
+    public static class AttachPointNode extends Node {
+        public AttachPointNode(String name) {
+            super (name);
 
+            setIsCollidable(false);
+            setLightCombineMode(Spatial.LightCombineMode.Off);
+        }
     }
 }
