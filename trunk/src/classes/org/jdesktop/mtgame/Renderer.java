@@ -1517,22 +1517,27 @@ class Renderer extends Thread {
             }
             pc = pc.getNextInChain();
             while (pc != null) {
-                pc.compute(pc.getCurrentTriggerCollection());
-                if (pc.getSwingSafe()) {
-                    releaseSwingLock();
-                    try {
-                        pc.commit(pc.getCurrentTriggerCollection());
-                    } catch (Exception e) {
-                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
+                boolean releasedSwingLock = false;
+                
+                try {
+                    pc.compute(pc.getCurrentTriggerCollection());
+                
+                    if (pc.getSwingSafe()) {
+                        releaseSwingLock();
+                        releasedSwingLock = true;
                     }
-                    acquireSwingLock();
-                } else {
-                    try {
-                        pc.commit(pc.getCurrentTriggerCollection());
-                    } catch (Exception e) {
-                        LOGGER.log(Level.WARNING, "MTGame: Exception Caught in renderer commit: " + e, e);
+                        
+                    pc.commit(pc.getCurrentTriggerCollection());
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "MTGame: Exception caught in processor: " + e, e);
+                } finally {
+                    // if we released the swing lock for any reason, make sure
+                    // to reaquire it
+                    if (releasedSwingLock) {
+                        acquireSwingLock();
                     }
                 }
+                
                 pc.clearTriggerCollection();
                 if (pc == pc.getNextInChain()) {
                     LOGGER.warning("MT Game Warning: Processor found twice in chain.");

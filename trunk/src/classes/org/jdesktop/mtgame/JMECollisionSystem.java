@@ -449,8 +449,9 @@ public class JMECollisionSystem extends CollisionSystem {
                 JMEPickDetails pickDetails = getPickDetails(pickData.getTargetMesh(), pickInfo, pickData);
                 pickInfo.addPickDetail(pickDetails);
 
-                // Add more details in geometry pick case
-                if (geometryPick) {
+                // Add more details in geometry pick case, assuming we hit
+                // triangles
+                if (geometryPick && (pickData instanceof TrianglePickData)) {
                     TrianglePickData tpd = (TrianglePickData) pickData;
                     Vector3f intersectionPoint = new Vector3f();
                     tpd.getIntersectionPoint(intersectionPoint);
