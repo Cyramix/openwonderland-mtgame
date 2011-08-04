@@ -67,6 +67,8 @@ import com.jme.util.export.JMEExporter;
 import com.jme.util.export.JMEImporter;
 import com.jme.util.export.Savable;
 import java.io.IOException;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 /**
@@ -515,16 +517,19 @@ public class RenderComponent extends EntityComponent {
      * its owning entity. This reference is added to the root spatial of
      * a render component, so that statistics about that entity can be tracked
      * by the renderer.
+     * 
+     * This class holds a weak reference to the entity, so it does not
+     * prevent garbage collection.
      */
     static class EntityRef implements Savable {
-        private final Entity entity;
+        private final Reference<Entity> entityRef;
 
         EntityRef(Entity entity) {
-            this.entity = entity;
+            this.entityRef = new WeakReference<Entity>(entity);
         }
 
         Entity getEntity() {
-            return entity;
+            return entityRef.get();
         }
 
         public Class getClassTag() {
