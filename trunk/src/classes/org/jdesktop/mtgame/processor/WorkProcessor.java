@@ -72,17 +72,19 @@ public class WorkProcessor extends ProcessorComponent {
 
     @Override
     public void compute(ProcessorArmingCollection arg0) {
+        LinkedList<WorkRecord> list;
         synchronized (this) {
-            LinkedList<WorkRecord> list = workComputeList;
+            list = workComputeList;
             workComputeList = new LinkedList();
-
-            for (WorkRecord job : list) {
-                ((WorkCompute) job.worker).compute();
-                if (job.listener != null) {
-                    job.listener.workDone(job.worker);
-                }
+        }
+        
+        // release the lock to reduce the chance of deadlock in the 
+        // compute() method (which we don't control)
+        for (WorkRecord job : list) {
+            ((WorkCompute) job.worker).compute();
+            if (job.listener != null) {
+                job.listener.workDone(job.worker);
             }
-            list.clear();
         }
     }
 
@@ -90,21 +92,23 @@ public class WorkProcessor extends ProcessorComponent {
     public void commit(ProcessorArmingCollection arg0) {
         // Clear the triggering events
 
+        LinkedList<WorkRecord> list;
         synchronized (this) {
             if (arg0.size() != 0) {
                 PostEventCondition pec = (PostEventCondition) arg0.get(0);
             }
 
-            LinkedList<WorkRecord> list = workCommitList;
+            list = workCommitList;
             workCommitList = new LinkedList();
+        }
         
-            for (WorkRecord job : list) {
-                ((WorkCommit) job.worker).commit();
-                if (job.listener != null) {
-                    job.listener.workDone(job.worker);
-                }
+        // release the lock to reduce the chance of deadlock in the 
+        // commit() method (which we don't control)
+        for (WorkRecord job : list) {
+            ((WorkCommit) job.worker).commit();
+            if (job.listener != null) {
+                job.listener.workDone(job.worker);
             }
-            list.clear();
         }
     }
 
