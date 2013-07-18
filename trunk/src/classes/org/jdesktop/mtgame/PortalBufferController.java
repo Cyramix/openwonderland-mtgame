@@ -36,7 +36,7 @@ import com.jme.renderer.Camera;
 import com.jme.math.Vector3f;
 import com.jme.math.Matrix3f;
 import com.jme.math.Quaternion;
-import javax.media.opengl.GLCanvas;
+import javax.media.opengl.awt.GLCanvas;
 
 
 /**

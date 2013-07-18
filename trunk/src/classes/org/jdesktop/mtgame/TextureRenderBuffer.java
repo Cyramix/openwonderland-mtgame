@@ -79,6 +79,7 @@ import javolution.util.FastList;
 import com.jme.renderer.Renderer;
 
 import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
 import javax.media.opengl.glu.GLU;
 
 /**
@@ -236,7 +237,7 @@ public class TextureRenderBuffer extends RenderBuffer {
         gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, components, getWidth(), getHeight(), 0,
                 format, dataType, null);
         if (t.getMinificationFilter().usesMipMapLevels()) {
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_2D);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_2D);
         }
 
         return BufferUtils.createByteBuffer(getWidth()*getHeight()*4);
@@ -330,10 +331,10 @@ public class TextureRenderBuffer extends RenderBuffer {
      * Get the actual texture data
      */
     public ByteBuffer getTextureData() {
-        GL gl = GLU.getCurrentGL();
+        GL2 gl = GLU.getCurrentGL().getGL2();
 
         JOGLTextureState.doTextureBind(getTexture().getTextureId(), 0, Texture.Type.TwoDimensional);
-        gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL.GL_BGR, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
+        gl.glGetTexImage(GL.GL_TEXTURE_2D, 0, GL2.GL_BGR, GL.GL_UNSIGNED_BYTE, textureReadBuffer);
         //System.out.println("GetErroe: " + gl.glGetError());
         return (textureReadBuffer);
     }

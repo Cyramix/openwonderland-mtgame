@@ -174,12 +174,12 @@ public class CubeMapRenderBuffer extends RenderBuffer {
         gl.glTexImage2D(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, components, width, height, 0,
                 format, dataType, null);
         if (t.getMinificationFilter().usesMipMapLevels()) {
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X);
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
-            gl.glGenerateMipmapEXT(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+            gl.glGenerateMipmap(GL.GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
         }
 
     }

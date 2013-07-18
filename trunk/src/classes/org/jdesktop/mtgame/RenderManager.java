@@ -42,6 +42,7 @@ import com.jme.renderer.pass.Pass;
 import org.jdesktop.mtgame.shader.Shader;
 import java.util.ArrayList;
 import com.jme.renderer.jogl.JOGLContextCapabilities;
+import java.util.concurrent.Semaphore;
 
 /**
  * The RenderManager creates and controls the renderer threads.  It also acts as
@@ -64,6 +65,9 @@ public class RenderManager {
      */
     private WorldManager worldManager = null;
 
+    /** Semaphore used for synchronization between renderer and EDT.  */
+    private Semaphore synchronizer;
+
     /**
      * The default constructor
      */
@@ -71,6 +75,11 @@ public class RenderManager {
         worldManager = wm;
         // Wait until we have a canvas to render into before doing anything
         renderer = new Renderer(wm, this, 0);
+        synchronizer = new Semaphore(1, true);
+    }
+
+    public Semaphore getSynchronizer() {
+        return synchronizer;
     }
 
     /**

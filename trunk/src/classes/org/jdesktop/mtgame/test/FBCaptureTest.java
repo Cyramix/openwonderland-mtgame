@@ -29,11 +29,8 @@
 
 package org.jdesktop.mtgame.test;
 
-import org.jdesktop.mtgame.processor.EyeSelectionProcessor;
 import org.jdesktop.mtgame.processor.MouseSelectionProcessor;
-import org.jdesktop.mtgame.processor.SelectionProcessor;
 import org.jdesktop.mtgame.processor.RotationProcessor;
-import org.jdesktop.mtgame.processor.PostEventProcessor;
 import org.jdesktop.mtgame.processor.OrbitCameraProcessor;
 import org.jdesktop.mtgame.util.FrameBufferCapture;
 import org.jdesktop.mtgame.*;
@@ -43,7 +40,6 @@ import com.jme.scene.shape.AxisRods;
 import com.jme.scene.state.ZBufferState;
 import com.jme.light.PointLight;
 import com.jme.renderer.ColorRGBA;
-import com.jme.scene.state.LightState;
 import com.jme.light.LightNode;
 import com.jme.scene.state.MaterialState;
 import com.jme.scene.state.BlendState;
@@ -51,7 +47,6 @@ import com.jme.scene.state.RenderState;
 import com.jme.scene.state.CullState;
 import com.jme.scene.shape.Teapot;
 import com.jme.scene.shape.Box;
-import com.jme.scene.shape.Sphere;
 import com.jme.scene.Geometry;
 import com.jme.bounding.BoundingBox;
 import com.jme.bounding.BoundingVolume;
@@ -85,9 +80,9 @@ import java.awt.Color;
 import java.nio.ByteBuffer;
 import java.awt.image.BufferedImage;
 import com.jme.util.geom.BufferUtils;
-import javax.media.opengl.GL;
 
 import java.util.Random;
+import javax.media.opengl.GL2;
 
 
 /**
@@ -405,7 +400,7 @@ public class FBCaptureTest {
 
             int size = 400 * 300 * 3;
             ByteBuffer buffer = BufferUtils.createByteBuffer(size);
-            FrameBufferCapture renderCapture = new FrameBufferCapture(wm, rb, this, buffer, GL.GL_BGR);
+            FrameBufferCapture renderCapture = new FrameBufferCapture(wm, rb, this, buffer, GL2.GL_BGR);
             captureCanvas = new MyCanvas(renderCapture);
             captureCanvas.setSize(rb.getWidth(), rb.getHeight());
             capturePanel.setLayout(new GridBagLayout());
