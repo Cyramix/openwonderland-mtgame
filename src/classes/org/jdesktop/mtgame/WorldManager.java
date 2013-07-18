@@ -147,6 +147,7 @@ public class WorldManager {
         worldManagers.put(name, this);
         defaultWorldManager = this;
         renderManager = new RenderManager(this);
+        renderManager.setRunning(false);
         processorManager = new ProcessorManager(this);
         processorManager.initialize();
         inputManager = new AWTInputManager();

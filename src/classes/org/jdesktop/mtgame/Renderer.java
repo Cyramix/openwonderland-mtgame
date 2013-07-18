@@ -88,7 +88,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.media.opengl.GLCanvas;
+import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.GLContext;
 import javax.media.opengl.Threading;
 import javolution.util.FastList;
@@ -619,7 +619,7 @@ class Renderer extends Thread {
         int height = rb.getHeight();
        
         // Create the canvas and it's notification object
-        JMECanvas canvas = displaySystem.createCanvas(width, height, "AWT", null);
+        JMECanvas canvas  = displaySystem.createCanvas(width, height, "AWT", null);
         if (useJOGL) {
             ((GLCanvas)canvas).setAutoSwapBufferMode(false);
         }
@@ -882,6 +882,12 @@ class Renderer extends Thread {
                     LOGGER.log(Level.WARNING, null, e);
                 }             
             }
+            // acquire synchronization semaphore
+            try {
+                renderManager.getSynchronizer().acquire();
+            } catch(InterruptedException ex){
+                continue;
+            }
             
             // Snapshot the current time
             frameStartTime = System.nanoTime();
@@ -962,6 +968,8 @@ class Renderer extends Thread {
 
             commitTime = System.nanoTime();
 
+            // release semaphore so EDT can use it
+            renderManager.getSynchronizer().release();
             // Let the processes know that we want to do a frame tick
             renderManager.triggerNewFrame();
 

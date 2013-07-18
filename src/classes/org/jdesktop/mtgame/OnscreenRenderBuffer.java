@@ -62,7 +62,7 @@ import com.jme.scene.Spatial;
 import com.jme.system.DisplaySystem;
 import java.awt.Canvas;
 import javolution.util.FastList;
-import javax.media.opengl.GLCanvas;
+import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.GLContext;
 import javax.media.opengl.GL;
 
@@ -168,7 +168,6 @@ public class OnscreenRenderBuffer extends RenderBuffer {
      */
     public boolean makeCurrent(DisplaySystem display, Renderer jMERenderer) {
         boolean doRender = true;
-
         GLCanvas currentCanvas = (GLCanvas) canvas;
         glContext = currentCanvas.getContext();
         try {

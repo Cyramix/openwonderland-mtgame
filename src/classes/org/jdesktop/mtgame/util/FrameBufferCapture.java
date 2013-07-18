@@ -37,6 +37,7 @@ import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
 import java.nio.Buffer;
 import com.jme.util.geom.BufferUtils;
+import javax.media.opengl.GL2;
 
 /**
  * This class encapsultes a rendering surface in mtgame.  It can be used
@@ -54,7 +55,7 @@ public class FrameBufferCapture implements RenderUpdater {
     private FrameBufferListener listener = null;
     private RenderBuffer renderBuffer = null;
     private ByteBuffer rawData = null;
-    private int dataType = GL.GL_BGR;
+    private int dataType = GL2.GL_BGR;
 
     public interface FrameBufferListener {
         public void update(Buffer b);
