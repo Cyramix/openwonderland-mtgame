@@ -424,7 +424,7 @@ public class JMECollisionSystem extends CollisionSystem {
                     int len = pickInfo.size();
                     for (j = 0; j < len; j++) {
                         JMEPickDetails pd = (JMEPickDetails) pickInfo.get(j);
-                        if (pickData.getTargetMesh().getZOrder() <=
+                        if (pickData.getTargetMesh().getZOrder() <
                                 pd.getPickData().getTargetMesh().getZOrder()) {
                             pickInfo.addPickDetail(j, pickDetails);
                             break;
