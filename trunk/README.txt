@@ -1,7 +1,7 @@
 This is the MTGame (Multi-threaded game) platform.  This system depends 
 upon a number of other systems.  You must have the runtime components of
 the other systems to successfully build MTGame.  Those componets are as
-follows:
+follows: 
 
     - A modified version of the Java Monkey Engine 2.0 platform.
       The svn branch with all the nessesary changes for this system
